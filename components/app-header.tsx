@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Church, Bell, ArrowLeftRight } from "lucide-react";
+import { Church, Bell, ArrowLeftRight, UserPlus } from "lucide-react";
+import { MemberSignupDialog } from "@/components/member-signup-dialog";
 
 interface AppHeaderProps {
   slug: string;
   name: string;
+  primaryColor?: string;
   logoUrl?: string | null;
   isMatriz: boolean;
   parent?: { id: string; name: string; slug: string } | null;
@@ -16,6 +18,7 @@ interface AppHeaderProps {
 export function AppHeader({
   slug,
   name,
+  primaryColor = "#dc2626",
   logoUrl,
   isMatriz,
   parent,
@@ -69,6 +72,13 @@ export function AppHeader({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
+          {/* Botão de Auto-Cadastro de Membro nesta Igreja */}
+          <MemberSignupDialog
+            churchName={name}
+            churchSlug={slug}
+            primaryColor={primaryColor}
+          />
+
           {/* Quick Demo Switcher */}
           <Link
             href={`/${switchTargetSlug}`}

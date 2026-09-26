@@ -16,7 +16,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { generatePixTransaction, type GeneratePixResponse } from "@/app/actions/finance";
+import {
+  generatePixTransaction,
+  getChurchPixConfig,
+  type GeneratePixResponse,
+} from "@/app/actions/finance";
 import {
   HeartHandshake,
   QrCode,
@@ -29,6 +33,7 @@ import {
   RefreshCw,
   Building2,
   Lock,
+  Key,
 } from "lucide-react";
 
 export default function DoarPage() {
@@ -41,10 +46,41 @@ export default function DoarPage() {
   const [copied, setCopied] = useState<boolean>(false);
   const [checkoutData, setCheckoutData] = useState<GeneratePixResponse | null>(null);
 
-  const quickAmounts = ["50", "100", "200", "500"];
+  const [quickAmounts, setQuickAmounts] = useState<string[]>(["30", "50", "100", "200", "500"]);
+  const [churchName, setChurchName] = useState<string>(
+    slug === "matriz" ? "Igreja Matriz Sede" : "Igreja Filial Central"
+  );
+  const [pixKeyInfo, setPixKeyInfo] = useState<{ key: string; type: string } | null>(null);
 
-  const churchFallbackName =
-    slug === "matriz" ? "Igreja Matriz Sede" : "Igreja Filial Central";
+  React.useEffect(() => {
+    async function loadPixConfig() {
+      try {
+        const res = await getChurchPixConfig(slug);
+        if (res.success && res.tenant) {
+          setChurchName(res.tenant.name);
+          if (res.tenant.pixPresetValues) {
+            const parsed = res.tenant.pixPresetValues
+              .split(",")
+              .map((v: string) => v.trim())
+              .filter(Boolean);
+            if (parsed.length > 0) {
+              setQuickAmounts(parsed);
+              setAmount(parsed[0]);
+            }
+          }
+          if (res.tenant.pixKey) {
+            setPixKeyInfo({
+              key: res.tenant.pixKey,
+              type: res.tenant.pixKeyType || "CNPJ",
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Falha ao carregar presets de PIX:", e);
+      }
+    }
+    loadPixConfig();
+  }, [slug]);
 
   // Ação de Gerar PIX via Server Action
   const handleGeneratePix = async () => {
@@ -184,12 +220,12 @@ export default function DoarPage() {
               </div>
             </div>
 
-            {/* 3. Botões Rápidos (Quick Add): Grid com 4 botões na cor primária */}
-            <div className="space-y-1.5">
+            {/* 3. Botões Rápidos (Quick Add): Flex / Grid responsivo com valores do banco */}
+            <div className="space-y-2">
               <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block text-center">
                 Valores Sugeridos
               </label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 {quickAmounts.map((val) => {
                   const isSelected = amount === val;
                   return (
@@ -198,7 +234,7 @@ export default function DoarPage() {
                       type="button"
                       variant={isSelected ? "default" : "outline"}
                       onClick={() => setAmount(val)}
-                      className={`h-11 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 active:scale-95 ${
+                      className={`h-11 px-4 min-w-[72px] text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 active:scale-95 cursor-pointer ${
                         isSelected
                           ? "bg-primary text-primary-foreground shadow-md ring-2 ring-primary/30"
                           : "border-border hover:border-primary/50 text-foreground"
@@ -209,6 +245,18 @@ export default function DoarPage() {
                   );
                 })}
               </div>
+
+              {/* Informação da Chave PIX cadastrada pela igreja */}
+              {pixKeyInfo && (
+                <div className="p-2 rounded-xl bg-muted/40 border border-border/60 text-center space-y-0.5 mt-2">
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                    Chave PIX ({pixKeyInfo.type}):
+                  </span>
+                  <p className="text-xs font-mono font-bold text-foreground select-all">
+                    {pixKeyInfo.key}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* 4. Botão Gigante: Gerar PIX Copia e Cola */}
@@ -241,7 +289,7 @@ export default function DoarPage() {
           <CardFooter className="py-3 px-6 bg-muted/20 border-t border-border/50 text-xs text-muted-foreground flex items-center justify-between">
             <span className="flex items-center gap-1.5 truncate">
               <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span className="truncate">{churchFallbackName}</span>
+              <span className="truncate">{churchName}</span>
             </span>
             <span className="text-[10px] font-semibold uppercase text-primary">
               PIX Instantâneo
@@ -273,7 +321,7 @@ export default function DoarPage() {
             <CardDescription className="text-xs text-muted-foreground mt-1">
               Destinatário:{" "}
               <strong className="text-foreground font-semibold">
-                {checkoutData.churchName || churchFallbackName}
+                {checkoutData.churchName || churchName}
               </strong>
             </CardDescription>
           </CardHeader>

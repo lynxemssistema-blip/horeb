@@ -15,6 +15,7 @@ import {
   Settings,
   PlusCircle,
   Sparkles,
+  Tv,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,16 @@ export function AppSidebar({
       name: "Dízimos & Ofertas",
       href: `/${slug}/doar`,
       icon: HeartHandshake,
+    },
+    {
+      name: "Cultos Online & Vídeos",
+      href: `/${slug}/videos`,
+      icon: Tv,
+    },
+    {
+      name: "Ministérios da Igreja",
+      href: `/${slug}/ministerios`,
+      icon: Sparkles,
     },
     {
       name: "Ministério Kids",

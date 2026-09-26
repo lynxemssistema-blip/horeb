@@ -11,9 +11,21 @@ model Tenant {
   id           String        @id @default(cuid())
   name         String
   slug         String        @unique
-  logoUrl      String?
+  logoUrl      String?       // Base64 ou URL da imagem/logo da igreja salva no banco
   primaryColor String        @default("#dc2626")
   
+  // Informações da Igreja
+  pastorName       String?
+  phone            String?
+  address          String?
+  city             String?
+  state            String?
+
+  // Configurações de Dízimos e Ofertas PIX
+  pixKey           String?
+  pixKeyType       String?       @default("CNPJ")
+  pixPresetValues  String?       @default("30,50,100,200,500")
+
   // Assinatura e Planos
   plan         String        @default("GESTAO") // ESSENCIAL, GESTAO, PREMIUM
   status       String        @default("ACTIVE") // ACTIVE, TRIAL, SUSPENDED, CANCELLED
@@ -27,7 +39,10 @@ model Tenant {
   branches     Tenant[]      @relation("TenantHierarchy")
 
   users        User[]
+  userAccesses UserChurchAccess[]
   cellGroups   CellGroup[]
+  ministries   Ministry[]
+  videos       ChurchVideo[]
   transactions Transaction[]
 
   createdAt    DateTime      @default(now())
@@ -47,10 +62,42 @@ model User {
   tenantId         String
   tenant           Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  churchAccesses   UserChurchAccess[]
   ledCells         CellGroup[] @relation("CellLeader")
+  ledMinistries    Ministry[]  @relation("MinistryLeader")
 
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
+}
+
+model Ministry {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  leaderId    String?
+  leader      User?    @relation("MinistryLeader", fields: [leaderId], references: [id])
+  schedule    String?  // ex: "Domingos às 17h"
+  color       String   @default("#8b5cf6")
+  icon        String   @default("Sparkles")
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model UserChurchAccess {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role      String   @default("MEMBER") // ADMIN, PASTOR, LEADER, FINANCIAL, KIDS, MEMBER
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, tenantId])
 }
 
 model CellGroup {
@@ -58,11 +105,30 @@ model CellGroup {
   name      String
   leaderId  String?
   leader    User?    @relation("CellLeader", fields: [leaderId], references: [id])
+  address   String?  // Bairro / Endereço
+  schedule  String?  // ex: "Quartas às 20h"
+  hostName  String?  // Anfitrião da casa
+  category  String?  @default("Geral") // Casais, Jovens, Família, Mulheres
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model ChurchVideo {
+  id          String   @id @default(cuid())
+  title       String
+  youtubeUrl  String   // URL ou ID do YouTube
+  description String?
+  preacher    String?  // Pregador / Ministro
+  date        String?  // Data do culto
+  category    String?  @default("Culto") // Culto de Celebração, Estudo Bíblico, Louvor
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Transaction {

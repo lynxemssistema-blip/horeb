@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -18,6 +18,14 @@ import {
   CreditCard,
   ShieldCheck,
   Layers,
+  Upload,
+  Image as ImageIcon,
+  Trash2,
+  Phone,
+  MapPin,
+  User,
+  QrCode,
+  Coins,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +39,14 @@ interface ChurchSettingsProps {
     slug: string;
     primaryColor: string;
     logoUrl?: string | null;
+    pastorName?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    city?: string | null;
+    state?: string | null;
+    pixKey?: string | null;
+    pixKeyType?: string | null;
+    pixPresetValues?: string | null;
     plan: string;
     status: string;
     isMatriz: boolean;
@@ -52,10 +68,56 @@ const colorPresets = [
 
 export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Form State
   const [name, setName] = useState(tenant.name);
   const [primaryColor, setPrimaryColor] = useState(tenant.primaryColor);
-  const [logoUrl, setLogoUrl] = useState(tenant.logoUrl || "");
+  const [logoUrl, setLogoUrl] = useState<string | null>(tenant.logoUrl || null);
+  const [pastorName, setPastorName] = useState(tenant.pastorName || "");
+  const [phone, setPhone] = useState(tenant.phone || "");
+  const [address, setAddress] = useState(tenant.address || "");
+  const [city, setCity] = useState(tenant.city || "");
+  const [state, setState] = useState(tenant.state || "");
+
+  // PIX Settings
+  const [pixKey, setPixKey] = useState(tenant.pixKey || "");
+  const [pixKeyType, setPixKeyType] = useState(tenant.pixKeyType || "CNPJ");
+  const [pixPresetValues, setPixPresetValues] = useState(
+    tenant.pixPresetValues || "30,50,100,200,500"
+  );
+
   const [saving, setSaving] = useState(false);
+
+  // Logo file upload -> Base64
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Por favor, selecione um arquivo de imagem válido (PNG, JPG, WEBP).");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 2MB para otimização rápida.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setLogoUrl(base64);
+      toast.success("Logo carregado! Clique em 'Salvar Alterações' para gravar no banco de dados.");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    toast.info("Logo removido. Clique em 'Salvar' para confirmar.");
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,15 +132,25 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
         tenantId: tenant.id,
         name,
         primaryColor,
-        logoUrl: logoUrl || undefined,
+        logoUrl: logoUrl,
+        pastorName,
+        phone,
+        address,
+        city,
+        state,
+        pixKey,
+        pixKeyType,
+        pixPresetValues,
       });
 
       if (res.success) {
-        toast.success("Dados da igreja atualizados com sucesso!");
+        toast.success("Dados da igreja e logo salvos com sucesso no banco de dados!");
         router.refresh();
       } else {
         toast.error(res.error || "Falha ao salvar alterações.");
       }
+    } catch {
+      toast.error("Erro inesperado no servidor.");
     } finally {
       setSaving(false);
     }
@@ -102,7 +174,7 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
               Configurações da Igreja
             </h1>
             <p className="text-xs text-zinc-400">
-              Personalize a identidade visual, cores dinâmicas e gerencie a rede de congregações.
+              Personalize o logo direto no banco, cores da marca, dados pastorais e chaves PIX de doação.
             </p>
           </div>
 
@@ -146,48 +218,99 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
             onSubmit={handleSave}
             className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 shadow-xl space-y-6"
           >
-            <div className="flex items-center gap-2 pb-3 border-b border-white/10">
-              <Church className="w-4 h-4 text-amber-400" />
-              <h2 className="text-sm font-black uppercase tracking-wider text-white">
-                Identidade & Dados Gerais
-              </h2>
-            </div>
-
+            {/* SEÇÃO 1: IDENTIDADE & LOGO (UPLOAD DIRETO NO BANCO) */}
             <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-300">Nome Oficial da Igreja *</label>
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Igreja Matriz Sede"
-                  required
-                  className="bg-black/50 border-white/10 text-white rounded-xl h-11"
-                />
+              <div className="flex items-center gap-2 pb-3 border-b border-white/10">
+                <Church className="w-4 h-4 text-amber-400" />
+                <h2 className="text-sm font-black uppercase tracking-wider text-white">
+                  1. Identidade & Logo da Igreja
+                </h2>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-300">URL / Slug Permanente</label>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-zinc-500">horeb.lynxems.com.br/</span>
+              {/* Upload de Logo em Base64 */}
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 space-y-3">
+                <label className="text-xs font-bold text-zinc-300 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
+                    Logo da Igreja (Gravado Direto no Banco de Dados)
+                  </span>
+                  <span className="text-[10px] text-zinc-400 font-mono">PNG / JPG / WEBP (max 2MB)</span>
+                </label>
+
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  {/* Preview do Logo */}
+                  <div className="w-20 h-20 rounded-2xl bg-black border border-white/15 flex items-center justify-center overflow-hidden shrink-0 shadow-inner relative group">
+                    {logoUrl ? (
+                      <img
+                        src={logoUrl}
+                        alt="Logo da Igreja"
+                        className="w-full h-full object-contain p-1"
+                      />
+                    ) : (
+                      <Church className="w-8 h-8 text-zinc-600" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-2 text-center sm:text-left">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                      id="logo-upload-input"
+                    />
+
+                    <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+                      <label
+                        htmlFor="logo-upload-input"
+                        className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all border border-white/10 cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-amber-400" />
+                        <span>{logoUrl ? "Trocar Imagem do Logo" : "Fazer Upload do Logo"}</span>
+                      </label>
+
+                      {logoUrl && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveLogo}
+                          className="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold transition-all border border-red-500/20 flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Remover Logo</span>
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-zinc-400">
+                      O arquivo é convertido e salvo no banco da sua igreja com segurança e alta velocidade. Não depende de links externos.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-300">Nome Oficial da Igreja *</label>
                   <Input
-                    value={tenant.slug}
-                    disabled
-                    className="bg-black/30 border-white/5 text-zinc-400 rounded-xl h-11 font-mono text-xs select-all cursor-not-allowed"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Ex: Igreja Matriz Sede"
+                    required
+                    className="bg-black/50 border-white/10 text-white rounded-xl h-11"
                   />
                 </div>
-                <span className="text-[10px] text-zinc-500">
-                  O link exclusivo da sua congregação. Não pode ser alterado para manter a integridade dos QR Codes de dízimos.
-                </span>
-              </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-300">URL do Logo (Opcional)</label>
-                <Input
-                  value={logoUrl}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                  placeholder="https://exemplo.com/logo.png"
-                  className="bg-black/50 border-white/10 text-white rounded-xl h-11 text-xs"
-                />
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-300">URL / Slug Permanente</label>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-mono text-zinc-500 shrink-0">horeb.lynxems.com.br/</span>
+                    <Input
+                      value={tenant.slug}
+                      disabled
+                      className="bg-black/30 border-white/5 text-zinc-400 rounded-xl h-11 font-mono text-xs select-all cursor-not-allowed"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Seletor de Cores White-Label */}
@@ -238,21 +361,154 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
               </div>
             </div>
 
+            {/* SEÇÃO 2: DADOS PASTORAIS & LOCALIZAÇÃO */}
+            <div className="space-y-4 pt-4 border-t border-white/10">
+              <div className="flex items-center gap-2 pb-2">
+                <User className="w-4 h-4 text-amber-400" />
+                <h2 className="text-sm font-black uppercase tracking-wider text-white">
+                  2. Liderança Pastoral & Contato
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-300">Pastor Titular / Presidente</label>
+                  <Input
+                    value={pastorName}
+                    onChange={(e) => setPastorName(e.target.value)}
+                    placeholder="Ex: Pr. Carlos Eduardo"
+                    className="bg-black/50 border-white/10 text-white rounded-xl h-11 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-300">Telefone / WhatsApp da Secretaria</label>
+                  <Input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Ex: (11) 98765-4321"
+                    className="bg-black/50 border-white/10 text-white rounded-xl h-11 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300">Endereço da Igreja</label>
+                <Input
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Ex: Av. das Nações, 1500 - Centro"
+                  className="bg-black/50 border-white/10 text-white rounded-xl h-11 text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-300">Cidade</label>
+                  <Input
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Ex: São Paulo"
+                    className="bg-black/50 border-white/10 text-white rounded-xl h-11 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-300">Estado (UF)</label>
+                  <Input
+                    value={state}
+                    onChange={(e) => setState(e.target.value.toUpperCase())}
+                    maxLength={2}
+                    placeholder="Ex: SP"
+                    className="bg-black/50 border-white/10 text-white rounded-xl h-11 text-xs uppercase"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SEÇÃO 3: CONFIGURAÇÃO DE DÍZIMOS E OFERTAS PIX */}
+            <div className="space-y-4 pt-4 border-t border-white/10">
+              <div className="flex items-center gap-2 pb-2">
+                <QrCode className="w-4 h-4 text-emerald-400" />
+                <h2 className="text-sm font-black uppercase tracking-wider text-white">
+                  3. Dízimos & Ofertas PIX Personalizados
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-300">Tipo da Chave PIX</label>
+                  <select
+                    value={pixKeyType}
+                    onChange={(e) => setPixKeyType(e.target.value)}
+                    className="w-full h-11 rounded-xl bg-black/50 border border-white/10 text-xs px-3 text-zinc-200 outline-none"
+                  >
+                    <option value="CNPJ">CNPJ</option>
+                    <option value="CPF">CPF</option>
+                    <option value="EMAIL">E-mail</option>
+                    <option value="TELEFONE">Telefone</option>
+                    <option value="ALEATORIA">Chave Aleatória</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2 space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-300">Chave PIX Oficial da Igreja</label>
+                  <Input
+                    value={pixKey}
+                    onChange={(e) => setPixKey(e.target.value)}
+                    placeholder="Ex: 12.345.678/0001-90 ou financeiro@igreja.com.br"
+                    className="bg-black/50 border-white/10 text-white rounded-xl h-11 text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                    <Coins className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Valores Rápidos Sugeridos (Separados por vírgula)</span>
+                  </label>
+                  <span className="text-[10px] text-zinc-400 font-mono">Ex: 30,50,100,200,500</span>
+                </div>
+                <Input
+                  value={pixPresetValues}
+                  onChange={(e) => setPixPresetValues(e.target.value)}
+                  placeholder="30,50,100,200,500"
+                  className="bg-black/50 border-white/10 text-white rounded-xl h-11 text-xs font-mono"
+                />
+                <div className="flex items-center gap-2 pt-1 flex-wrap">
+                  <span className="text-[11px] text-zinc-400">Prévia dos botões de oferta:</span>
+                  {pixPresetValues
+                    .split(",")
+                    .map((v) => v.trim())
+                    .filter(Boolean)
+                    .map((val) => (
+                      <span
+                        key={val}
+                        className="px-2.5 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold"
+                      >
+                        R$ {val}
+                      </span>
+                    ))}
+                </div>
+              </div>
+            </div>
+
             <Button
               type="submit"
               disabled={saving}
-              className="w-full h-12 font-black text-sm rounded-xl shadow-lg transition-all text-white cursor-pointer gap-2"
+              className="w-full h-12 font-black text-sm rounded-xl shadow-lg transition-all text-white cursor-pointer gap-2 mt-4"
               style={{ backgroundColor: primaryColor }}
             >
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Salvando Alterações...</span>
+                  <span>Salvando Alterações no Banco...</span>
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  <span>Salvar Alterações da Igreja</span>
+                  <span>Salvar Todas as Configurações da Igreja</span>
                 </>
               )}
             </Button>
@@ -265,7 +521,7 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
           <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 shadow-xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-primary" />
+                <Building2 className="w-4 h-4 text-amber-400" />
                 <h3 className="text-xs font-black uppercase tracking-wider text-white">
                   Rede & Congregações
                 </h3>
@@ -296,7 +552,7 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
                           />
                           <span className="font-bold text-white truncate">{b.name}</span>
                         </div>
-                        <ExternalLink className="w-3.5 h-3.5 text-zinc-500 group-hover:text-primary transition-colors" />
+                        <ExternalLink className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 transition-colors" />
                       </a>
                     ))}
                   </div>
@@ -322,7 +578,7 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full text-xs font-bold gap-1.5 border-dashed border-primary/40 hover:border-primary text-primary hover:bg-primary/10 h-10 rounded-xl cursor-pointer"
+                        className="w-full text-xs font-bold gap-1.5 border-dashed border-amber-500/40 hover:border-amber-400 text-amber-400 hover:bg-amber-500/10 h-10 rounded-xl cursor-pointer"
                       >
                         <PlusCircle className="w-3.5 h-3.5" />
                         <span>Cadastrar Mais Uma Filial</span>
@@ -339,7 +595,7 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
                 {tenant.parent && (
                   <a
                     href={`/${tenant.parent.slug}`}
-                    className="flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/30 text-xs font-bold text-primary hover:bg-primary/20 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs font-bold text-amber-400 hover:bg-amber-500/20 transition-colors"
                   >
                     <span>{tenant.parent.name}</span>
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -371,7 +627,7 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
             </div>
 
             <p className="text-[11px] text-zinc-400 leading-relaxed">
-              Plataforma com motor multi-tenant e segurança em nuvem. Para upgrades ou expansão de filiais, fale com a equipe Lynx EMS Sistemas.
+              Plataforma com motor multi-tenant e segurança em nuvem. Desenvolvido por Lynx EMS Sistemas.
             </p>
           </div>
         </div>

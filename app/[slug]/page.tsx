@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PrayerRequestDialog } from "@/components/prayer-request-dialog";
 import { CreateChurchDialog } from "@/components/create-church-dialog";
+import { MemberSignupDialog } from "@/components/member-signup-dialog";
 import {
   Calendar,
   HeartHandshake,
@@ -29,6 +30,8 @@ import {
   ShieldCheck,
   Church,
   PlusCircle,
+  UserPlus,
+  Tv,
 } from "lucide-react";
 
 interface PageProps {
@@ -46,6 +49,8 @@ export default async function TenantDashboardPage({ params }: PageProps) {
       cellGroups: {
         include: { leader: true },
       },
+      ministries: true,
+      videos: true,
       users: {
         where: { role: "PASTOR" },
       },
@@ -119,14 +124,16 @@ export default async function TenantDashboardPage({ params }: PageProps) {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button
-                variant="default"
-                size="sm"
-                className="w-full sm:w-auto font-medium shadow-sm"
-              >
-                <Radio className="w-3.5 h-3.5 mr-1" />
-                Assistir Transmissão
-              </Button>
+              <Link href={`/${slug}/videos`}>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="w-full sm:w-auto font-medium shadow-sm cursor-pointer gap-1.5"
+                >
+                  <Radio className="w-3.5 h-3.5" />
+                  <span>Cultos & Mensagens Online</span>
+                </Button>
+              </Link>
             </div>
           </div>
         </CardContent>
@@ -137,7 +144,23 @@ export default async function TenantDashboardPage({ params }: PageProps) {
             <span>Versículo do Dia: Salmos 133:1</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <MemberSignupDialog
+              churchName={tenant.name}
+              churchSlug={slug}
+              primaryColor={tenant.primaryColor}
+              triggerButton={
+                <Button
+                  size="sm"
+                  className="text-xs font-bold gap-1.5 text-white shadow-md hover:brightness-110 cursor-pointer"
+                  style={{ backgroundColor: tenant.primaryColor }}
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Quero me Cadastrar</span>
+                </Button>
+              }
+            />
+
             <PrayerRequestDialog
               tenantSlug={slug}
               triggerButton={
@@ -303,6 +326,64 @@ export default async function TenantDashboardPage({ params }: PageProps) {
               </CardContent>
             </Card>
           </div>
+
+          {/* Card: Cultos & Vídeos Online */}
+          <Link href={`/${slug}/videos`} className="group block focus:outline-none">
+            <Card className="h-full border-border/80 hover:border-primary/50 hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+              <CardHeader className="pb-2">
+                <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Tv className="w-5 h-5" />
+                </div>
+                <CardTitle className="text-base font-semibold group-hover:text-primary transition-colors flex items-center justify-between">
+                  <span>Cultos & Vídeos Online</span>
+                  <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-primary" />
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {tenant.videos.length > 0
+                    ? `${tenant.videos.length} pregações e cultos disponíveis no YouTube.`
+                    : "Assista aos cultos e mensagens pastorais pelo YouTube."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2 text-xs font-semibold hover:border-primary hover:text-primary"
+                >
+                  Assistir Vídeos ({tenant.videos.length})
+                </Button>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Card: Ministérios da Igreja */}
+          <Link href={`/${slug}/ministerios`} className="group block focus:outline-none">
+            <Card className="h-full border-border/80 hover:border-primary/50 hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+              <CardHeader className="pb-2">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <CardTitle className="text-base font-semibold group-hover:text-primary transition-colors flex items-center justify-between">
+                  <span>Ministérios da Igreja</span>
+                  <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-primary" />
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {tenant.ministries.length > 0
+                    ? `${tenant.ministries.length} ministérios em atividade (Louvor, Jovens, Casais...).`
+                    : "Conheça os ministérios e áreas de atuação da congregação."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2 text-xs font-semibold hover:border-primary hover:text-primary"
+                >
+                  Ver Ministérios ({tenant.ministries.length})
+                </Button>
+              </CardContent>
+            </Card>
+          </Link>
 
           {/* Card 6: Gestão, Filiais & Membresia */}
           <div className="group block focus:outline-none">

@@ -16,6 +16,8 @@ export interface RegisterMasterParams {
   primaryColor?: string;
   logoUrl?: string;
   address?: string;
+  phone?: string;
+  pastorName?: string;
 }
 
 export interface CreateBranchParams {
@@ -25,6 +27,8 @@ export interface CreateBranchParams {
   primaryColor?: string;
   logoUrl?: string;
   address?: string;
+  phone?: string;
+  pastorName?: string;
 }
 
 // 1. Cadastra o Usuário Master com Login, Senha, Igreja Sede e Envio de Código de Ativação
@@ -90,6 +94,9 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
         slug,
         primaryColor,
         logoUrl: params.logoUrl || null,
+        pastorName: params.pastorName || params.masterName?.trim() || null,
+        phone: params.phone?.trim() || null,
+        address: params.address?.trim() || null,
         plan: "GESTAO",
         status: "ACTIVE",
         monthlyPrice: 249,
@@ -331,6 +338,9 @@ export async function createBranchChurch(params: CreateBranchParams) {
         primaryColor,
         parentId: parentTenant.id,
         logoUrl: params.logoUrl || parentTenant.logoUrl,
+        pastorName: params.pastorName?.trim() || null,
+        phone: params.phone?.trim() || null,
+        address: params.address?.trim() || null,
         plan: parentTenant.plan || "GESTAO",
         status: "ACTIVE",
         monthlyPrice: 149,

@@ -81,13 +81,21 @@ export async function getChurchNetworkMembers(churchSlug: string) {
       });
     }
 
-    // Buscar todos os usuários desta rede
+    // Buscar todos os usuários desta rede (seja igreja principal ou acessos secundários)
     const users = await prisma.user.findMany({
       where: {
-        tenantId: { in: networkTenantIds },
+        OR: [
+          { tenantId: { in: networkTenantIds } },
+          { churchAccesses: { some: { tenantId: { in: networkTenantIds } } } },
+        ],
       },
       include: {
         tenant: true,
+        churchAccesses: {
+          include: {
+            tenant: true,
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -117,6 +125,15 @@ export async function getChurchNetworkMembers(churchSlug: string) {
           slug: u.tenant.slug,
           primaryColor: u.tenant.primaryColor,
         },
+        churchAccesses: u.churchAccesses.map((ca) => ({
+          id: ca.id,
+          tenantId: ca.tenantId,
+          churchName: ca.tenant.name,
+          churchSlug: ca.tenant.slug,
+          primaryColor: ca.tenant.primaryColor,
+          role: ca.role,
+          roleLabel: ROLE_LABELS[ca.role] || ca.role,
+        })),
       })),
     };
   } catch (error: any) {
@@ -150,10 +167,36 @@ export async function createChurchUser(params: {
 
     const existingUser = await prisma.user.findUnique({
       where: { email: cleanEmail },
+      include: { churchAccesses: true },
     });
 
     if (existingUser) {
-      return { success: false, error: "Este e-mail já está cadastrado no sistema." };
+      // Se o usuário já existe no sistema, vincular à congregação de destino
+      await prisma.userChurchAccess.upsert({
+        where: {
+          userId_tenantId: {
+            userId: existingUser.id,
+            tenantId: tenant.id,
+          },
+        },
+        update: { role: params.role || "MEMBER" },
+        create: {
+          userId: existingUser.id,
+          tenantId: tenant.id,
+          role: params.role || "MEMBER",
+        },
+      });
+
+      return {
+        success: true,
+        user: {
+          id: existingUser.id,
+          name: existingUser.name,
+          email: existingUser.email,
+          role: params.role,
+          tempPassword: "",
+        },
+      };
     }
 
     const rawPassword = params.password || "Horeb" + Math.floor(1000 + Math.random() * 9000) + "!";
@@ -171,6 +214,12 @@ export async function createChurchUser(params: {
         verificationCode: activationCode,
         codeExpiresAt,
         tenantId: tenant.id,
+        churchAccesses: {
+          create: {
+            tenantId: tenant.id,
+            role: params.role || "MEMBER",
+          },
+        },
       },
     });
 
@@ -355,12 +404,20 @@ export async function deleteChurchUser(userId: string) {
   }
 }
 
-// 6. Atualizar Dados e Identidade Visual da Igreja (Nome, Cor, Logo, etc.)
+// 6. Atualizar Dados e Identidade Visual da Igreja (Nome, Cor, Logo Base64, Endereço, PIX, etc.)
 export async function updateChurchSettings(params: {
   tenantId: string;
   name: string;
   primaryColor: string;
-  logoUrl?: string;
+  logoUrl?: string | null;
+  pastorName?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pixKey?: string | null;
+  pixKeyType?: string | null;
+  pixPresetValues?: string | null;
 }) {
   try {
     const tenant = await prisma.tenant.findUnique({
@@ -376,7 +433,15 @@ export async function updateChurchSettings(params: {
       data: {
         name: params.name.trim(),
         primaryColor: params.primaryColor || tenant.primaryColor,
-        logoUrl: params.logoUrl || tenant.logoUrl,
+        logoUrl: params.logoUrl !== undefined ? params.logoUrl : tenant.logoUrl,
+        pastorName: params.pastorName !== undefined ? params.pastorName : tenant.pastorName,
+        phone: params.phone !== undefined ? params.phone : tenant.phone,
+        address: params.address !== undefined ? params.address : tenant.address,
+        city: params.city !== undefined ? params.city : tenant.city,
+        state: params.state !== undefined ? params.state : tenant.state,
+        pixKey: params.pixKey !== undefined ? params.pixKey : tenant.pixKey,
+        pixKeyType: params.pixKeyType !== undefined ? params.pixKeyType : tenant.pixKeyType,
+        pixPresetValues: params.pixPresetValues !== undefined ? params.pixPresetValues : tenant.pixPresetValues,
       },
     });
 
@@ -384,10 +449,208 @@ export async function updateChurchSettings(params: {
     revalidatePath(`/${tenant.slug}`);
     revalidatePath(`/${tenant.slug}/configuracoes`);
     revalidatePath(`/${tenant.slug}/membros`);
+    revalidatePath(`/${tenant.slug}/doar`);
 
     return { success: true, tenant: updated };
   } catch (error: any) {
     console.error("Erro ao atualizar dados da igreja:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// 7. Auto-cadastro de Membro diretamente na página da igreja (Matriz ou Filial)
+export async function registerMemberSelf(params: {
+  name: string;
+  email: string;
+  password: string;
+  tenantSlug: string;
+}) {
+  try {
+    const cleanEmail = params.email.trim().toLowerCase();
+    if (!isValidEmail(cleanEmail)) {
+      return { success: false, error: "Informe um e-mail válido." };
+    }
+    if (params.password.length < 6) {
+      return { success: false, error: "A senha deve ter no mínimo 6 caracteres." };
+    }
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { slug: params.tenantSlug },
+    });
+
+    if (!tenant) {
+      return { success: false, error: "Congregação não encontrada." };
+    }
+
+    let user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+      include: { churchAccesses: true },
+    });
+
+    const activationCode = generateActivationCode();
+    const codeExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    if (user) {
+      // O usuário já existe no sistema global. Vamos verificar se já tem acesso a esta igreja específica:
+      const existingAccess = user.churchAccesses.find((ca) => ca.tenantId === tenant.id);
+      if (existingAccess) {
+        return {
+          success: false,
+          error: `Você já possui cadastro na ${tenant.name}. Faça login diretamente com seu e-mail e senha!`,
+        };
+      }
+
+      // Conectar este usuário a esta igreja com perfil padrão MEMBER
+      await prisma.userChurchAccess.create({
+        data: {
+          userId: user.id,
+          tenantId: tenant.id,
+          role: "MEMBER",
+        },
+      });
+
+      // Atualizar código de ativação se ainda não verificado
+      if (!user.isEmailVerified) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { verificationCode: activationCode, codeExpiresAt },
+        });
+        await sendActivationCodeEmail({
+          to: cleanEmail,
+          name: user.name,
+          code: activationCode,
+          churchName: tenant.name,
+        });
+      }
+
+      revalidatePath(`/${tenant.slug}`);
+      revalidatePath(`/${tenant.slug}/membros`);
+
+      return {
+        success: true,
+        alreadyHadAccount: true,
+        requiresActivation: !user.isEmailVerified,
+        message: `Você agora faz parte da congregação ${tenant.name} como Membro!`,
+      };
+    }
+
+    // Criar novo usuário
+    const hashedPassword = await bcrypt.hash(params.password, 10);
+    user = await prisma.user.create({
+      data: {
+        name: params.name.trim(),
+        email: cleanEmail,
+        password: hashedPassword,
+        role: "MEMBER", // Por padrão é membro
+        isEmailVerified: false,
+        verificationCode: activationCode,
+        codeExpiresAt,
+        tenantId: tenant.id,
+        churchAccesses: {
+          create: {
+            tenantId: tenant.id,
+            role: "MEMBER",
+          },
+        },
+      },
+      include: { churchAccesses: true },
+    });
+
+    await prisma.activationCode.create({
+      data: {
+        email: cleanEmail,
+        code: activationCode,
+        expiresAt: codeExpiresAt,
+      },
+    });
+
+    // Enviar código de 6 dígitos via Hostinger SMTP
+    await sendActivationCodeEmail({
+      to: cleanEmail,
+      name: user.name,
+      code: activationCode,
+      churchName: tenant.name,
+    });
+
+    await prisma.emailLog.create({
+      data: {
+        type: "OUTGOING",
+        from: "suporte@lynxems.com.br",
+        to: cleanEmail,
+        subject: `Código de Ativação: ${activationCode} • ${tenant.name}`,
+        snippet: `Auto-cadastro de membro na congregação ${tenant.name}`,
+        status: "SENT",
+        code: activationCode,
+      },
+    });
+
+    revalidatePath(`/${tenant.slug}`);
+    revalidatePath(`/${tenant.slug}/membros`);
+
+    return {
+      success: true,
+      requiresActivation: true,
+      email: cleanEmail,
+      message: `Cadastro realizado com sucesso na ${tenant.name}! Enviamos o código de 6 dígitos para ${cleanEmail}.`,
+    };
+  } catch (error: any) {
+    console.error("Erro no auto-cadastro de membro:", error);
+    return { success: false, error: error.message || "Erro ao realizar cadastro." };
+  }
+}
+
+// 8. O Master define/altera o acesso e perfil de um usuário para qualquer igreja da rede
+export async function setUserChurchAccess(params: {
+  userId: string;
+  tenantId: string;
+  role: string;
+}) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: params.userId },
+    });
+    if (!user) return { success: false, error: "Usuário não encontrado." };
+
+    const access = await prisma.userChurchAccess.upsert({
+      where: {
+        userId_tenantId: {
+          userId: params.userId,
+          tenantId: params.tenantId,
+        },
+      },
+      update: {
+        role: params.role,
+      },
+      create: {
+        userId: params.userId,
+        tenantId: params.tenantId,
+        role: params.role,
+      },
+      include: {
+        tenant: true,
+      },
+    });
+
+    return { success: true, access };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// 9. O Master revoga o acesso de um usuário a uma igreja específica
+export async function removeUserChurchAccess(params: {
+  userId: string;
+  tenantId: string;
+}) {
+  try {
+    await prisma.userChurchAccess.deleteMany({
+      where: {
+        userId: params.userId,
+        tenantId: params.tenantId,
+      },
+    });
+    return { success: true };
+  } catch (error: any) {
     return { success: false, error: error.message };
   }
 }

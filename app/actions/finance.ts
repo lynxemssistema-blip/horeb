@@ -97,3 +97,29 @@ export async function generatePixTransaction({
     };
   }
 }
+
+export async function getChurchPixConfig(slug: string) {
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        primaryColor: true,
+        pixKey: true,
+        pixKeyType: true,
+        pixPresetValues: true,
+      },
+    });
+
+    if (!tenant) return { success: false, error: "Igreja não encontrada." };
+
+    return {
+      success: true,
+      tenant,
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
