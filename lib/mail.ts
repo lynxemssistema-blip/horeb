@@ -127,6 +127,116 @@ export async function sendActivationCodeEmail({
   }
 }
 
+export async function sendMemberInvitationEmail({
+  to,
+  recipientName,
+  churchName,
+  roleName,
+  inviteUrl,
+  primaryColor = "#f59e0b",
+}: {
+  to: string;
+  recipientName?: string;
+  churchName: string;
+  roleName: string;
+  inviteUrl: string;
+  primaryColor?: string;
+}) {
+  try {
+    const greeting = recipientName ? `Olá, <strong style="color: #ffffff;">${recipientName}</strong>!` : "A paz do Senhor!";
+    const info = await mailTransporter.sendMail({
+      from: smtpFrom,
+      to,
+      subject: `Convite Especial: Você foi convidado para a ${churchName} • Horeb`,
+      html: `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Convite de Membresia • Horeb</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #070709; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f4f4f5;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #070709; padding: 30px 15px;">
+            <tr>
+              <td align="center">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 540px; background-color: #121216; border-radius: 20px; border: 1px solid rgba(245, 158, 11, 0.25); overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.8);">
+                  
+                  <!-- Top Bar Colorida -->
+                  <tr>
+                    <td height="6" style="background: linear-gradient(90deg, ${primaryColor}, #f59e0b, ${primaryColor});"></td>
+                  </tr>
+
+                  <!-- Header com Título -->
+                  <tr>
+                    <td style="padding: 35px 35px 20px 35px; text-align: center;">
+                      <div style="display: inline-block; padding: 6px 16px; border-radius: 9999px; background-color: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px;">
+                        CONVITE EXCLUSIVO • REDE DE IGREJAS
+                      </div>
+                      <h1 style="margin: 0; font-size: 24px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">
+                        Você Foi Convidado!
+                      </h1>
+                      <p style="margin: 10px 0 0 0; font-size: 14px; color: #a1a1aa; line-height: 1.6;">
+                        ${greeting} A liderança da <strong style="color: #ffffff;">${churchName}</strong> enviou este convite para você fazer parte da comunidade na plataforma Horeb.
+                      </p>
+                    </td>
+                  </tr>
+
+                  <!-- Card de Detalhes do Perfil -->
+                  <tr>
+                    <td style="padding: 10px 35px 25px 35px;">
+                      <div style="background-color: #09090b; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 20px; text-align: center;">
+                        <span style="display: block; font-size: 11px; font-weight: 700; color: #a1a1aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">
+                          Seu Perfil de Acesso Atribuído
+                        </span>
+                        <span style="display: inline-block; padding: 6px 16px; border-radius: 9999px; background-color: ${primaryColor}25; color: ${primaryColor}; font-size: 14px; font-weight: 800; border: 1px solid ${primaryColor}50;">
+                          ${roleName}
+                        </span>
+                        <p style="margin: 12px 0 0 0; font-size: 12px; color: #71717a;">
+                          Congregação: <strong style="color: #d4d4d8;">${churchName}</strong>
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Botão de Ação -->
+                  <tr>
+                    <td style="padding: 0 35px 30px 35px; text-align: center;">
+                      <a href="${inviteUrl}" target="_blank" style="display: inline-block; width: 85%; padding: 14px 20px; background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #000000; font-size: 15px; font-weight: 900; text-decoration: none; border-radius: 14px; box-shadow: 0 10px 25px rgba(245,158,11,0.3); text-transform: uppercase; letter-spacing: 0.5px;">
+                        Concluir Meu Cadastro Agora &rarr;
+                      </a>
+                      <p style="margin: 16px 0 0 0; font-size: 11px; color: #71717a;">
+                        Ou copie e cole este link no seu navegador:<br>
+                        <a href="${inviteUrl}" style="color: #f59e0b; word-break: break-all;">${inviteUrl}</a>
+                      </p>
+                    </td>
+                  </tr>
+
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #09090b; border-top: 1px solid rgba(255,255,255,0.06); padding: 20px 35px; text-align: center; font-size: 11px; color: #52525b;">
+                      Horeb • Desenvolvido e Gerenciado por <strong>Lynx EMS Sistemas</strong>.<br>
+                      Plataforma Oficial de Tecnologia e Gestão Eclesial.
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+    });
+
+    console.log("E-mail de convite enviado com sucesso:", info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error("Falha ao enviar e-mail de convite:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function testSmtpConnection() {
   try {
     await mailTransporter.verify();

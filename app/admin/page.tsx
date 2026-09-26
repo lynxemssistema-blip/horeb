@@ -6,21 +6,23 @@ import {
   getAllPlans,
   getAllUsers,
   getEmailCenterData,
+  getPromotionConfig,
 } from "@/app/actions/superadmin";
 
 export const metadata = {
-  title: "Super Admin • Horeb SaaS",
-  description: "Painel executivo master de gestão de assinaturas, congregações e e-mails.",
+  title: "Super Admin • Horeb por Lynx EMS Sistemas",
+  description: "Painel executivo master de gestão de assinaturas, congregações, e-mails e promoções.",
 };
 
 export default async function AdminPage() {
-  const [metricsRes, tenantsRes, plansRes, usersRes, emailDataRes] =
+  const [metricsRes, tenantsRes, plansRes, usersRes, emailDataRes, promoRes] =
     await Promise.all([
       getSuperAdminMetrics(),
       getAllTenants(),
       getAllPlans(),
       getAllUsers(),
       getEmailCenterData(),
+      getPromotionConfig(),
     ]);
 
   return (
@@ -33,6 +35,7 @@ export default async function AdminPage() {
       initialInbox={emailDataRes.inbox || []}
       inboxTotal={emailDataRes.inboxTotal || 0}
       imapConnected={emailDataRes.imapConnected || false}
+      initialPromoConfig={promoRes.config}
     />
   );
 }

@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
   updateTenantSubscription,
   createOrUpdatePlan,
@@ -22,6 +23,7 @@ import {
   manuallyVerifyUser,
   sendDirectEmail,
   testEmailDiagnostics,
+  updatePromotionConfig,
 } from "@/app/actions/superadmin";
 import { resendActivationCode } from "@/app/actions/activation";
 import {
@@ -51,6 +53,9 @@ import {
   LogOut,
   ChevronRight,
   Layers,
+  Gift,
+  Sliders,
+  Check,
 } from "lucide-react";
 
 interface SuperAdminDashboardProps {
@@ -62,6 +67,7 @@ interface SuperAdminDashboardProps {
   initialInbox: any[];
   inboxTotal: number;
   imapConnected: boolean;
+  initialPromoConfig?: any;
 }
 
 export function SuperAdminDashboard({
@@ -73,6 +79,7 @@ export function SuperAdminDashboard({
   initialInbox,
   inboxTotal,
   imapConnected,
+  initialPromoConfig,
 }: SuperAdminDashboardProps) {
   const [tenants, setTenants] = useState(initialTenants);
   const [plans, setPlans] = useState(initialPlans);
@@ -84,6 +91,23 @@ export function SuperAdminDashboard({
 
   // Estados de formulários
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Estado da Promoção de Lançamento (Outubro/2026 - Primeiras 100 Igrejas)
+  const [promoConfig, setPromoConfig] = useState(
+    initialPromoConfig || {
+      active: true,
+      badge: "CONDIÇÃO EXCLUSIVA DE LANÇAMENTO",
+      title: "Programa Especial: Primeiras 100 Igrejas de Outubro/2026",
+      description:
+        "Para as primeiras 100 igrejas parceiras do mês de outubro/2026, oferecemos 50% de desconto na taxa de implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança. Em troca, construiremos juntos seu case de sucesso ministerial.",
+      discountPercent: 50,
+      currentCount: 63,
+      targetCount: 100,
+      validityText: "Válido até 31 de Outubro de 2026",
+      ctaText: "Garantir Minha Vaga (50% OFF)",
+    }
+  );
+  const [savingPromo, setSavingPromo] = useState(false);
 
   // Estado do Modal de Criar/Editar Plano
   const [showPlanModal, setShowPlanModal] = useState(false);
@@ -133,6 +157,36 @@ export function SuperAdminDashboard({
         toast.error("Falha ao atualizar assinatura.");
       }
     });
+  };
+
+  // Ação: Salvar Configurações da Promoção
+  const handleSavePromo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingPromo(true);
+    try {
+      const res = await updatePromotionConfig({
+        active: promoConfig.active,
+        badge: promoConfig.badge,
+        title: promoConfig.title,
+        description: promoConfig.description,
+        discountPercent: Number(promoConfig.discountPercent) || 50,
+        currentCount: Number(promoConfig.currentCount) || 0,
+        targetCount: Number(promoConfig.targetCount) || 100,
+        validityText: promoConfig.validityText,
+        ctaText: promoConfig.ctaText,
+      });
+
+      if (res.success && res.config) {
+        setPromoConfig(res.config);
+        toast.success("Promoção de lançamento atualizada com sucesso na landing page!");
+      } else {
+        toast.error(res.error || "Falha ao atualizar promoção.");
+      }
+    } catch {
+      toast.error("Erro inesperado ao salvar promoção.");
+    } finally {
+      setSavingPromo(false);
+    }
   };
 
   // Ação: Abrir modal de edição/criação de plano
@@ -296,13 +350,13 @@ export function SuperAdminDashboard({
               </div>
               <div>
                 <span className="font-black text-white text-base tracking-tight flex items-center gap-2">
-                  Horeb SaaS
+                  Horeb SaaS • Lynx EMS Sistemas
                   <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
                     SUPER ADMIN
                   </span>
                 </span>
                 <span className="text-[11px] text-zinc-400 block -mt-0.5">
-                  Painel Executivo de Gestão Geral
+                  Desenvolvido e Gerenciado por Lynx EMS Sistemas
                 </span>
               </div>
             </Link>
@@ -332,49 +386,50 @@ export function SuperAdminDashboard({
 
       {/* Conteúdo Principal */}
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-8 py-8 space-y-8 flex-1">
-        {/* Navegação por Abas do Super Admin */}
+        {/* Navegação por Abas do Super Admin - BOTÕES COM ALTO CONTRASTE E VISIBILIDADE TOTAL */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 w-full bg-zinc-950/90 border border-white/15 p-2 rounded-2xl gap-2 shadow-2xl backdrop-blur-xl">
+          {[
+            { id: "overview", label: "1. Visão Geral (MRR)", icon: TrendingUp },
+            { id: "tenants", label: "2. Assinaturas & Igrejas", icon: Building2 },
+            { id: "plans", label: "3. Planos Comerciais", icon: Layers },
+            { id: "users", label: "4. Usuários & Ativação", icon: Users },
+            { id: "emails", label: "5. Central de E-mails", icon: Mail },
+            { id: "promo", label: "6. Promoção (100)", icon: Gift, badge: "Outubro" },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-black text-xs transition-all cursor-pointer select-none",
+                  isActive
+                    ? "bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-black shadow-lg shadow-amber-500/30 border border-amber-300 font-black scale-[1.02]"
+                    : "bg-zinc-900 text-zinc-100 hover:text-white hover:bg-zinc-800 border border-zinc-700/80 hover:border-amber-500/50 shadow-sm"
+                )}
+              >
+                <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-black" : "text-amber-400")} />
+                <span className="truncate">{tab.label}</span>
+                {tab.badge && (
+                  <span
+                    className={cn(
+                      "text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase ml-0.5 shrink-0",
+                      isActive
+                        ? "bg-black/20 text-black"
+                        : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                    )}
+                  >
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-          <TabsList className="grid grid-cols-2 sm:grid-cols-5 w-full h-auto bg-zinc-900/80 border border-white/[0.08] p-1.5 rounded-2xl gap-1.5">
-            <TabsTrigger
-              value="overview"
-              className="text-xs font-black py-2.5 rounded-xl gap-2 data-active:!bg-gradient-to-r data-active:!from-amber-500 data-active:!to-yellow-500 data-active:!text-black data-active:!shadow-lg transition-all"
-            >
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>1. Visão Geral (MRR)</span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="tenants"
-              className="text-xs font-black py-2.5 rounded-xl gap-2 data-active:!bg-gradient-to-r data-active:!from-amber-500 data-active:!to-yellow-500 data-active:!text-black data-active:!shadow-lg transition-all"
-            >
-              <Building2 className="w-3.5 h-3.5" />
-              <span>2. Assinaturas & Igrejas</span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="plans"
-              className="text-xs font-black py-2.5 rounded-xl gap-2 data-active:!bg-gradient-to-r data-active:!from-amber-500 data-active:!to-yellow-500 data-active:!text-black data-active:!shadow-lg transition-all"
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>3. Planos Comerciais</span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="users"
-              className="text-xs font-black py-2.5 rounded-xl gap-2 data-active:!bg-gradient-to-r data-active:!from-amber-500 data-active:!to-yellow-500 data-active:!text-black data-active:!shadow-lg transition-all"
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>4. Usuários & Ativação</span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="emails"
-              className="text-xs font-black py-2.5 rounded-xl gap-2 data-active:!bg-gradient-to-r data-active:!from-amber-500 data-active:!to-yellow-500 data-active:!text-black data-active:!shadow-lg transition-all"
-            >
-              <Mail className="w-3.5 h-3.5" />
-              <span>5. Central de E-mails</span>
-            </TabsTrigger>
-          </TabsList>
 
           {/* ========================================================================= */}
           {/* TAB 1: VISÃO GERAL & MRR                                                  */}
@@ -456,11 +511,12 @@ export function SuperAdminDashboard({
                 </div>
                 <div>
                   <h3 className="text-lg font-black text-white">
-                    Modo Super Admin • Acesso Irrestrito
+                    Modo Super Admin • Acesso Irrestrito (Edson Manoel)
                   </h3>
                   <p className="text-xs text-zinc-400">
                     Você possui autoridade master para impersonar qualquer igreja, gerenciar
-                    assinaturas, criar planos e inspecionar mensagens SMTP/IMAP.
+                    assinaturas, criar planos, alterar a promoção de outubro e inspecionar mensagens
+                    SMTP/IMAP.
                   </p>
                 </div>
               </div>
@@ -472,6 +528,14 @@ export function SuperAdminDashboard({
                 >
                   <span>Gerenciar Assinaturas das Igrejas</span>
                   <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                </Button>
+
+                <Button
+                  onClick={() => setActiveTab("promo")}
+                  className="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-black text-xs h-10 px-4 rounded-xl gap-1.5"
+                >
+                  <Gift className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Configurar Promoção (Outubro)</span>
                 </Button>
 
                 <Button
@@ -880,7 +944,7 @@ export function SuperAdminDashboard({
               <Button
                 onClick={handleRunDiagnostics}
                 disabled={diagRunning}
-                className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs h-10 px-4 rounded-xl gap-2"
+                className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs h-10 px-4 rounded-xl gap-2 cursor-pointer"
               >
                 {diagRunning ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -1061,6 +1125,271 @@ export function SuperAdminDashboard({
                   <span>Enviar E-mail Oficial</span>
                 </Button>
               </form>
+            </div>
+          </TabsContent>
+
+          {/* ========================================================================= */}
+          {/* TAB 6: GERENCIADOR DA PROMOÇÃO (OUTUBRO / PRIMEIRAS 100 IGREJAS)         */}
+          {/* ========================================================================= */}
+          <TabsContent value="promo" className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-black text-white flex items-center gap-2">
+                  <Gift className="w-5 h-5 text-amber-400" />
+                  <span>Gerenciador da Promoção de Lançamento (Outubro/2026)</span>
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Ative ou desative a promoção, ajuste o contador de vagas (ex: 63/100), período de
+                  validade e textos exibidos na página inicial.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-zinc-300">Status na Home:</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPromoConfig((p: any) => ({ ...p, active: !p.active }))
+                  }
+                  className={`px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-1.5 ${
+                    promoConfig.active
+                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-lg shadow-emerald-500/10"
+                      : "bg-zinc-800 text-zinc-400 border-white/10"
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      promoConfig.active ? "bg-emerald-400 animate-pulse" : "bg-zinc-500"
+                    }`}
+                  />
+                  <span>{promoConfig.active ? "PROMOÇÃO ATIVA" : "PAUSADA (OCULTA)"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Painel de Edição e Live Preview Lado a Lado */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Formulário de Configuração */}
+              <div className="p-6 rounded-2xl bg-zinc-950 border border-white/10 space-y-4">
+                <h4 className="text-sm font-black text-white flex items-center gap-2 border-b border-white/[0.08] pb-3">
+                  <Sliders className="w-4 h-4 text-amber-400" />
+                  <span>Editar Parâmetros da Campanha</span>
+                </h4>
+
+                <form onSubmit={handleSavePromo} className="space-y-4">
+                  {/* Título da Promoção */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-zinc-300">
+                      Título Principal da Campanha
+                    </label>
+                    <Input
+                      required
+                      value={promoConfig.title}
+                      onChange={(e) =>
+                        setPromoConfig({ ...promoConfig, title: e.target.value })
+                      }
+                      placeholder="Programa Especial: Primeiras 100 Igrejas de Outubro/2026"
+                      className="bg-zinc-900 border-white/10 text-xs h-10 rounded-xl"
+                    />
+                  </div>
+
+                  {/* Badge Superior */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-zinc-300">
+                      Badge Superior / Selo
+                    </label>
+                    <Input
+                      required
+                      value={promoConfig.badge}
+                      onChange={(e) =>
+                        setPromoConfig({ ...promoConfig, badge: e.target.value })
+                      }
+                      placeholder="CONDIÇÃO EXCLUSIVA DE LANÇAMENTO"
+                      className="bg-zinc-900 border-white/10 text-xs h-10 rounded-xl uppercase font-mono"
+                    />
+                  </div>
+
+                  {/* Contador: Vagas Preenchidas / Total */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-zinc-300">
+                        Vagas Preenchidas (Contador)
+                      </label>
+                      <Input
+                        required
+                        type="number"
+                        min={0}
+                        value={promoConfig.currentCount}
+                        onChange={(e) =>
+                          setPromoConfig({
+                            ...promoConfig,
+                            currentCount: parseInt(e.target.value, 10) || 0,
+                          })
+                        }
+                        placeholder="63"
+                        className="bg-zinc-900 border-white/10 text-xs h-10 rounded-xl font-bold font-mono text-amber-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-zinc-300">
+                        Meta Total de Vagas
+                      </label>
+                      <Input
+                        required
+                        type="number"
+                        min={1}
+                        value={promoConfig.targetCount}
+                        onChange={(e) =>
+                          setPromoConfig({
+                            ...promoConfig,
+                            targetCount: parseInt(e.target.value, 10) || 100,
+                          })
+                        }
+                        placeholder="100"
+                        className="bg-zinc-900 border-white/10 text-xs h-10 rounded-xl font-bold font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Período de Validade */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-zinc-300">
+                        Período de Validade (Texto)
+                      </label>
+                      <Input
+                        required
+                        value={promoConfig.validityText}
+                        onChange={(e) =>
+                          setPromoConfig({ ...promoConfig, validityText: e.target.value })
+                        }
+                        placeholder="Válido até 31 de Outubro de 2026"
+                        className="bg-zinc-900 border-white/10 text-xs h-10 rounded-xl"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-zinc-300">
+                        Texto do Botão CTA
+                      </label>
+                      <Input
+                        required
+                        value={promoConfig.ctaText}
+                        onChange={(e) =>
+                          setPromoConfig({ ...promoConfig, ctaText: e.target.value })
+                        }
+                        placeholder="Garantir Minha Vaga (50% OFF)"
+                        className="bg-zinc-900 border-white/10 text-xs h-10 rounded-xl font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Descrição Detalhada */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-zinc-300">
+                      Texto da Descrição Promocional
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={promoConfig.description}
+                      onChange={(e) =>
+                        setPromoConfig({ ...promoConfig, description: e.target.value })
+                      }
+                      className="w-full bg-zinc-900 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:ring-1 focus:ring-amber-500 leading-relaxed"
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={savingPromo}
+                    className="w-full h-11 bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-black font-black text-xs rounded-xl shadow-lg shadow-amber-500/20 gap-2 cursor-pointer"
+                  >
+                    {savingPromo ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Check className="w-4 h-4 stroke-[3]" />
+                    )}
+                    <span>Salvar e Atualizar Promoção na Página Inicial</span>
+                  </Button>
+                </form>
+              </div>
+
+              {/* Prévia ao Vivo (Como vai aparecer na Landing Page) */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-black text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <span>Prévia em Tempo Real (Landing Page)</span>
+                  </h4>
+                  <span className="text-[10px] text-zinc-500">Atualiza automaticamente</span>
+                </div>
+
+                {/* Card Banner Renderizado */}
+                <div className="relative rounded-3xl p-6 sm:p-7 bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-600/15 border-2 border-amber-500/40 backdrop-blur-xl shadow-2xl space-y-4 overflow-hidden">
+                  <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-amber-500/20 blur-3xl rounded-full pointer-events-none" />
+
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 text-[11px] font-black uppercase tracking-wider">
+                    <Gift className="w-3.5 h-3.5" />
+                    <span>{promoConfig.badge}</span>
+                  </div>
+
+                  <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    {promoConfig.title}
+                  </h3>
+
+                  <p className="text-xs text-zinc-300 leading-relaxed">
+                    {promoConfig.description}
+                  </p>
+
+                  {/* Barra de Progresso do Contador (ex: 63/100) */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between text-xs font-bold">
+                      <span className="text-amber-300 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        Vagas Preenchidas:
+                      </span>
+                      <span className="font-mono text-white bg-black/60 px-2.5 py-0.5 rounded-lg border border-white/10">
+                        <strong>{promoConfig.currentCount}</strong> / {promoConfig.targetCount} vagas ({Math.round(((promoConfig.currentCount || 0) / (promoConfig.targetCount || 1)) * 100)}%)
+                      </span>
+                    </div>
+
+                    <div className="w-full h-3.5 bg-black/60 rounded-full border border-white/15 overflow-hidden p-0.5">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-300 rounded-full shadow-[0_0_12px_rgba(245,158,11,0.6)] transition-all duration-500"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            Math.round(
+                              ((promoConfig.currentCount || 0) /
+                                (promoConfig.targetCount || 1)) *
+                                100
+                            )
+                          )}%`,
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-0.5">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-amber-400" />
+                        {promoConfig.validityText}
+                      </span>
+                      <span className="text-emerald-400 font-bold">
+                        {Math.max(0, promoConfig.targetCount - promoConfig.currentCount)} vagas restantes
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <Button className="h-11 px-6 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 text-black font-black text-xs rounded-xl shadow-lg gap-2">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>{promoConfig.ctaText}</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           </TabsContent>
         </Tabs>

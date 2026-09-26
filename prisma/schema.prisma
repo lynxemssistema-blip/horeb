@@ -119,3 +119,18 @@ model EmailLog {
 
   createdAt DateTime @default(now())
 }
+
+model PromotionConfig {
+  id              String   @id @default("default")
+  active          Boolean  @default(true)
+  badge           String   @default("CONDIÇÃO EXCLUSIVA DE LANÇAMENTO")
+  title           String   @default("Programa Especial: Primeiras 100 Igrejas de Outubro/2026")
+  description     String   @default("Para as primeiras 100 igrejas parceiras do mês de outubro/2026, oferecemos 50% de desconto na taxa de implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança. Em troca, construiremos juntos seu case de sucesso ministerial.")
+  discountPercent Int      @default(50)
+  currentCount    Int      @default(63)
+  targetCount     Int      @default(100)
+  validityText    String   @default("Válido até 31 de Outubro de 2026")
+  ctaText         String   @default("Garantir Minha Vaga (50% OFF)")
+
+  updatedAt       DateTime @updatedAt
+}

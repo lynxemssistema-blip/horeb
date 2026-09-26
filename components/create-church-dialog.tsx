@@ -556,6 +556,16 @@ export function CreateChurchDialog({
             {/* TAB 2: CRIAR UMA FILIAL VINCULADA À MATRIZ                                */}
             {/* ========================================================================= */}
             <TabsContent value="branch" className="pt-4 space-y-4">
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-xs space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-amber-400">
+                  <Sparkles className="w-4 h-4" />
+                  <span>Estrutura Completa para Cada Filial</span>
+                </div>
+                <p className="text-[11px] text-zinc-300 leading-relaxed">
+                  A matriz pode cadastrar quantas filiais desejar. Cada filial terá toda a estrutura completa do app Horeb: URL própria, células nos lares, dízimos via PIX, espaço kids com check-in seguro, pedidos de oração e paleta de cores exclusiva vinculada à Matriz.
+                </p>
+              </div>
+
               <form onSubmit={handleCreateBranch} className="space-y-4">
                 {/* Seleção de Sede */}
                 <div className="rounded-2xl bg-zinc-900/60 border border-white/[0.07] p-4 sm:p-5 space-y-3 backdrop-blur-sm">

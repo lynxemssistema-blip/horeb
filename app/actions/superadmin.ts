@@ -296,3 +296,71 @@ export async function testEmailDiagnostics() {
     imap: imapRes,
   };
 }
+
+// 9. Buscar e Atualizar Configurações da Promoção
+export async function getPromotionConfig() {
+  try {
+    const config = await prisma.promotionConfig.upsert({
+      where: { id: "default" },
+      update: {},
+      create: {
+        id: "default",
+        active: true,
+        badge: "CONDIÇÃO EXCLUSIVA DE LANÇAMENTO",
+        title: "Programa Especial: Primeiras 100 Igrejas de Outubro/2026",
+        description:
+          "Para as primeiras 100 igrejas parceiras do mês de outubro/2026, oferecemos 50% de desconto na taxa de implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança. Em troca, construiremos juntos seu case de sucesso ministerial.",
+        discountPercent: 50,
+        currentCount: 63,
+        targetCount: 100,
+        validityText: "Válido até 31 de Outubro de 2026",
+        ctaText: "Garantir Minha Vaga (50% OFF)",
+      },
+    });
+
+    return { success: true, config };
+  } catch (error: any) {
+    return {
+      success: false,
+      config: {
+        id: "default",
+        active: true,
+        badge: "CONDIÇÃO EXCLUSIVA DE LANÇAMENTO",
+        title: "Programa Especial: Primeiras 100 Igrejas de Outubro/2026",
+        description:
+          "Para as primeiras 100 igrejas parceiras do mês de outubro/2026, oferecemos 50% de desconto na taxa de implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança.",
+        discountPercent: 50,
+        currentCount: 63,
+        targetCount: 100,
+        validityText: "Válido até 31 de Outubro de 2026",
+        ctaText: "Garantir Minha Vaga (50% OFF)",
+      },
+    };
+  }
+}
+
+export async function updatePromotionConfig(data: {
+  active: boolean;
+  badge: string;
+  title: string;
+  description: string;
+  discountPercent: number;
+  currentCount: number;
+  targetCount: number;
+  validityText: string;
+  ctaText: string;
+}) {
+  try {
+    const config = await prisma.promotionConfig.upsert({
+      where: { id: "default" },
+      update: data,
+      create: { id: "default", ...data },
+    });
+
+    revalidatePath("/");
+    revalidatePath("/admin");
+    return { success: true, config };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}

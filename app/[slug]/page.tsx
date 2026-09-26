@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PrayerRequestDialog } from "@/components/prayer-request-dialog";
+import { CreateChurchDialog } from "@/components/create-church-dialog";
 import {
   Calendar,
   HeartHandshake,
@@ -27,6 +28,7 @@ import {
   MessageCircle,
   ShieldCheck,
   Church,
+  PlusCircle,
 } from "lucide-react";
 
 interface PageProps {
@@ -302,12 +304,17 @@ export default async function TenantDashboardPage({ params }: PageProps) {
             </Card>
           </div>
 
-          {/* Card 6: Gestão e Membresia */}
+          {/* Card 6: Gestão, Filiais & Membresia */}
           <div className="group block focus:outline-none">
             <Card className="h-full border-border/80 hover:border-primary/50 hover:shadow-md transition-all duration-200 flex flex-col justify-between">
               <CardHeader className="pb-2">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                  <ShieldCheck className="w-5 h-5" />
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    {isMatriz ? `${tenant.branches.length} Filiais` : "Filial Vinculada"}
+                  </span>
                 </div>
                 <CardTitle className="text-base font-semibold group-hover:text-primary transition-colors flex items-center justify-between">
                   <span>Rede & Filiais</span>
@@ -318,25 +325,72 @@ export default async function TenantDashboardPage({ params }: PageProps) {
                     : `Filial pertencente à ${tenant.parent?.name || "Matriz"}.`}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-0">
+              <CardContent className="pt-0 space-y-2">
                 {isMatriz && tenant.branches.length > 0 ? (
-                  <div className="space-y-1 mt-2">
-                    {tenant.branches.slice(0, 2).map((b) => (
+                  <div className="space-y-1.5 mt-1">
+                    {tenant.branches.map((b) => (
                       <Link
                         key={b.id}
                         href={`/${b.slug}`}
-                        className="flex items-center justify-between text-xs p-1.5 rounded bg-muted/50 hover:bg-muted text-foreground"
+                        className="flex items-center justify-between text-xs p-2 rounded-lg bg-muted/50 hover:bg-muted text-foreground transition-colors border border-border/50"
                       >
-                        <span className="truncate">{b.name}</span>
-                        <ArrowRight className="w-3 h-3 text-primary" />
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: b.primaryColor }}
+                          />
+                          <span className="truncate font-semibold">{b.name}</span>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
                       </Link>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-[11px] text-muted-foreground bg-muted/60 p-2 rounded-lg mt-2">
-                    {isMatriz ? "Nenhuma filial cadastrada ainda." : "Sede com suporte em tempo real."}
+                  <div className="text-[11px] text-muted-foreground bg-muted/60 p-2.5 rounded-lg mt-1">
+                    {isMatriz
+                      ? "Cadastre filiais para expandir a estrutura da sua igreja."
+                      : `Conectada à ${tenant.parent?.name || "Matriz Sede"}.`}
                   </div>
                 )}
+
+                {/* Ações da Rede de Igrejas */}
+                <div className="pt-2 flex flex-col gap-1.5">
+                  {isMatriz && (
+                    <CreateChurchDialog
+                      defaultTab="branch"
+                      parentTenantId={tenant.id}
+                      existingTenants={[
+                        {
+                          id: tenant.id,
+                          name: tenant.name,
+                          slug: tenant.slug,
+                          primaryColor: tenant.primaryColor,
+                        },
+                      ]}
+                      triggerButton={
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs font-bold gap-1.5 h-9 border-dashed border-primary/40 hover:border-primary text-primary hover:bg-primary/10 transition-all cursor-pointer"
+                        >
+                          <PlusCircle className="w-3.5 h-3.5" />
+                          <span>+ Cadastrar Nova Filial</span>
+                        </Button>
+                      }
+                    />
+                  )}
+
+                  <Link href={`/${slug}/membros`}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs font-semibold gap-1.5 h-8 text-muted-foreground hover:text-foreground"
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      <span>Gerenciar Membros & Convites</span>
+                    </Button>
+                  </Link>
+                </div>
               </CardContent>
             </Card>
           </div>

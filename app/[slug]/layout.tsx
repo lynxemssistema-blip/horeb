@@ -158,6 +158,7 @@ export default async function TenantLayout({
       <AppSidebar
         slug={tenant.slug}
         name={tenant.name}
+        tenantId={tenant.id}
         logoUrl={tenant.logoUrl}
         primaryColor={tenant.primaryColor}
         isMatriz={isMatriz}

@@ -25,12 +25,42 @@ interface TenantOption {
   primaryColor: string;
 }
 
-interface PricingSectionProps {
-  existingTenants: TenantOption[];
+interface PromoConfigOption {
+  id?: string;
+  active?: boolean;
+  badge?: string;
+  title?: string;
+  description?: string;
+  discountPercent?: number;
+  currentCount?: number;
+  targetCount?: number;
+  validityText?: string;
+  ctaText?: string;
 }
 
-export function PricingSection({ existingTenants }: PricingSectionProps) {
-  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
+interface PricingSectionProps {
+  existingTenants: TenantOption[];
+  promoConfig?: PromoConfigOption;
+}
+
+export function PricingSection({ existingTenants, promoConfig }: PricingSectionProps) {
+  // Configurações com fallback caso não venha do banco
+  const promo = promoConfig || {
+    active: true,
+    badge: "CONDIÇÃO EXCLUSIVA DE LANÇAMENTO",
+    title: "Programa Especial: Primeiras 100 Igrejas de Outubro/2026",
+    description:
+      "Para as primeiras 100 igrejas parceiras do mês de outubro/2026, oferecemos 50% de desconto na taxa de implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança. Em troca, construiremos juntos seu case de sucesso ministerial.",
+    discountPercent: 50,
+    currentCount: 63,
+    targetCount: 100,
+    validityText: "Válido até 31 de Outubro de 2026",
+    ctaText: "Garantir Minha Vaga (50% OFF)",
+  };
+
+  const currentCount = promo.currentCount ?? 63;
+  const targetCount = promo.targetCount ?? 100;
+  const percentage = Math.min(100, Math.round((currentCount / (targetCount || 1)) * 100));
 
   const plans = [
     {
@@ -134,8 +164,8 @@ export function PricingSection({ existingTenants }: PricingSectionProps) {
           </span>
         </h2>
         <p className="text-sm sm:text-base text-zinc-400 leading-relaxed">
-          Taxa única de implantação com treinamento incluso + mensalidade sem fidelidade que cabe
-          no orçamento da sua igreja.
+          Taxa única de implantação com treinamento presencial incluso + mensalidade sem fidelidade que
+          cabe no orçamento da sua igreja. Desenvolvido pela <strong>Lynx EMS Sistemas</strong>.
         </p>
       </div>
 
@@ -248,62 +278,95 @@ export function PricingSection({ existingTenants }: PricingSectionProps) {
                 }
               />
               <p className="text-[10px] text-center text-zinc-500 mt-2">
-                Instalação rápida • Sem contrato de fidelidade
+                Instalação assistida • Sem contrato de fidelidade
               </p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Banner de Condição Especial: Programa Igrejas Fundadoras */}
-      <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-600/15 border-2 border-amber-500/40 backdrop-blur-xl shadow-2xl overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-amber-500/20 blur-3xl rounded-full pointer-events-none" />
+      {/* Banner de Condição Especial: Controlado Dinamicamente pelo Super Admin */}
+      {promo.active !== false && (
+        <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-600/15 border-2 border-amber-500/40 backdrop-blur-xl shadow-2xl overflow-hidden animate-in fade-in-0 duration-500">
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-amber-500/20 blur-3xl rounded-full pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-3 max-w-2xl text-center md:text-left">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 text-xs font-black uppercase tracking-wider">
-              <Gift className="w-3.5 h-3.5" />
-              <span>Condição Exclusiva de Lançamento</span>
-            </div>
-            <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Programa de Igrejas Fundadoras (Apenas 2 Vagas)
-            </h3>
-            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
-              Para as duas primeiras igrejas parceiras, oferecemos{" "}
-              <strong className="text-amber-400 font-extrabold">50% de desconto</strong> na taxa de
-              implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança.
-              Em troca, construiremos juntos seu case de sucesso ministerial.
-            </p>
-            <div className="flex flex-wrap gap-4 pt-1 text-xs text-zinc-400 justify-center md:justify-start">
-              <span className="flex items-center gap-1.5">
-                <Check className="w-4 h-4 text-emerald-400" /> 50% OFF na Implantação
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Check className="w-4 h-4 text-emerald-400" /> Treinamento Presencial da Equipe
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Check className="w-4 h-4 text-emerald-400" /> Suporte VIP Direto no WhatsApp
-              </span>
-            </div>
-          </div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="space-y-3.5 max-w-2xl text-center md:text-left">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 text-xs font-black uppercase tracking-wider">
+                <Gift className="w-3.5 h-3.5" />
+                <span>{promo.badge || "CONDIÇÃO EXCLUSIVA DE LANÇAMENTO"}</span>
+              </div>
 
-          <div className="shrink-0 flex flex-col items-center gap-2">
-            <CreateChurchDialog
-              existingTenants={existingTenants}
-              defaultTab="master"
-              triggerButton={
-                <Button className="h-13 px-8 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:brightness-110 text-black font-black text-sm rounded-2xl shadow-xl shadow-amber-500/30 gap-2 cursor-pointer transition-transform hover:scale-105">
-                  <Sparkles className="w-4 h-4" />
-                  <span>Quero Ser Igreja Fundadora</span>
-                </Button>
-              }
-            />
-            <span className="text-[11px] text-amber-300/80 font-medium">
-              Válido para as visitas inaugurais
-            </span>
+              <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                {promo.title || "Programa Especial: Primeiras 100 Igrejas de Outubro/2026"}
+              </h3>
+
+              <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                {promo.description ||
+                  "Para as primeiras 100 igrejas parceiras do mês de outubro/2026, oferecemos 50% de desconto na taxa de implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança. Em troca, construiremos juntos seu case de sucesso ministerial."}
+              </p>
+
+              {/* Contador Dinâmico de Escassez (ex: 63/100) */}
+              <div className="space-y-1.5 pt-1 max-w-md mx-auto md:mx-0">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="text-amber-300 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    Vagas Preenchidas em Outubro:
+                  </span>
+                  <span className="font-mono text-white bg-black/60 px-2.5 py-0.5 rounded-lg border border-white/10">
+                    <strong className="text-amber-400 font-black">{currentCount}</strong> / {targetCount} vagas ({percentage}%)
+                  </span>
+                </div>
+
+                <div className="w-full h-3.5 bg-black/60 rounded-full border border-white/15 overflow-hidden p-0.5">
+                  <div
+                    className="h-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-300 rounded-full shadow-[0_0_12px_rgba(245,158,11,0.6)] transition-all duration-700"
+                    style={{ width: `${percentage}%` }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-0.5">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-amber-400" />
+                    {promo.validityText || "Válido até 31 de Outubro de 2026"}
+                  </span>
+                  <span className="text-emerald-400 font-bold">
+                    {Math.max(0, targetCount - currentCount)} vagas restantes
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-4 pt-1 text-xs text-zinc-400 justify-center md:justify-start">
+                <span className="flex items-center gap-1.5">
+                  <Check className="w-4 h-4 text-emerald-400" /> 50% OFF na Implantação
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Check className="w-4 h-4 text-emerald-400" /> Treinamento Presencial da Equipe
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Check className="w-4 h-4 text-emerald-400" /> Suporte VIP Direto no WhatsApp
+                </span>
+              </div>
+            </div>
+
+            <div className="shrink-0 flex flex-col items-center gap-2">
+              <CreateChurchDialog
+                existingTenants={existingTenants}
+                defaultTab="master"
+                triggerButton={
+                  <Button className="h-13 px-8 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:brightness-110 text-black font-black text-sm rounded-2xl shadow-xl shadow-amber-500/30 gap-2 cursor-pointer transition-transform hover:scale-105">
+                    <Sparkles className="w-4 h-4" />
+                    <span>{promo.ctaText || "Garantir Minha Vaga (50% OFF)"}</span>
+                  </Button>
+                }
+              />
+              <span className="text-[11px] text-amber-300/80 font-medium">
+                {promo.validityText || "Válido até 31 de Outubro de 2026"}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Entenda o Modelo: Implantação vs Mensalidade */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
@@ -340,7 +403,7 @@ export function PricingSection({ existingTenants }: PricingSectionProps) {
             <li className="flex items-start gap-2">
               <span className="text-amber-400">•</span>
               <span>
-                Treinamento prático e humanizado para secretários, tesoureiros e pastores.
+                Treinamento prático e humanizado pela equipe da <strong>Lynx EMS Sistemas</strong>.
               </span>
             </li>
           </ul>
@@ -373,7 +436,7 @@ export function PricingSection({ existingTenants }: PricingSectionProps) {
             <li className="flex items-start gap-2">
               <span className="text-emerald-400">•</span>
               <span>
-                Suporte técnico atencioso para tirar dúvidas e orientar a equipe ministerial.
+                Suporte técnico atencioso da <strong>Lynx EMS Sistemas</strong> para orientar a equipe.
               </span>
             </li>
             <li className="flex items-start gap-2">

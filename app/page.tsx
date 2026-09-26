@@ -31,15 +31,19 @@ import {
   ChevronRight,
   CreditCard,
 } from "lucide-react";
+import { getPromotionConfig } from "@/app/actions/superadmin";
 
 export default async function HomePage() {
-  const tenants = await prisma.tenant.findMany({
-    include: {
-      parent: true,
-      branches: true,
-      cellGroups: true,
-    },
-  });
+  const [tenants, promoRes] = await Promise.all([
+    prisma.tenant.findMany({
+      include: {
+        parent: true,
+        branches: true,
+        cellGroups: true,
+      },
+    }),
+    getPromotionConfig(),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#070709] text-zinc-100 flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200 relative overflow-x-hidden">
@@ -338,6 +342,7 @@ export default async function HomePage() {
             slug: t.slug,
             primaryColor: t.primaryColor,
           }))}
+          promoConfig={promoRes.config}
         />
 
         {/* Pilares de Confiança */}
@@ -362,7 +367,7 @@ export default async function HomePage() {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
           <div className="flex items-center gap-3">
             <span className="font-semibold text-zinc-300">
-              Horeb Soluções Tecnologias Para Igrejas
+              Horeb • Desenvolvido e Gerenciado por <strong className="text-white">Lynx EMS Sistemas</strong>
             </span>
             <span className="text-zinc-600">•</span>
             <Link

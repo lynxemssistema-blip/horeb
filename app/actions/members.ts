@@ -1,0 +1,393 @@
+"use server";
+
+import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
+import { revalidatePath } from "next/cache";
+import { isValidEmail } from "@/lib/validators";
+import {
+  generateActivationCode,
+  sendActivationCodeEmail,
+  sendMemberInvitationEmail,
+} from "@/lib/mail";
+import { ROLE_LABELS } from "@/lib/constants";
+
+// 1. Obter membros e toda a rede de igrejas (Matriz + Filiais)
+export async function getChurchNetworkMembers(churchSlug: string) {
+  try {
+    const currentChurch = await prisma.tenant.findUnique({
+      where: { slug: churchSlug },
+      include: {
+        parent: {
+          include: {
+            branches: true,
+          },
+        },
+        branches: true,
+      },
+    });
+
+    if (!currentChurch) {
+      return { success: false, error: "Igreja não encontrada." };
+    }
+
+    const isMatriz = !currentChurch.parentId;
+    
+    // Obter todos os IDs de congregações pertencentes a esta rede
+    let networkTenantIds: string[] = [currentChurch.id];
+    let allNetworkChurches: { id: string; name: string; slug: string; primaryColor: string; isMatriz: boolean }[] = [
+      {
+        id: currentChurch.id,
+        name: currentChurch.name,
+        slug: currentChurch.slug,
+        primaryColor: currentChurch.primaryColor,
+        isMatriz,
+      },
+    ];
+
+    if (isMatriz) {
+      // Se for Matriz, inclui todas as suas filiais
+      currentChurch.branches.forEach((b) => {
+        networkTenantIds.push(b.id);
+        allNetworkChurches.push({
+          id: b.id,
+          name: b.name,
+          slug: b.slug,
+          primaryColor: b.primaryColor,
+          isMatriz: false,
+        });
+      });
+    } else if (currentChurch.parent) {
+      // Se for Filial, inclui a Sede Matriz e todas as irmãs
+      networkTenantIds.push(currentChurch.parent.id);
+      allNetworkChurches.unshift({
+        id: currentChurch.parent.id,
+        name: currentChurch.parent.name,
+        slug: currentChurch.parent.slug,
+        primaryColor: currentChurch.parent.primaryColor,
+        isMatriz: true,
+      });
+
+      currentChurch.parent.branches.forEach((sister) => {
+        if (sister.id !== currentChurch.id) {
+          networkTenantIds.push(sister.id);
+          allNetworkChurches.push({
+            id: sister.id,
+            name: sister.name,
+            slug: sister.slug,
+            primaryColor: sister.primaryColor,
+            isMatriz: false,
+          });
+        }
+      });
+    }
+
+    // Buscar todos os usuários desta rede
+    const users = await prisma.user.findMany({
+      where: {
+        tenantId: { in: networkTenantIds },
+      },
+      include: {
+        tenant: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return {
+      success: true,
+      isMatriz,
+      currentChurch: {
+        id: currentChurch.id,
+        name: currentChurch.name,
+        slug: currentChurch.slug,
+        primaryColor: currentChurch.primaryColor,
+        plan: currentChurch.plan,
+      },
+      allNetworkChurches,
+      users: users.map((u) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        roleLabel: ROLE_LABELS[u.role] || u.role,
+        isEmailVerified: u.isEmailVerified,
+        createdAt: u.createdAt.toISOString(),
+        tenant: {
+          id: u.tenant.id,
+          name: u.tenant.name,
+          slug: u.tenant.slug,
+          primaryColor: u.tenant.primaryColor,
+        },
+      })),
+    };
+  } catch (error: any) {
+    console.error("Erro ao buscar membros da rede:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// 2. Criar novo usuário com nível de acesso e congregação definida
+export async function createChurchUser(params: {
+  name: string;
+  email: string;
+  role: string;
+  tenantId: string;
+  password?: string;
+  sendInviteEmail?: boolean;
+}) {
+  try {
+    const cleanEmail = params.email.trim().toLowerCase();
+    if (!isValidEmail(cleanEmail)) {
+      return { success: false, error: "Informe um e-mail válido." };
+    }
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: params.tenantId },
+    });
+
+    if (!tenant) {
+      return { success: false, error: "Congregação de destino não encontrada." };
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+    });
+
+    if (existingUser) {
+      return { success: false, error: "Este e-mail já está cadastrado no sistema." };
+    }
+
+    const rawPassword = params.password || "Horeb" + Math.floor(1000 + Math.random() * 9000) + "!";
+    const hashedPassword = await bcrypt.hash(rawPassword, 10);
+    const activationCode = generateActivationCode();
+    const codeExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora de validade
+
+    const user = await prisma.user.create({
+      data: {
+        name: params.name.trim(),
+        email: cleanEmail,
+        password: hashedPassword,
+        role: params.role || "MEMBER",
+        isEmailVerified: false,
+        verificationCode: activationCode,
+        codeExpiresAt,
+        tenantId: tenant.id,
+      },
+    });
+
+    // Salvar código na tabela de ativação
+    await prisma.activationCode.create({
+      data: {
+        email: cleanEmail,
+        code: activationCode,
+        expiresAt: codeExpiresAt,
+      },
+    });
+
+    // Enviar e-mail de ativação e boas-vindas via Hostinger SMTP
+    if (params.sendInviteEmail !== false) {
+      const inviteUrl = `https://horeb.lynxems.com.br/${tenant.slug}/cadastro?email=${encodeURIComponent(
+        cleanEmail
+      )}&role=${params.role || "MEMBER"}`;
+
+      await sendMemberInvitationEmail({
+        to: cleanEmail,
+        recipientName: params.name,
+        churchName: tenant.name,
+        roleName: ROLE_LABELS[params.role] || params.role,
+        inviteUrl,
+        primaryColor: tenant.primaryColor,
+      });
+
+      // Também envia o código numérico por segurança
+      await sendActivationCodeEmail({
+        to: cleanEmail,
+        name: params.name,
+        code: activationCode,
+        churchName: tenant.name,
+      });
+
+      await prisma.emailLog.create({
+        data: {
+          type: "OUTGOING",
+          from: "suporte@lynxems.com.br",
+          to: cleanEmail,
+          subject: `Convite de Membro: ${tenant.name} • Horeb`,
+          snippet: `Criação direta de usuário ${params.name} (${params.role})`,
+          status: "SENT",
+          code: activationCode,
+        },
+      });
+    }
+
+    revalidatePath(`/${tenant.slug}`);
+    revalidatePath(`/${tenant.slug}/membros`);
+
+    return {
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        tempPassword: rawPassword,
+      },
+    };
+  } catch (error: any) {
+    console.error("Erro ao criar usuário da igreja:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// 3. Disparar convite por e-mail com link direto para cadastro
+export async function sendDirectInviteEmail(params: {
+  recipientEmail: string;
+  recipientName?: string;
+  role: string;
+  tenantId: string;
+}) {
+  try {
+    const cleanEmail = params.recipientEmail.trim().toLowerCase();
+    if (!isValidEmail(cleanEmail)) {
+      return { success: false, error: "Informe um e-mail válido." };
+    }
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: params.tenantId },
+    });
+
+    if (!tenant) {
+      return { success: false, error: "Congregação não encontrada." };
+    }
+
+    const inviteUrl = `https://horeb.lynxems.com.br/${tenant.slug}/cadastro?email=${encodeURIComponent(
+      cleanEmail
+    )}&role=${params.role}&name=${encodeURIComponent(params.recipientName || "")}`;
+
+    const mailRes = await sendMemberInvitationEmail({
+      to: cleanEmail,
+      recipientName: params.recipientName,
+      churchName: tenant.name,
+      roleName: ROLE_LABELS[params.role] || params.role,
+      inviteUrl,
+      primaryColor: tenant.primaryColor,
+    });
+
+    if (mailRes.success) {
+      await prisma.emailLog.create({
+        data: {
+          type: "OUTGOING",
+          from: "suporte@lynxems.com.br",
+          to: cleanEmail,
+          subject: `Convite de Membresia: ${tenant.name}`,
+          snippet: `Convite enviado para ${params.recipientName || cleanEmail} com perfil ${params.role}`,
+          status: "SENT",
+        },
+      });
+      return { success: true, inviteUrl };
+    } else {
+      return { success: false, error: mailRes.error || "Falha ao enviar e-mail via Hostinger SMTP." };
+    }
+  } catch (error: any) {
+    console.error("Erro ao enviar convite direto:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// 4. Alterar nível de acesso ou congregação de um usuário
+export async function updateUserRoleAndTenant(params: {
+  userId: string;
+  role: string;
+  tenantId?: string;
+}) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: params.userId },
+      include: { tenant: true },
+    });
+
+    if (!user) {
+      return { success: false, error: "Usuário não encontrado." };
+    }
+
+    if (user.role === "SUPERADMIN") {
+      return { success: false, error: "Não é permitido alterar o perfil do Super Administrador Master." };
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: params.userId },
+      data: {
+        role: params.role,
+        ...(params.tenantId ? { tenantId: params.tenantId } : {}),
+      },
+    });
+
+    revalidatePath(`/${user.tenant.slug}/membros`);
+    return { success: true, user: updated };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// 5. Excluir usuário da congregação
+export async function deleteChurchUser(userId: string) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { tenant: true },
+    });
+
+    if (!user) {
+      return { success: false, error: "Usuário não encontrado." };
+    }
+
+    if (user.role === "SUPERADMIN") {
+      return { success: false, error: "O Super Administrador não pode ser excluído." };
+    }
+
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+
+    revalidatePath(`/${user.tenant.slug}/membros`);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// 6. Atualizar Dados e Identidade Visual da Igreja (Nome, Cor, Logo, etc.)
+export async function updateChurchSettings(params: {
+  tenantId: string;
+  name: string;
+  primaryColor: string;
+  logoUrl?: string;
+}) {
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: params.tenantId },
+    });
+
+    if (!tenant) {
+      return { success: false, error: "Igreja não encontrada." };
+    }
+
+    const updated = await prisma.tenant.update({
+      where: { id: params.tenantId },
+      data: {
+        name: params.name.trim(),
+        primaryColor: params.primaryColor || tenant.primaryColor,
+        logoUrl: params.logoUrl || tenant.logoUrl,
+      },
+    });
+
+    revalidatePath("/");
+    revalidatePath(`/${tenant.slug}`);
+    revalidatePath(`/${tenant.slug}/configuracoes`);
+    revalidatePath(`/${tenant.slug}/membros`);
+
+    return { success: true, tenant: updated };
+  } catch (error: any) {
+    console.error("Erro ao atualizar dados da igreja:", error);
+    return { success: false, error: error.message };
+  }
+}

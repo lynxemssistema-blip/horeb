@@ -22,8 +22,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Horeb | SaaS Multi-Tenant para Igrejas",
-  description: "Plataforma de engajamento e gestão eclesial com motor White-Label dinâmico e arquitetura mobile-first.",
+  title: "Horeb SaaS • Desenvolvido por Lynx EMS Sistemas | Soluções para Igrejas",
+  description: "Plataforma de engajamento e gestão eclesial desenvolvida pela Lynx EMS Sistemas com motor White-Label dinâmico e arquitetura mobile-first.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
