@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { CreateChurchDialog } from "@/components/create-church-dialog";
 import { PricingSection } from "@/components/pricing-section";
 import { NativeMobileTools } from "@/components/native-mobile-tools";
+import { AboutHorebSection } from "@/components/about-horeb-section";
 import {
   Church,
   ArrowRight,
@@ -66,10 +67,10 @@ export default async function HomePage() {
             />
           </div>
 
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-xs font-bold tracking-widest uppercase shadow-sm backdrop-blur-md">
+          <a href="#origem-horeb" className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-xs font-bold tracking-widest uppercase shadow-sm backdrop-blur-md hover:bg-amber-500/20 transition-colors">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Mais que tecnologia, é sobre propósito</span>
-          </div>
+            <span>Mais que tecnologia, é sobre propósito • Conheça a Origem</span>
+          </a>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white max-w-3xl leading-[1.1] pt-1">
             TODA A SUA IGREJA CONECTADA EM UM{" "}
@@ -185,6 +186,9 @@ export default async function HomePage() {
             );
           })}
         </div>
+
+        {/* Por que Horeb? O Significado por Trás do Nome */}
+        <AboutHorebSection />
 
         {/* Seleção de Igrejas para Testar (Multi-Tenant White Label) */}
         <div className="space-y-6 pt-4">
