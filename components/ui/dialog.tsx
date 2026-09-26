@@ -53,11 +53,24 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl bg-zinc-950 p-6 text-sm text-foreground ring-1 ring-white/10 shadow-2xl duration-200 outline-none sm:max-w-lg data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed z-50 flex flex-col w-full bg-zinc-950 text-sm text-foreground ring-1 ring-white/10 shadow-2xl duration-200 outline-none",
+          // Mobile: Bottom Sheet full-width ancorado na base da tela com suporte a safe-area
+          "bottom-0 inset-x-0 max-h-[94dvh] rounded-t-3xl border-t border-white/15 sm:bottom-auto sm:inset-x-auto",
+          // Desktop: Centered dialog modal
+          "sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-lg sm:rounded-3xl sm:max-h-[88vh] sm:border sm:border-white/10",
+          // Animações suaves
+          "data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-bottom-8 sm:data-open:slide-in-from-bottom-0 sm:data-open:zoom-in-95",
+          "data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-bottom-8 sm:data-closed:slide-out-to-bottom-0 sm:data-closed:zoom-out-95",
           className
         )}
+        style={{
+          WebkitOverflowScrolling: "touch",
+          overscrollBehaviorY: "contain",
+        }}
         {...props}
       >
+        {/* Handle visual de Bottom Sheet nativo para Mobile */}
+        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close
@@ -65,7 +78,7 @@ function DialogContent({
             render={
               <button
                 type="button"
-                className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors z-50 cursor-pointer"
+                className="absolute top-3.5 right-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors z-50 cursor-pointer"
               />
             }
           >

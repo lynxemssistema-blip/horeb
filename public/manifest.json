@@ -1,0 +1,27 @@
+{
+  "name": "Horeb | Tecnologia Para Igrejas",
+  "short_name": "Horeb",
+  "description": "Plataforma e aplicativo oficial para gestão, membros, orações, células e dízimos da sua igreja.",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#070709",
+  "theme_color": "#f59e0b",
+  "lang": "pt-BR",
+  "categories": ["lifestyle", "social", "utilities"],
+  "icons": [
+    {
+      "src": "/logo-horeb.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-horeb.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

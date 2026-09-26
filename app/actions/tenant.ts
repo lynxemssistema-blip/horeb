@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { generateActivationCode, sendActivationCodeEmail } from "@/lib/mail";
+import { isValidEmail, sanitizeSlug } from "@/lib/validators";
 
 export interface RegisterMasterParams {
   masterName: string;
@@ -25,9 +27,7 @@ export interface CreateBranchParams {
   address?: string;
 }
 
-import { isValidEmail, sanitizeSlug } from "@/lib/validators";
-
-// 3. Cadastra o Usuário Master com Login, Senha e Igreja Sede
+// 1. Cadastra o Usuário Master com Login, Senha, Igreja Sede e Envio de Código de Ativação
 export async function registerMasterAndChurch(params: RegisterMasterParams) {
   try {
     const cleanEmail = params.masterEmail?.trim().toLowerCase();
@@ -90,21 +90,65 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
         slug,
         primaryColor,
         logoUrl: params.logoUrl || null,
+        plan: "GESTAO",
+        status: "ACTIVE",
+        monthlyPrice: 249,
+        setupPrice: 790,
       },
     });
 
-    // 2. Criar o Usuário Master como ADMIN com Senha Criptografada
+    // 2. Gerar Código de Ativação de 6 Dígitos
+    const isSuperAdmin = cleanEmail === "edsonmanoel2012@gmail.com";
+    const activationCode = generateActivationCode();
+    const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+
+    // 3. Criar o Usuário Master
     const user = await prisma.user.create({
       data: {
         name: params.masterName.trim(),
         email: cleanEmail,
         password: hashedPassword,
-        role: "ADMIN",
+        role: isSuperAdmin ? "SUPERADMIN" : "ADMIN",
+        isEmailVerified: isSuperAdmin, // Super admin já nasce ativo
+        verificationCode: isSuperAdmin ? null : activationCode,
+        codeExpiresAt: isSuperAdmin ? null : codeExpiresAt,
         tenantId: tenant.id,
       },
     });
 
-    // 3. Criar uma célula padrão para demonstração
+    // Salvar código na tabela de ativação
+    if (!isSuperAdmin) {
+      await prisma.activationCode.create({
+        data: {
+          email: cleanEmail,
+          code: activationCode,
+          expiresAt: codeExpiresAt,
+        },
+      });
+
+      // Enviar e-mail com o código de 6 dígitos via Hostinger SMTP
+      const mailRes = await sendActivationCodeEmail({
+        to: cleanEmail,
+        name: user.name,
+        code: activationCode,
+        churchName: tenant.name,
+      });
+
+      // Gravar log de envio
+      await prisma.emailLog.create({
+        data: {
+          type: "OUTGOING",
+          from: "suporte@lynxems.com.br",
+          to: cleanEmail,
+          subject: `Código de Ativação: ${activationCode} • Horeb`,
+          snippet: `Envio de ativação para ${user.name} (${cleanEmail})`,
+          status: mailRes.success ? "SENT" : "FAILED",
+          code: activationCode,
+        },
+      });
+    }
+
+    // 4. Criar uma célula padrão para demonstração
     await prisma.cellGroup.create({
       data: {
         name: "Célula Principal (Sede)",
@@ -113,22 +157,20 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
       },
     });
 
-    // 4. Cadastrar no Supabase Auth & Banco na VPS
+    // 5. Cadastrar no Supabase Auth & Banco na VPS (fallback)
     try {
-      // Criar no Auth da VPS
       await supabase.auth.signUp({
         email: cleanEmail,
         password: rawPassword,
         options: {
           data: {
             name: user.name,
-            role: "ADMIN",
+            role: user.role,
             tenant_id: tenant.id,
           },
         },
       });
 
-      // Salvar tabela pública tenants
       await supabase.from("tenants").insert({
         id: tenant.id,
         name: tenant.name,
@@ -138,13 +180,12 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
         address: params.address || "Sede Principal",
       });
 
-      // Salvar tabela pública users
       await supabase.from("users").insert({
         id: user.id,
         tenant_id: tenant.id,
         name: user.name,
         email: user.email,
-        role: "ADMIN",
+        role: user.role,
       });
     } catch (sbErr) {
       console.warn("Supabase auth sync warning (fallback local active):", sbErr);
@@ -155,9 +196,11 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
 
     return {
       success: true,
+      requiresActivation: !isSuperAdmin,
+      email: cleanEmail,
       tenant,
-      user: { id: user.id, name: user.name, email: user.email },
-      redirectUrl: `/${slug}`,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      redirectUrl: isSuperAdmin ? "/admin" : `/${slug}`,
     };
   } catch (error: any) {
     console.error("Erro no cadastro Master:", error);
@@ -168,7 +211,7 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
   }
 }
 
-// 4. Login de Usuário com E-mail e Senha
+// 2. Login de Usuário com E-mail e Senha
 export async function loginUser(email: string, rawPassword: string) {
   try {
     const cleanEmail = email?.trim().toLowerCase();
@@ -176,6 +219,7 @@ export async function loginUser(email: string, rawPassword: string) {
       return { success: false, error: "Informe um e-mail válido." };
     }
 
+    // Super Admin Master Hardcoded check ou busca no banco
     const user = await prisma.user.findUnique({
       where: { email: cleanEmail },
       include: { tenant: true },
@@ -188,6 +232,50 @@ export async function loginUser(email: string, rawPassword: string) {
     const passwordMatches = await bcrypt.compare(rawPassword, user.password);
     if (!passwordMatches) {
       return { success: false, error: "E-mail ou senha incorretos." };
+    }
+
+    // Se for SUPERADMIN, redirecionar direto para o painel Super Admin
+    if (user.role === "SUPERADMIN") {
+      return {
+        success: true,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: "SUPERADMIN",
+          tenantSlug: user.tenant?.slug || "matriz",
+        },
+        redirectUrl: "/admin",
+      };
+    }
+
+    // Verificar se a conta foi ativada por e-mail
+    if (!user.isEmailVerified) {
+      // Gerar novo código e reenviar por e-mail
+      const activationCode = generateActivationCode();
+      const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          verificationCode: activationCode,
+          codeExpiresAt,
+        },
+      });
+
+      await sendActivationCodeEmail({
+        to: cleanEmail,
+        name: user.name,
+        code: activationCode,
+        churchName: user.tenant?.name,
+      });
+
+      return {
+        success: false,
+        requiresActivation: true,
+        email: cleanEmail,
+        error: "Sua conta ainda não foi ativada. Enviamos um novo código de 6 dígitos para o seu e-mail.",
+      };
     }
 
     return {
@@ -206,7 +294,7 @@ export async function loginUser(email: string, rawPassword: string) {
   }
 }
 
-// 5. Cria uma Filial vinculada à Matriz
+// 3. Cria uma Filial vinculada à Matriz
 export async function createBranchChurch(params: CreateBranchParams) {
   try {
     const slug = sanitizeSlug(params.branchSlug || params.branchName);
@@ -220,7 +308,7 @@ export async function createBranchChurch(params: CreateBranchParams) {
     });
 
     if (!parentTenant) {
-      return { success: false, error: "Igreja Matriz não encontrada." };
+      return { success: false, error: "Igreja sede (matriz) não encontrada." };
     }
 
     const existingSlug = await prisma.tenant.findUnique({
@@ -243,6 +331,10 @@ export async function createBranchChurch(params: CreateBranchParams) {
         primaryColor,
         parentId: parentTenant.id,
         logoUrl: params.logoUrl || parentTenant.logoUrl,
+        plan: parentTenant.plan || "GESTAO",
+        status: "ACTIVE",
+        monthlyPrice: 149,
+        setupPrice: 490,
       },
     });
 

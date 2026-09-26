@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreateChurchDialog } from "@/components/create-church-dialog";
+import { PricingSection } from "@/components/pricing-section";
+import { NativeMobileTools } from "@/components/native-mobile-tools";
 import {
   Church,
   ArrowRight,
@@ -26,6 +28,7 @@ import {
   Sparkles,
   Layers,
   ChevronRight,
+  CreditCard,
 } from "lucide-react";
 
 export default async function HomePage() {
@@ -39,6 +42,9 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#070709] text-zinc-100 flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200 relative overflow-x-hidden">
+      {/* Ferramentas Nativas para Celular (PWA Banner & Instalação) */}
+      <NativeMobileTools />
+
       {/* Luz Ambiente / Ambient Glow no Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] sm:w-[900px] h-[450px] bg-gradient-to-b from-amber-500/15 via-yellow-500/5 to-transparent blur-3xl rounded-full" />
@@ -111,6 +117,16 @@ export default async function HomePage() {
                 </Button>
               }
             />
+
+            <a href="#planos">
+              <Button
+                variant="ghost"
+                className="h-12 px-5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 font-bold text-sm rounded-xl gap-2 transition-all hover:scale-105 cursor-pointer"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Ver Planos & Valores</span>
+              </Button>
+            </a>
           </div>
         </div>
 
@@ -310,6 +326,16 @@ export default async function HomePage() {
           </div>
         </div>
 
+        {/* Planos Comerciais & Estrutura de Negócio Horeb */}
+        <PricingSection
+          existingTenants={tenants.map((t) => ({
+            id: t.id,
+            name: t.name,
+            slug: t.slug,
+            primaryColor: t.primaryColor,
+          }))}
+        />
+
         {/* Pilares de Confiança */}
         <div className="flex flex-wrap items-center justify-center gap-8 text-xs text-zinc-400 pt-6 border-t border-white/[0.08]">
           <div className="flex items-center gap-2">
@@ -330,9 +356,19 @@ export default async function HomePage() {
       {/* Footer Final com Glassmorphism */}
       <footer className="border-t border-white/[0.08] bg-black/70 backdrop-blur-xl py-6 px-4 relative z-10">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
-          <span className="font-semibold text-zinc-300">
-            Horeb Soluções Tecnologias Para Igrejas
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="font-semibold text-zinc-300">
+              Horeb Soluções Tecnologias Para Igrejas
+            </span>
+            <span className="text-zinc-600">•</span>
+            <Link
+              href="/admin"
+              className="text-zinc-400 hover:text-amber-400 transition-colors flex items-center gap-1 font-bold"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+              <span>Painel Super Admin</span>
+            </Link>
+          </div>
           <span className="italic text-amber-400 font-medium tracking-wide">
             &ldquo;Juntos por um maior alcance.&rdquo;
           </span>

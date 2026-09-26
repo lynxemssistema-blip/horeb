@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -12,9 +12,28 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#070709",
+};
+
 export const metadata: Metadata = {
   title: "Horeb | SaaS Multi-Tenant para Igrejas",
   description: "Plataforma de engajamento e gestão eclesial com motor White-Label dinâmico e arquitetura mobile-first.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Horeb App",
+  },
+  icons: {
+    icon: "/logo-horeb.png",
+    apple: "/logo-horeb.png",
+  },
 };
 
 import { Toaster } from "@/components/ui/sonner";

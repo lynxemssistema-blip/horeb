@@ -39,6 +39,7 @@ import {
   Sparkles,
   ArrowRight,
 } from "lucide-react";
+import { ActivationDialog } from "@/components/activation-dialog";
 
 interface TenantOption {
   id: string;
@@ -76,7 +77,6 @@ export function CreateChurchDialog({
   const [activeTab, setActiveTab] = useState<string>(defaultTab);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Formulário 1: Cadastro Master + Matriz
   const [masterName, setMasterName] = useState("");
   const [masterEmail, setMasterEmail] = useState("");
   const [masterPassword, setMasterPassword] = useState("");
@@ -84,6 +84,10 @@ export function CreateChurchDialog({
   const [churchName, setChurchName] = useState("");
   const [churchSlug, setChurchSlug] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#dc2626");
+
+  // Estado da Validação de Código de Ativação
+  const [activationOpen, setActivationOpen] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
 
   // Formulário 2: Login
   const [loginEmail, setLoginEmail] = useState("");
@@ -148,12 +152,19 @@ export function CreateChurchDialog({
         primaryColor,
       });
 
-      if (res.success && res.redirectUrl) {
-        toast.success(`Igreja "${res.tenant?.name}" criada com sucesso!`, {
-          description: `Login master ativo para ${masterEmail}. Redirecionando...`,
-        });
-        setOpen(false);
-        router.push(res.redirectUrl);
+      if (res.success) {
+        if (res.requiresActivation) {
+          toast.info("Código de ativação enviado para o seu e-mail!", {
+            description: `Enviamos um código de 6 dígitos para ${masterEmail}.`,
+          });
+          setPendingEmail(masterEmail);
+          setOpen(false);
+          setActivationOpen(true);
+        } else if (res.redirectUrl) {
+          toast.success(`Igreja "${res.tenant?.name}" criada com sucesso!`);
+          setOpen(false);
+          router.push(res.redirectUrl);
+        }
       } else {
         toast.error(res.error || "Falha ao criar igreja.");
       }
@@ -181,6 +192,11 @@ export function CreateChurchDialog({
         });
         setOpen(false);
         router.push(res.redirectUrl);
+      } else if (res.requiresActivation) {
+        toast.warning(res.error || "Sua conta precisa de ativação.");
+        setPendingEmail(loginEmail);
+        setOpen(false);
+        setActivationOpen(true);
       } else {
         toast.error(res.error || "E-mail ou senha incorretos.");
       }
@@ -227,23 +243,24 @@ export function CreateChurchDialog({
   const selectedParentChurch = existingTenants.find((t) => t.id === selectedParentId);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          (triggerButton as React.ReactElement) || (
-            <Button className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-extrabold shadow-lg shadow-amber-500/20 gap-2">
-              <PlusCircle className="w-4 h-4" />
-              <span>Cadastrar Minha Igreja</span>
-            </Button>
-          )
-        }
-      />
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger
+          render={
+            (triggerButton as React.ReactElement) || (
+              <Button className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-extrabold shadow-lg shadow-amber-500/20 gap-2">
+                <PlusCircle className="w-4 h-4" />
+                <span>Cadastrar Minha Igreja</span>
+              </Button>
+            )
+          }
+        />
 
-      <DialogContent className="max-w-lg w-full max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 bg-zinc-950 border border-white/10 rounded-2xl sm:rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.9),0_0_50px_rgba(245,158,11,0.06)] relative text-zinc-100">
-        {/* Glow de Iluminação Superior */}
-        <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-80 h-40 bg-amber-500/15 blur-3xl rounded-full" />
+        <DialogContent className="max-w-lg w-full max-h-[92dvh] sm:max-h-[88vh] overflow-y-auto overflow-x-hidden p-0 bg-zinc-950 border border-white/10 rounded-2xl sm:rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.9),0_0_50px_rgba(245,158,11,0.06)] relative text-zinc-100 touch-pan-y overscroll-contain">
+          {/* Glow de Iluminação Superior */}
+          <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-80 h-40 bg-amber-500/15 blur-3xl rounded-full" />
 
-        <div className="p-5 sm:p-7 space-y-5 relative z-10">
+          <div className="p-4 sm:p-7 space-y-4 sm:space-y-5 relative z-10">
           {/* Cabeçalho */}
           <DialogHeader className="text-left space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-[11px] font-bold tracking-wider uppercase w-fit">
@@ -793,5 +810,17 @@ export function CreateChurchDialog({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Modal de Confirmação do Código de 6 Dígitos */}
+    <ActivationDialog
+      isOpen={activationOpen}
+      email={pendingEmail}
+      onClose={() => setActivationOpen(false)}
+      onSuccess={(redirectUrl) => {
+        setActivationOpen(false);
+        router.push(redirectUrl);
+      }}
+    />
+  </>
   );
 }
