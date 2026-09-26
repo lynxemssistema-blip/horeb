@@ -1,0 +1,68 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tenant {
+  id           String        @id @default(cuid())
+  name         String
+  slug         String        @unique
+  logoUrl      String?
+  primaryColor String        @default("#dc2626")
+  
+  // Hierarquia Matriz -> Filiais (Self-relation)
+  parentId     String?
+  parent       Tenant?       @relation("TenantHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  branches     Tenant[]      @relation("TenantHierarchy")
+
+  users        User[]
+  cellGroups   CellGroup[]
+  transactions Transaction[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model User {
+  id        String      @id @default(cuid())
+  name      String
+  email     String      @unique
+  password  String?     // Senha criptografada (bcrypt)
+  role      String      @default("MEMBER") // ADMIN, PASTOR, LEADER, MEMBER
+  tenantId  String
+  tenant    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  ledCells  CellGroup[] @relation("CellLeader")
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model CellGroup {
+  id        String   @id @default(cuid())
+  name      String
+  leaderId  String?
+  leader    User?    @relation("CellLeader", fields: [leaderId], references: [id])
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  amount    Float
+  category  String   @default("DIZIMO")    // DIZIMO, OFERTA, MISSOES
+  status    String   @default("COMPLETED") // PENDING, COMPLETED, FAILED
+  type      String   @default("PIX")       // PIX, CREDIT
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
