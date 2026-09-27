@@ -339,30 +339,30 @@ export function SuperAdminDashboard({
   };
 
   return (
-    <div className="min-h-screen bg-[#070709] text-zinc-100 flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200">
+    <div className="min-h-[100dvh] bg-[#070709] text-zinc-100 flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200 overflow-x-hidden">
       {/* Top Header do Super Admin */}
-      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-black/80 backdrop-blur-xl px-4 sm:px-8 py-3.5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="relative w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
+      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-black/80 backdrop-blur-xl px-3 sm:px-8 py-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pl-[env(safe-area-inset-left,0px))] pr-[env(safe-area-inset-right,0px))]">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group min-w-0">
+              <div className="relative w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform shrink-0">
                 <Crown className="w-4 h-4" />
               </div>
-              <div>
-                <span className="font-black text-white text-base tracking-tight flex items-center gap-2">
-                  Horeb SaaS • Lynx EMS Sistemas
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+              <div className="min-w-0">
+                <span className="font-black text-white text-xs sm:text-base tracking-tight flex items-center gap-1.5 sm:gap-2">
+                  <span className="truncate">Horeb SaaS</span>
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
                     SUPER ADMIN
                   </span>
                 </span>
-                <span className="text-[11px] text-zinc-400 block -mt-0.5">
+                <span className="text-[10px] sm:text-[11px] text-zinc-400 block -mt-0.5 truncate hidden xs:block">
                   Desenvolvido e Gerenciado por Lynx EMS Sistemas
                 </span>
               </div>
             </Link>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <div className="hidden sm:flex items-center gap-2 bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-1.5 text-xs text-zinc-300">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>
@@ -374,7 +374,7 @@ export function SuperAdminDashboard({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 px-3 rounded-xl border-white/[0.12] bg-white/[0.04] text-xs font-bold text-zinc-200 hover:text-white"
+                className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl border-white/[0.12] bg-white/[0.04] text-xs font-bold text-zinc-200 hover:text-white"
               >
                 <span>Ver App</span>
                 <ExternalLink className="w-3.5 h-3.5 ml-1" />

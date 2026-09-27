@@ -56,16 +56,16 @@ export default async function HomePage(props: {
   ]);
 
   return (
-    <div className="min-h-screen bg-[#070709] text-zinc-100 flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200 relative overflow-x-hidden">
+    <div className="min-h-[100dvh] bg-[#070709] text-zinc-100 flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200 relative overflow-x-hidden">
       {/* Ferramentas Nativas para Celular (PWA Banner & Instalação) */}
       <NativeMobileTools />
 
       {/* Botão Flutuante de Ajuda & Guia Completo */}
-      <div className="fixed bottom-6 right-6 z-50 shadow-2xl">
+      <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] right-[calc(1.25rem+env(safe-area-inset-right,0px))] z-50 shadow-2xl">
         <HelpGuideDialog
           triggerButton={
             <Button
-              className="h-12 px-4 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-black font-black text-xs shadow-[0_10px_30px_rgba(245,158,11,0.4)] gap-2 transition-all hover:scale-105 active:scale-95 cursor-pointer border border-amber-400/40"
+              className="h-11 sm:h-12 px-3.5 sm:px-4 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-black font-black text-xs shadow-[0_10px_30px_rgba(245,158,11,0.4)] gap-2 transition-all hover:scale-105 active:scale-95 cursor-pointer border border-amber-400/40"
             >
               <HelpCircle className="w-4 h-4 text-black" />
               <span className="hidden sm:inline">Guia de Uso & Dúvidas</span>

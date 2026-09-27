@@ -31,6 +31,7 @@ export async function generateViewport({
     initialScale: 1,
     maximumScale: 1,
     userScalable: false,
+    viewportFit: "cover" as const,
   };
 }
 
@@ -147,7 +148,7 @@ export default async function TenantLayout({
   return (
     <div
       data-tenant={tenant.slug}
-      className="min-h-screen bg-background text-foreground flex flex-col md:flex-row antialiased transition-colors"
+      className="min-h-[100dvh] bg-background text-foreground flex flex-col md:flex-row antialiased transition-colors overflow-x-hidden"
       style={
         {
           "--primary": theme.hex,
@@ -198,7 +199,7 @@ export default async function TenantLayout({
           branches={tenant.branches}
         />
 
-        <main className="flex-1 pb-24 md:pb-10 max-w-7xl w-full mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
+        <main className="flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-10 max-w-7xl w-full mx-auto px-3 sm:px-6 pt-3 sm:pt-6 pl-[max(0.75rem,env(safe-area-inset-left,0px))] pr-[max(0.75rem,env(safe-area-inset-right,0px))]">
           {children}
         </main>
 

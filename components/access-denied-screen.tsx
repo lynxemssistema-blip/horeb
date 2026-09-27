@@ -33,7 +33,7 @@ export function AccessDeniedScreen({
   };
 
   return (
-    <div className="min-h-screen bg-[#070709] text-zinc-100 flex items-center justify-center p-4">
+    <div className="min-h-[100dvh] bg-[#070709] text-zinc-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full rounded-3xl bg-zinc-950 border border-red-500/30 p-6 sm:p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
         {/* Glow de Alerta */}
         <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-80 h-40 bg-red-500/15 blur-3xl rounded-full" />

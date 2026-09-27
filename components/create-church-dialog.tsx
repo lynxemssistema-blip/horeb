@@ -300,7 +300,7 @@ export function CreateChurchDialog({
         />
 
         {/* Modal rigorosamente centralizado no meio da tela com viewport responsivo e scroll interno */}
-        <DialogContent className="w-[94vw] max-w-lg max-h-[88vh] flex flex-col p-0 overflow-hidden bg-zinc-950 border border-white/10 rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.9),0_0_50px_rgba(245,158,11,0.06)] relative text-zinc-100">
+        <DialogContent className="w-[94vw] max-w-lg max-h-[88dvh] flex flex-col p-0 overflow-hidden bg-zinc-950 border border-white/10 rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.9),0_0_50px_rgba(245,158,11,0.06)] relative text-zinc-100">
           {/* Glow de Iluminação */}
           <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-80 h-32 bg-amber-500/15 blur-3xl rounded-full" />
 

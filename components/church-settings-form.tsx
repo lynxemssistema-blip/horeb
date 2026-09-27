@@ -302,14 +302,14 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
                   />
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 min-w-0">
                   <label className="text-xs font-bold text-zinc-300">URL / Slug Permanente</label>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 min-w-0">
                     <span className="text-[11px] font-mono text-zinc-500 shrink-0">horeb.lynxems.com.br/</span>
                     <Input
                       value={tenant.slug}
                       disabled
-                      className="bg-black/30 border-white/5 text-zinc-400 rounded-xl h-11 font-mono text-xs select-all cursor-not-allowed"
+                      className="bg-black/30 border-white/5 text-zinc-400 rounded-xl h-11 font-mono text-xs select-all cursor-not-allowed min-w-0 flex-1"
                     />
                   </div>
                 </div>

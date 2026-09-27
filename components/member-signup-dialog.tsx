@@ -115,7 +115,7 @@ export function MemberSignupDialog({
           }
         />
 
-        <DialogContent className="max-w-md w-full p-6 bg-zinc-950 border border-white/10 rounded-3xl shadow-2xl text-zinc-100 relative overflow-hidden">
+        <DialogContent className="max-w-md w-full p-5 sm:p-6 bg-zinc-950 border border-white/10 rounded-3xl shadow-2xl text-zinc-100 relative overflow-y-auto max-h-[90dvh]">
           {/* Top Glow Bar */}
           <div
             className="absolute top-0 left-0 right-0 h-1.5"
@@ -148,7 +148,7 @@ export function MemberSignupDialog({
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Seu nome completo"
                   required
-                  className="pl-9 bg-black/60 border-white/10 text-white rounded-xl h-11 text-xs"
+                  className="pl-9 bg-black/60 border-white/10 text-white rounded-xl h-11 text-base sm:text-sm"
                 />
               </div>
             </div>
@@ -163,7 +163,7 @@ export function MemberSignupDialog({
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seuemail@exemplo.com"
                   required
-                  className="pl-9 bg-black/60 border-white/10 text-white rounded-xl h-11 text-xs"
+                  className="pl-9 bg-black/60 border-white/10 text-white rounded-xl h-11 text-base sm:text-sm"
                 />
               </div>
             </div>
@@ -178,7 +178,7 @@ export function MemberSignupDialog({
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Mínimo 6 caracteres"
                   required
-                  className="pl-9 pr-10 bg-black/60 border-white/10 text-white rounded-xl h-11 text-xs"
+                  className="pl-9 pr-10 bg-black/60 border-white/10 text-white rounded-xl h-11 text-base sm:text-sm"
                 />
                 <button
                   type="button"

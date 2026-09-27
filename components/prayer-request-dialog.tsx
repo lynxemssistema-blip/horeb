@@ -77,7 +77,7 @@ export function PrayerRequestDialog({
         }
       />
 
-      <DialogContent className="max-w-md bg-card text-foreground border-border shadow-2xl p-6">
+      <DialogContent className="max-w-md w-[94vw] bg-card text-foreground border-border shadow-2xl p-5 sm:p-6 overflow-y-auto max-h-[90dvh]">
         <DialogHeader className="text-left space-y-1 pb-2">
           <div className="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wider">
             <HeartHandshake className="w-4 h-4" />
@@ -101,11 +101,11 @@ export function PrayerRequestDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={isAnonymous ? "Anônimo" : "Ex: Maria Silva"}
-              className="text-xs h-9.5 bg-background border-border"
+              className="text-base sm:text-sm h-10 bg-background border-border rounded-xl"
             />
           </div>
 
-          <label className="flex items-center gap-2 text-xs cursor-pointer select-none text-muted-foreground">
+          <label className="flex items-center gap-2 text-xs cursor-pointer select-none text-muted-foreground min-h-[36px]">
             <input
               type="checkbox"
               checked={isAnonymous}
@@ -125,7 +125,7 @@ export function PrayerRequestDialog({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Descreva o seu motivo (saúde, família, causa na justiça, libertação, agradecimento)..."
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-base sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
           </div>
 

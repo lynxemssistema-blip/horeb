@@ -410,8 +410,16 @@ export function ChurchMembersManager({
 
       {/* Tabela de Membros */}
       <div className="rounded-2xl border border-white/10 bg-zinc-950/80 backdrop-blur-xl overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-zinc-300">
+        {/* Dica de Scroll no Celular */}
+        <div className="sm:hidden px-4 py-2 bg-white/[0.03] border-b border-white/10 text-[11px] text-zinc-400 flex items-center justify-between">
+          <span className="flex items-center gap-1.5 text-amber-400/90 font-medium">
+            <span>👉 Deslize para o lado para ver perfis e ações</span>
+          </span>
+          <span className="text-[10px] text-zinc-500 font-mono">⟷ Scroll</span>
+        </div>
+
+        <div className="overflow-x-auto scroll-touch">
+          <table className="w-full min-w-[680px] text-left text-xs text-zinc-300">
             <thead className="bg-black/60 border-b border-white/10 text-zinc-400 uppercase text-[10px] font-black tracking-wider">
               <tr>
                 <th className="px-4 py-3.5">Membro / Usuário</th>

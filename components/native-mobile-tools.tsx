@@ -118,7 +118,7 @@ export function NativeMobileTools({
     <>
       {/* 1. Banner Flutuante de Instalação Nativa (Mobile Only) */}
       {!isStandalone && !dismissedBanner && (
-        <div className="fixed top-3 inset-x-3 z-50 md:hidden animate-in fade-in-0 slide-in-from-top-4 duration-300">
+        <div className="fixed top-[calc(0.75rem+env(safe-area-inset-top,0px))] inset-x-3 z-50 md:hidden animate-in fade-in-0 slide-in-from-top-4 duration-300">
           <div className="p-3 bg-gradient-to-r from-amber-500/95 via-yellow-500/95 to-amber-600/95 text-black rounded-2xl shadow-2xl shadow-amber-500/30 flex items-center justify-between gap-3 border border-amber-300/40 backdrop-blur-md">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-black/15 flex items-center justify-center shrink-0">
@@ -158,8 +158,8 @@ export function NativeMobileTools({
 
       {/* 2. Modal Nativo com Instruções de Instalação (para iPhone ou navegadores sem prompt automático) */}
       {showInstallModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-3 animate-in fade-in-0">
-          <div className="bg-zinc-950 border border-white/10 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] animate-in fade-in-0">
+          <div className="bg-zinc-950 border border-white/10 rounded-3xl p-5 sm:p-6 max-w-sm w-full space-y-4 shadow-2xl relative">
             <button
               onClick={() => setShowInstallModal(false)}
               className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white"

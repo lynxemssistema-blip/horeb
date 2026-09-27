@@ -43,7 +43,7 @@ export function BottomNav({ slug }: BottomNavProps) {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/90 backdrop-blur-lg border-t border-border/80 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] px-4 py-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/90 backdrop-blur-lg border-t border-border/80 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] px-2 sm:px-4 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pl-[calc(0.5rem+env(safe-area-inset-left,0px))] pr-[calc(0.5rem+env(safe-area-inset-right,0px))]">
       <div className="flex items-center justify-around max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = item.exact
@@ -56,7 +56,7 @@ export function BottomNav({ slug }: BottomNavProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex flex-col items-center justify-center -mt-5 group"
+                className="flex flex-col items-center justify-center -mt-6 group min-w-[52px] min-h-[44px]"
               >
                 <div
                   className={cn(
@@ -83,7 +83,7 @@ export function BottomNav({ slug }: BottomNavProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all duration-200 active:scale-90",
+                "flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 active:scale-90 min-w-[48px] min-h-[44px]",
                 isActive
                   ? "text-primary font-semibold"
                   : "text-muted-foreground hover:text-foreground"
