@@ -290,6 +290,7 @@ export async function createManualTransaction(data: any) {
     return {
       success: true,
       transaction,
+      message: `${type === "INCOME" ? "Entrada" : "Saída"} registrada com sucesso!`,
     };
   } catch (error: any) {
     console.error("Erro ao criar transação manual:", error);

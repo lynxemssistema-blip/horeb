@@ -235,7 +235,7 @@ export function CreateChurchDialog({
         });
         setOpen(false);
         window.location.href = res.redirectUrl;
-      } else if (res.requiresActivation) {
+      } else if ((res as any).requiresActivation) {
         toast.warning(res.error || "Sua conta precisa de ativação.");
         setPendingEmail(loginEmail);
         setOpen(false);

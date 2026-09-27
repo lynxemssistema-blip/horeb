@@ -211,7 +211,7 @@ export function FinanceDashboardView({
       });
 
       if (res.success && res.transaction) {
-        toast.success(res.message);
+        toast.success((res as any).message || "Lançamento registrado com sucesso!");
         setShowNewModal(false);
         setNewAmount("");
         setNewDescription("");
