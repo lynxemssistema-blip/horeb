@@ -18,6 +18,8 @@ import {
   Tv,
   HelpCircle,
   LogOut,
+  Wallet,
+  Receipt,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -64,12 +66,18 @@ export function AppSidebar({
       exact: true,
     },
     {
+      name: "Gestão Financeira (ERP)",
+      href: `/${slug}/admin/finance`,
+      icon: Wallet,
+      highlightBadge: "Novo",
+    },
+    {
       name: "Células & Grupos",
       href: `/${slug}/celulas`,
       icon: Users,
     },
     {
-      name: "Dízimos & Ofertas",
+      name: "Dízimos & Doações",
       href: `/${slug}/doar`,
       icon: HeartHandshake,
     },
@@ -164,7 +172,12 @@ export function AppSidebar({
                   isActive ? "text-primary-foreground" : "text-muted-foreground"
                 )}
               />
-              <span>{item.name}</span>
+              <span className="flex-1 truncate">{item.name}</span>
+              {"highlightBadge" in item && (
+                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  {item.highlightBadge}
+                </span>
+              )}
             </Link>
           );
         })}

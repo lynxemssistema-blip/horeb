@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Church, Bell, ArrowLeftRight, UserPlus, HelpCircle, LogOut } from "lucide-react";
+import { Church, Bell, ArrowLeftRight, UserPlus, HelpCircle, LogOut, Crown, ShieldCheck } from "lucide-react";
 import { MemberSignupDialog } from "@/components/member-signup-dialog";
 import { HelpGuideDialog } from "@/components/help-guide-dialog";
 import { logoutUser } from "@/app/actions/tenant";
@@ -15,6 +15,8 @@ interface AppHeaderProps {
   isMatriz: boolean;
   parent?: { id: string; name: string; slug: string } | null;
   branches?: { id: string; name: string; slug: string; primaryColor: string }[];
+  userRole?: string;
+  userName?: string;
 }
 
 export function AppHeader({
@@ -25,6 +27,8 @@ export function AppHeader({
   isMatriz,
   parent,
   branches = [],
+  userRole,
+  userName,
 }: AppHeaderProps) {
   // Alvo de alternância dinâmico
   const targetBranch = branches[0];
@@ -74,6 +78,19 @@ export function AppHeader({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {/* Badge & Atalho de Acesso do Usuário Master */}
+          {(userRole === "ADMIN" || userRole === "SUPERADMIN") && (
+            <Link
+              href={`/${slug}/membros`}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-300 text-xs font-bold transition-all shadow-sm"
+              title="Você é o Usuário Master desta igreja. Clique para gerenciar membros e níveis de acesso."
+            >
+              <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="hidden sm:inline">Master ({userName ? userName.split(" ")[0] : "Admin"})</span>
+              <span className="sm:hidden text-[10px]">Acessos</span>
+            </Link>
+          )}
+
           {/* Botão de Auto-Cadastro de Membro nesta Igreja */}
           <MemberSignupDialog
             churchName={name}

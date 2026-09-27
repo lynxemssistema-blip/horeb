@@ -192,7 +192,7 @@ export default async function TenantDashboardPage({ params }: PageProps) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {/* Card 1: Dízimos & Ofertas (PIX) */}
-          <Link href={`/${slug}/doar`} className="group block focus:outline-none">
+          <div className="group block focus:outline-none">
             <Card className="h-full border-border/80 hover:border-primary/50 hover:shadow-md transition-all duration-200">
               <CardHeader className="pb-2">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
@@ -207,16 +207,29 @@ export default async function TenantDashboardPage({ params }: PageProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="w-full mt-2 text-xs font-semibold"
-                >
-                  Contribuir com PIX
-                </Button>
+                <div className="flex gap-2 mt-2">
+                  <Link href={`/${slug}/doar`} className="flex-1">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full text-xs font-semibold cursor-pointer"
+                    >
+                      Contribuir PIX
+                    </Button>
+                  </Link>
+                  <Link href={`/${slug}/admin/finance`} className="flex-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs font-bold border-amber-500/30 text-amber-400 hover:bg-amber-500/10 cursor-pointer"
+                    >
+                      Tesouraria (ERP)
+                    </Button>
+                  </Link>
+                </div>
               </CardContent>
             </Card>
-          </Link>
+          </div>
 
           {/* Card 2: Pedidos de Oração */}
           <div className="group block focus:outline-none">
@@ -465,10 +478,10 @@ export default async function TenantDashboardPage({ params }: PageProps) {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full text-xs font-semibold gap-1.5 h-8 text-muted-foreground hover:text-foreground"
+                      className="w-full text-xs font-bold gap-1.5 h-9 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30 transition-all cursor-pointer"
                     >
-                      <Users className="w-3.5 h-3.5" />
-                      <span>Gerenciar Membros & Convites</span>
+                      <Users className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Controle de Membros & Níveis de Acesso</span>
                     </Button>
                   </Link>
                 </div>

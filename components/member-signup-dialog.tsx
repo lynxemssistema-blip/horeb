@@ -83,9 +83,9 @@ export function MemberSignupDialog({
           setOpen(false);
           setActivationOpen(true);
         } else {
-          toast.success(res.message || "Cadastro realizado com sucesso!");
+          toast.success(res.message || "Cadastro realizado com sucesso! Bem-vindo(a)!");
           setOpen(false);
-          router.refresh();
+          window.location.href = `/${churchSlug}`;
         }
       } else {
         toast.error(res.error || "Falha ao realizar cadastro.");

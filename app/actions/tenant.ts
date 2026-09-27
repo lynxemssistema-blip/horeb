@@ -107,57 +107,32 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
     });
 
     // 2. Gerar Código de Ativação de 6 Dígitos
+    // 2. Criar o Usuário Master da Igreja (já nasce ativo e autenticado como Administrador/Master)
     const isSuperAdmin = cleanEmail === "edsonmanoel2012@gmail.com";
-    const activationCode = generateActivationCode();
-    const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
 
-    // 3. Criar o Usuário Master
     const user = await prisma.user.create({
       data: {
         name: params.masterName.trim(),
         email: cleanEmail,
         password: hashedPassword,
         role: isSuperAdmin ? "SUPERADMIN" : "ADMIN",
-        isEmailVerified: isSuperAdmin, // Super admin já nasce ativo
-        verificationCode: isSuperAdmin ? null : activationCode,
-        codeExpiresAt: isSuperAdmin ? null : codeExpiresAt,
+        isEmailVerified: true, // Já nasce ativo para entrar direto na sua igreja
+        verificationCode: null,
+        codeExpiresAt: null,
         tenantId: tenant.id,
       },
     });
 
-    // Salvar código na tabela de ativação
-    if (!isSuperAdmin) {
-      await prisma.activationCode.create({
-        data: {
-          email: cleanEmail,
-          code: activationCode,
-          expiresAt: codeExpiresAt,
-        },
-      });
+    // 3. Criar registro de acesso e controle total em UserChurchAccess
+    await prisma.userChurchAccess.create({
+      data: {
+        userId: user.id,
+        tenantId: tenant.id,
+        role: isSuperAdmin ? "SUPERADMIN" : "ADMIN",
+      },
+    });
 
-      // Enviar e-mail com o código de 6 dígitos via Hostinger SMTP
-      const mailRes = await sendActivationCodeEmail({
-        to: cleanEmail,
-        name: user.name,
-        code: activationCode,
-        churchName: tenant.name,
-      });
-
-      // Gravar log de envio
-      await prisma.emailLog.create({
-        data: {
-          type: "OUTGOING",
-          from: "suporte@lynxems.com.br",
-          to: cleanEmail,
-          subject: `Código de Ativação: ${activationCode} • Horeb`,
-          snippet: `Envio de ativação para ${user.name} (${cleanEmail})`,
-          status: mailRes.success ? "SENT" : "FAILED",
-          code: activationCode,
-        },
-      });
-    }
-
-    // 4. Criar uma célula padrão para demonstração
+    // 4. Criar uma célula principal para demonstração
     await prisma.cellGroup.create({
       data: {
         name: "Célula Principal (Sede)",
@@ -200,15 +175,25 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
       console.warn("Supabase auth sync warning (fallback local active):", sbErr);
     }
 
+    // 6. Iniciar imediatamente a Sessão HTTP-Only para o Usuário Master
+    await createSession({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      tenantId: tenant.id,
+      tenantSlug: tenant.slug,
+    });
+
     revalidatePath("/");
     revalidatePath(`/${slug}`);
 
     return {
       success: true,
-      requiresActivation: !isSuperAdmin,
+      requiresActivation: false,
       email: cleanEmail,
       tenant,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, tenantSlug: tenant.slug },
       redirectUrl: isSuperAdmin ? "/admin" : `/${slug}`,
     };
   } catch (error: any) {
@@ -267,33 +252,16 @@ export async function loginUser(email: string, rawPassword: string) {
       };
     }
 
-    // Verificar se a conta foi ativada por e-mail
+    // Se a conta ainda não estava marcada como verificada no banco, ativamos agora que a senha foi validada com sucesso
     if (!user.isEmailVerified) {
-      // Gerar novo código e reenviar por e-mail
-      const activationCode = generateActivationCode();
-      const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
       await prisma.user.update({
         where: { id: user.id },
         data: {
-          verificationCode: activationCode,
-          codeExpiresAt,
+          isEmailVerified: true,
+          verificationCode: null,
+          codeExpiresAt: null,
         },
       });
-
-      await sendActivationCodeEmail({
-        to: cleanEmail,
-        name: user.name,
-        code: activationCode,
-        churchName: user.tenant?.name,
-      });
-
-      return {
-        success: false,
-        requiresActivation: true,
-        email: cleanEmail,
-        error: "Sua conta ainda não foi ativada. Enviamos um novo código de 6 dígitos para o seu e-mail.",
-      };
     }
 
     // Gravar Cookie de Sessão HTTP-Only no Navegador
@@ -388,6 +356,25 @@ export async function createBranchChurch(params: CreateBranchParams) {
         setupPrice: 490,
       },
     });
+
+    // Vincular o usuário da sessão como ADMIN também desta filial
+    const session = await getSession();
+    if (session?.userId) {
+      await prisma.userChurchAccess.upsert({
+        where: {
+          userId_tenantId: {
+            userId: session.userId,
+            tenantId: branch.id,
+          },
+        },
+        update: { role: "ADMIN" },
+        create: {
+          userId: session.userId,
+          tenantId: branch.id,
+          role: "ADMIN",
+        },
+      });
+    }
 
     try {
       await supabase.from("tenants").insert({

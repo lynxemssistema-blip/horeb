@@ -203,9 +203,11 @@ export function CreateChurchDialog({
           setOpen(false);
           setActivationOpen(true);
         } else if (res.redirectUrl) {
-          toast.success(`Igreja "${res.tenant?.name}" criada com sucesso!`);
+          toast.success(`Igreja "${res.tenant?.name}" cadastrada com sucesso!`, {
+            description: "Você já está conectado como Usuário Master. Entrando...",
+          });
           setOpen(false);
-          router.push(res.redirectUrl);
+          window.location.href = res.redirectUrl;
         }
       } else {
         toast.error(res.error || "Falha ao criar igreja.");
@@ -232,7 +234,7 @@ export function CreateChurchDialog({
           description: "Login efetuado com sucesso.",
         });
         setOpen(false);
-        router.push(res.redirectUrl);
+        window.location.href = res.redirectUrl;
       } else if (res.requiresActivation) {
         toast.warning(res.error || "Sua conta precisa de ativação.");
         setPendingEmail(loginEmail);
@@ -269,10 +271,10 @@ export function CreateChurchDialog({
 
       if (res.success && res.redirectUrl) {
         toast.success(`Filial "${res.branch?.name}" vinculada com sucesso!`, {
-          description: `Redirecionando para: ${res.redirectUrl}`,
+          description: `Entrando na filial...`,
         });
         setOpen(false);
-        router.push(res.redirectUrl);
+        window.location.href = res.redirectUrl;
       } else {
         toast.error(res.error || "Falha ao criar filial.");
       }

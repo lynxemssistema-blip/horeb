@@ -65,6 +65,8 @@ model User {
   churchAccesses   UserChurchAccess[]
   ledCells         CellGroup[] @relation("CellLeader")
   ledMinistries    Ministry[]  @relation("MinistryLeader")
+  cpf              String?     // CPF para relatório de Imposto de Renda (IRPF)
+  transactions     Transaction[] @relation("MemberTransactions")
 
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -132,16 +134,23 @@ model ChurchVideo {
 }
 
 model Transaction {
-  id        String   @id @default(cuid())
-  amount    Float
-  category  String   @default("DIZIMO")    // DIZIMO, OFERTA, MISSOES
-  status    String   @default("COMPLETED") // PENDING, COMPLETED, FAILED
-  type      String   @default("PIX")       // PIX, CREDIT
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  amount        Float
+  type          String   @default("INCOME")    // INCOME (Entrada / Arrecadação), EXPENSE (Saída / Despesa)
+  category      String   @default("OFERTA")    // DIZIMO, OFERTA, MISSOES, ALUGUEL, LUZ, SALARIO, SOM, REFORMA, OUTROS
+  description   String?                        // Ex: "Conta de Luz de Março", "Dízimo Culto de Celebração"
+  status        String   @default("COMPLETED") // PENDING, COMPLETED, FAILED
+  paymentMethod String   @default("PIX")       // PIX, DINHEIRO, CARTAO, BOLETO, TRANSFERENCIA
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Rastreamento Nominal para fins de Imposto de Renda (IRPF)
+  memberId      String?
+  member        User?    @relation("MemberTransactions", fields: [memberId], references: [id], onDelete: SetNull)
+
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Plan {

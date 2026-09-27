@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { generateActivationCode, sendActivationCodeEmail } from "@/lib/mail";
+import { createSession } from "@/lib/session";
 
 interface VerifyCodeParams {
   email: string;
@@ -100,6 +101,16 @@ export async function verifyActivationCode({ email, code }: VerifyCodeParams) {
       user.role === "SUPERADMIN"
         ? "/admin"
         : `/${user.tenant.slug}`;
+
+    // Iniciar sessão HTTP-Only após validação do código
+    await createSession({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      tenantId: user.tenantId,
+      tenantSlug: user.tenant.slug,
+    });
 
     return {
       success: true,

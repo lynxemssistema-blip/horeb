@@ -4,18 +4,19 @@ const smtpHost = process.env.SMTP_HOST || "smtp.hostinger.com";
 const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
 const smtpUser = process.env.SMTP_USER || "suporte@lynxems.com.br";
 const smtpPass = process.env.SMTP_PASS || "10207597Rdv*";
-const smtpFrom = process.env.SMTP_FROM || `"Horeb Tecnologia" <${smtpUser}>`;
+const smtpFrom = process.env.SMTP_FROM || `"Horeb - Lynx EMS" <${smtpUser}>`;
 
 export const mailTransporter = nodemailer.createTransport({
   host: smtpHost,
   port: smtpPort,
-  secure: true, // SSL na porta 465
+  secure: smtpPort === 465, // SSL
   auth: {
     user: smtpUser,
     pass: smtpPass,
   },
   tls: {
     rejectUnauthorized: false,
+    minVersion: "TLSv1.2",
   },
 });
 
@@ -37,75 +38,103 @@ export async function sendActivationCodeEmail({
   churchName = "Sua Igreja",
 }: SendActivationParams) {
   try {
+    const cleanTo = to.trim().toLowerCase();
+    const messageId = `<horeb-auth-${Date.now()}-${Math.random().toString(36).substring(2, 8)}@lynxems.com.br>`;
+
+    // Versão em Texto Puro (Essencial para não cair no SPAM do Gmail/Outlook)
+    const plainText = [
+      `Olá, ${name}!`,
+      ``,
+      `Seu código de verificação para acesso à congregação ${churchName} é:`,
+      `${code}`,
+      ``,
+      `Este código é válido por 15 minutos e garante a segurança do seu acesso ao aplicativo Horeb.`,
+      `Se você não solicitou este código, por favor desconsidere este e-mail.`,
+      ``,
+      `Atenciosamente,`,
+      `Equipe Horeb • Lynx EMS Sistemas`,
+      `suporte@lynxems.com.br`,
+    ].join("\n");
+
     const info = await mailTransporter.sendMail({
       from: smtpFrom,
-      to,
-      subject: `Código de Ativação: ${code} • Horeb Aplicativo`,
+      to: cleanTo,
+      replyTo: "suporte@lynxems.com.br",
+      subject: `${code} é seu código de segurança Horeb`,
+      text: plainText,
+      headers: {
+        "Message-ID": messageId,
+        "X-Mailer": "Horeb Mail Engine 1.0",
+        "X-Priority": "3",
+        "Auto-Submitted": "auto-generated",
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
       html: `
         <!DOCTYPE html>
         <html lang="pt-BR">
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Ativação de Conta • Horeb</title>
+          <title>Código de Segurança • Horeb</title>
         </head>
-        <body style="margin: 0; padding: 0; background-color: #070709; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f4f4f5;">
-          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #070709; padding: 30px 15px;">
+        <body style="margin: 0; padding: 0; background-color: #f4f5f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #18181b;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f5f7; padding: 30px 15px;">
             <tr>
               <td align="center">
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 540px; background-color: #121216; border-radius: 20px; border: 1px solid rgba(245, 158, 11, 0.25); overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.8);">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 520px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e4e4e7; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
                   
-                  <!-- Top Bar Dourada -->
+                  <!-- Top Bar Dourada Horeb -->
                   <tr>
-                    <td height="6" style="background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);"></td>
+                    <td height="5" style="background: #f59e0b;"></td>
                   </tr>
 
-                  <!-- Header com Logo / Título -->
+                  <!-- Header -->
                   <tr>
-                    <td style="padding: 35px 35px 20px 35px; text-align: center;">
-                      <div style="display: inline-block; padding: 6px 16px; border-radius: 9999px; background-color: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px;">
-                        HOREB • APLICATIVO DA IGREJA
+                    <td style="padding: 32px 32px 20px 32px; text-align: center;">
+                      <div style="display: inline-block; padding: 4px 14px; border-radius: 9999px; background-color: #fef3c7; color: #b45309; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px;">
+                        HOREB • SEGURANÇA E ACESSO
                       </div>
-                      <h1 style="margin: 0; font-size: 24px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">
-                        Código de Ativação
+                      <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #09090b; letter-spacing: -0.3px;">
+                        Código de Verificação
                       </h1>
-                      <p style="margin: 8px 0 0 0; font-size: 14px; color: #a1a1aa; line-height: 1.5;">
-                        Olá, <strong style="color: #ffffff;">${name}</strong>! Confirme seu acesso para entrar na plataforma da congregação <strong>${churchName}</strong>.
+                      <p style="margin: 10px 0 0 0; font-size: 14px; color: #52525b; line-height: 1.5;">
+                        Olá, <strong>${name}</strong>! Use o código abaixo para validar seu acesso na congregação <strong>${churchName}</strong>.
                       </p>
                     </td>
                   </tr>
 
                   <!-- Caixa do Código -->
                   <tr>
-                    <td style="padding: 10px 35px 25px 35px; text-align: center;">
-                      <div style="background-color: #09090b; border: 2px dashed #f59e0b; border-radius: 16px; padding: 22px 15px; margin: 10px 0;">
-                        <span style="display: block; font-size: 11px; font-weight: 700; color: #a1a1aa; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">
+                    <td style="padding: 10px 32px 25px 32px; text-align: center;">
+                      <div style="background-color: #fafafa; border: 2px dashed #f59e0b; border-radius: 14px; padding: 20px 10px; margin: 5px 0;">
+                        <span style="display: block; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">
                           Seu Código de 6 Dígitos
                         </span>
-                        <span style="font-family: 'Courier New', monospace; font-size: 38px; font-weight: 900; letter-spacing: 8px; color: #fbbf24; text-shadow: 0 0 15px rgba(245, 158, 11, 0.4);">
+                        <span style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 900; letter-spacing: 6px; color: #d97706;">
                           ${code}
                         </span>
                       </div>
                       <p style="margin: 12px 0 0 0; font-size: 12px; color: #71717a;">
-                        ⏳ Este código expira em <strong>15 minutos</strong>. Não o compartilhe com ninguém.
+                        Este código expira em <strong>15 minutos</strong>. Não compartilhe com terceiros.
                       </p>
                     </td>
                   </tr>
 
-                  <!-- Instruções Rápidas -->
+                  <!-- Instruções -->
                   <tr>
-                    <td style="padding: 0 35px 30px 35px;">
-                      <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; font-size: 12px; color: #d4d4d8; line-height: 1.6;">
-                        <strong style="color: #f59e0b;">Como validar:</strong><br>
-                        Volte para o aplicativo no seu navegador ou celular e digite o código de 6 dígitos acima para ativar sua conta e liberar o acesso completo.
+                    <td style="padding: 0 32px 25px 32px;">
+                      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; font-size: 12px; color: #475569; line-height: 1.5;">
+                        <strong style="color: #0f172a;">Onde digitar:</strong><br>
+                        Retorne à tela do aplicativo no seu navegador ou smartphone e digite o código de 6 dígitos acima para liberar seu acesso imediatamente.
                       </div>
                     </td>
                   </tr>
 
-                  <!-- Footer -->
+                  <!-- Footer Oficial com Identificação de Empresa -->
                   <tr>
-                    <td style="background-color: #09090b; border-top: 1px solid rgba(255,255,255,0.06); padding: 20px 35px; text-align: center; font-size: 11px; color: #52525b;">
-                      Enviado automaticamente por <strong>Horeb Soluções Para Igrejas</strong>.<br>
+                    <td style="background-color: #f8fafc; border-top: 1px solid #e4e4e7; padding: 18px 32px; text-align: center; font-size: 11px; color: #71717a; line-height: 1.6;">
+                      Mensagem transacional automática enviada por <strong>Horeb Soluções para Igrejas</strong>.<br>
+                      Desenvolvido e operado por <strong>Lynx EMS Sistemas</strong> • <a href="mailto:suporte@lynxems.com.br" style="color: #d97706; text-decoration: none;">suporte@lynxems.com.br</a><br>
                       Se você não solicitou este cadastro, ignore esta mensagem.
                     </td>
                   </tr>
@@ -119,7 +148,7 @@ export async function sendActivationCodeEmail({
       `,
     });
 
-    console.log("E-mail de ativação enviado com sucesso:", info.messageId);
+    console.log("E-mail de verificação enviado com sucesso:", info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error: any) {
     console.error("Falha ao enviar e-mail via Hostinger SMTP:", error);
@@ -143,11 +172,36 @@ export async function sendMemberInvitationEmail({
   primaryColor?: string;
 }) {
   try {
-    const greeting = recipientName ? `Olá, <strong style="color: #ffffff;">${recipientName}</strong>!` : "A paz do Senhor!";
+    const cleanTo = to.trim().toLowerCase();
+    const messageId = `<horeb-invite-${Date.now()}-${Math.random().toString(36).substring(2, 8)}@lynxems.com.br>`;
+    const greeting = recipientName ? `Olá, ${recipientName}!` : "A paz do Senhor!";
+
+    const plainText = [
+      `${greeting}`,
+      ``,
+      `Você foi convidado pela liderança da congregação ${churchName} para fazer parte da comunidade no aplicativo Horeb.`,
+      `Perfil atribuído: ${roleName}`,
+      ``,
+      `Para ativar seu acesso, clique no link abaixo ou cole no seu navegador:`,
+      `${inviteUrl}`,
+      ``,
+      `Atenciosamente,`,
+      `Equipe Horeb • Lynx EMS Sistemas`,
+      `suporte@lynxems.com.br`,
+    ].join("\n");
+
     const info = await mailTransporter.sendMail({
       from: smtpFrom,
-      to,
-      subject: `Convite Especial: Você foi convidado para a ${churchName} • Horeb`,
+      to: cleanTo,
+      replyTo: "suporte@lynxems.com.br",
+      subject: `Convite para participar da ${churchName} no aplicativo Horeb`,
+      text: plainText,
+      headers: {
+        "Message-ID": messageId,
+        "X-Mailer": "Horeb Mail Engine 1.0",
+        "X-Priority": "3",
+        "Auto-Submitted": "auto-generated",
+      },
       html: `
         <!DOCTYPE html>
         <html lang="pt-BR">
@@ -156,44 +210,44 @@ export async function sendMemberInvitationEmail({
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Convite de Membresia • Horeb</title>
         </head>
-        <body style="margin: 0; padding: 0; background-color: #070709; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f4f4f5;">
-          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #070709; padding: 30px 15px;">
+        <body style="margin: 0; padding: 0; background-color: #f4f5f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #18181b;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f5f7; padding: 30px 15px;">
             <tr>
               <td align="center">
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 540px; background-color: #121216; border-radius: 20px; border: 1px solid rgba(245, 158, 11, 0.25); overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.8);">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 520px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e4e4e7; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
                   
                   <!-- Top Bar Colorida -->
                   <tr>
-                    <td height="6" style="background: linear-gradient(90deg, ${primaryColor}, #f59e0b, ${primaryColor});"></td>
+                    <td height="5" style="background: ${primaryColor};"></td>
                   </tr>
 
                   <!-- Header com Título -->
                   <tr>
-                    <td style="padding: 35px 35px 20px 35px; text-align: center;">
-                      <div style="display: inline-block; padding: 6px 16px; border-radius: 9999px; background-color: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px;">
-                        CONVITE EXCLUSIVO • REDE DE IGREJAS
+                    <td style="padding: 32px 32px 20px 32px; text-align: center;">
+                      <div style="display: inline-block; padding: 4px 14px; border-radius: 9999px; background-color: #fef3c7; color: #b45309; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px;">
+                        CONVITE OFICIAL • REDE DE IGREJAS
                       </div>
-                      <h1 style="margin: 0; font-size: 24px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">
+                      <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #09090b; letter-spacing: -0.3px;">
                         Você Foi Convidado!
                       </h1>
-                      <p style="margin: 10px 0 0 0; font-size: 14px; color: #a1a1aa; line-height: 1.6;">
-                        ${greeting} A liderança da <strong style="color: #ffffff;">${churchName}</strong> enviou este convite para você fazer parte da comunidade na plataforma Horeb.
+                      <p style="margin: 10px 0 0 0; font-size: 14px; color: #52525b; line-height: 1.6;">
+                        ${greeting} A liderança da congregação <strong>${churchName}</strong> convidou você para fazer parte do aplicativo Horeb.
                       </p>
                     </td>
                   </tr>
 
                   <!-- Card de Detalhes do Perfil -->
                   <tr>
-                    <td style="padding: 10px 35px 25px 35px;">
-                      <div style="background-color: #09090b; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 20px; text-align: center;">
-                        <span style="display: block; font-size: 11px; font-weight: 700; color: #a1a1aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">
+                    <td style="padding: 10px 32px 25px 32px;">
+                      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; text-align: center;">
+                        <span style="display: block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">
                           Seu Perfil de Acesso Atribuído
                         </span>
-                        <span style="display: inline-block; padding: 6px 16px; border-radius: 9999px; background-color: ${primaryColor}25; color: ${primaryColor}; font-size: 14px; font-weight: 800; border: 1px solid ${primaryColor}50;">
+                        <span style="display: inline-block; padding: 5px 14px; border-radius: 9999px; background-color: #e0f2fe; color: #0369a1; font-size: 13px; font-weight: 800; border: 1px solid #bae6fd;">
                           ${roleName}
                         </span>
-                        <p style="margin: 12px 0 0 0; font-size: 12px; color: #71717a;">
-                          Congregação: <strong style="color: #d4d4d8;">${churchName}</strong>
+                        <p style="margin: 10px 0 0 0; font-size: 12px; color: #64748b;">
+                          Congregação: <strong style="color: #0f172a;">${churchName}</strong>
                         </p>
                       </div>
                     </td>
@@ -201,22 +255,22 @@ export async function sendMemberInvitationEmail({
 
                   <!-- Botão de Ação -->
                   <tr>
-                    <td style="padding: 0 35px 30px 35px; text-align: center;">
-                      <a href="${inviteUrl}" target="_blank" style="display: inline-block; width: 85%; padding: 14px 20px; background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #000000; font-size: 15px; font-weight: 900; text-decoration: none; border-radius: 14px; box-shadow: 0 10px 25px rgba(245,158,11,0.3); text-transform: uppercase; letter-spacing: 0.5px;">
-                        Concluir Meu Cadastro Agora &rarr;
+                    <td style="padding: 0 32px 30px 32px; text-align: center;">
+                      <a href="${inviteUrl}" target="_blank" style="display: inline-block; width: 85%; padding: 13px 20px; background-color: #f59e0b; color: #000000; font-size: 14px; font-weight: 800; text-decoration: none; border-radius: 12px; box-shadow: 0 4px 14px rgba(245,158,11,0.3); text-transform: uppercase; letter-spacing: 0.5px;">
+                        Acessar Minha Igreja Agora &rarr;
                       </a>
-                      <p style="margin: 16px 0 0 0; font-size: 11px; color: #71717a;">
+                      <p style="margin: 14px 0 0 0; font-size: 11px; color: #71717a;">
                         Ou copie e cole este link no seu navegador:<br>
-                        <a href="${inviteUrl}" style="color: #f59e0b; word-break: break-all;">${inviteUrl}</a>
+                        <a href="${inviteUrl}" style="color: #d97706; word-break: break-all;">${inviteUrl}</a>
                       </p>
                     </td>
                   </tr>
 
                   <!-- Footer -->
                   <tr>
-                    <td style="background-color: #09090b; border-top: 1px solid rgba(255,255,255,0.06); padding: 20px 35px; text-align: center; font-size: 11px; color: #52525b;">
+                    <td style="background-color: #f8fafc; border-top: 1px solid #e4e4e7; padding: 18px 32px; text-align: center; font-size: 11px; color: #71717a; line-height: 1.6;">
                       Horeb • Desenvolvido e Gerenciado por <strong>Lynx EMS Sistemas</strong>.<br>
-                      Plataforma Oficial de Tecnologia e Gestão Eclesial.
+                      Plataforma Oficial de Tecnologia e Gestão Eclesial • <a href="mailto:suporte@lynxems.com.br" style="color: #d97706; text-decoration: none;">suporte@lynxems.com.br</a>
                     </td>
                   </tr>
 

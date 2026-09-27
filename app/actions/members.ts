@@ -10,6 +10,7 @@ import {
   sendMemberInvitationEmail,
 } from "@/lib/mail";
 import { ROLE_LABELS } from "@/lib/constants";
+import { createSession } from "@/lib/session";
 
 // 1. Obter membros e toda a rede de igrejas (Matriz + Filiais)
 export async function getChurchNetworkMembers(churchSlug: string) {
@@ -509,19 +510,22 @@ export async function registerMemberSelf(params: {
         },
       });
 
-      // Atualizar código de ativação se ainda não verificado
+      // Auto-verificar se ainda não verificado
       if (!user.isEmailVerified) {
         await prisma.user.update({
           where: { id: user.id },
-          data: { verificationCode: activationCode, codeExpiresAt },
-        });
-        await sendActivationCodeEmail({
-          to: cleanEmail,
-          name: user.name,
-          code: activationCode,
-          churchName: tenant.name,
+          data: { isEmailVerified: true },
         });
       }
+
+      await createSession({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        role: "MEMBER",
+        tenantId: tenant.id,
+        tenantSlug: tenant.slug,
+      });
 
       revalidatePath(`/${tenant.slug}`);
       revalidatePath(`/${tenant.slug}/membros`);
@@ -529,22 +533,23 @@ export async function registerMemberSelf(params: {
       return {
         success: true,
         alreadyHadAccount: true,
-        requiresActivation: !user.isEmailVerified,
+        requiresActivation: false,
+        redirectUrl: `/${tenant.slug}`,
         message: `Você agora faz parte da congregação ${tenant.name} como Membro!`,
       };
     }
 
-    // Criar novo usuário
+    // Criar novo usuário já ativo e com perfil de Membro
     const hashedPassword = await bcrypt.hash(params.password, 10);
     user = await prisma.user.create({
       data: {
         name: params.name.trim(),
         email: cleanEmail,
         password: hashedPassword,
-        role: "MEMBER", // Por padrão é membro
-        isEmailVerified: false,
-        verificationCode: activationCode,
-        codeExpiresAt,
+        role: "MEMBER",
+        isEmailVerified: true,
+        verificationCode: null,
+        codeExpiresAt: null,
         tenantId: tenant.id,
         churchAccesses: {
           create: {
@@ -556,32 +561,14 @@ export async function registerMemberSelf(params: {
       include: { churchAccesses: true },
     });
 
-    await prisma.activationCode.create({
-      data: {
-        email: cleanEmail,
-        code: activationCode,
-        expiresAt: codeExpiresAt,
-      },
-    });
-
-    // Enviar código de 6 dígitos via Hostinger SMTP
-    await sendActivationCodeEmail({
-      to: cleanEmail,
+    // Iniciar sessão HTTP-Only automaticamente
+    await createSession({
+      userId: user.id,
+      email: user.email,
       name: user.name,
-      code: activationCode,
-      churchName: tenant.name,
-    });
-
-    await prisma.emailLog.create({
-      data: {
-        type: "OUTGOING",
-        from: "suporte@lynxems.com.br",
-        to: cleanEmail,
-        subject: `Código de Ativação: ${activationCode} • ${tenant.name}`,
-        snippet: `Auto-cadastro de membro na congregação ${tenant.name}`,
-        status: "SENT",
-        code: activationCode,
-      },
+      role: "MEMBER",
+      tenantId: tenant.id,
+      tenantSlug: tenant.slug,
     });
 
     revalidatePath(`/${tenant.slug}`);
@@ -589,9 +576,10 @@ export async function registerMemberSelf(params: {
 
     return {
       success: true,
-      requiresActivation: true,
+      requiresActivation: false,
       email: cleanEmail,
-      message: `Cadastro realizado com sucesso na ${tenant.name}! Enviamos o código de 6 dígitos para ${cleanEmail}.`,
+      redirectUrl: `/${tenant.slug}`,
+      message: `Cadastro realizado com sucesso na ${tenant.name}! Você já está conectado.`,
     };
   } catch (error: any) {
     console.error("Erro no auto-cadastro de membro:", error);
