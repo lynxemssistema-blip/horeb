@@ -36,6 +36,7 @@ export async function getChurchMinistries(churchSlug: string) {
         name: tenant.name,
         slug: tenant.slug,
         primaryColor: tenant.primaryColor,
+        plan: tenant.plan,
       },
       ministries: tenant.ministries.map((m) => ({
         id: m.id,

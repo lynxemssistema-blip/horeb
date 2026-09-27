@@ -1,11 +1,13 @@
 import React from "react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { generateTenantTheme } from "@/lib/theme";
 import { AppHeader } from "@/components/app-header";
 import { BottomNav } from "@/components/bottom-nav";
 import { AppSidebar } from "@/components/app-sidebar";
 import { getTenantBySlug } from "@/lib/supabase-service";
+import { checkChurchAccess } from "@/lib/session";
+import { AccessDeniedScreen } from "@/components/access-denied-screen";
 
 interface TenantLayoutProps {
   children: React.ReactNode;
@@ -55,6 +57,24 @@ export default async function TenantLayout({
   params,
 }: TenantLayoutProps) {
   const { slug } = await params;
+
+  // 0. Regra Crucial: Usuários não logados só acessam a página principal (/).
+  // Usuários logados só acessam as suas próprias congregações.
+  const access = await checkChurchAccess(slug);
+  if (!access.authorized) {
+    if (access.reason === "NOT_LOGGED_IN") {
+      redirect(`/?auth=required&church=${slug}`);
+    }
+    if (access.reason === "NOT_MEMBER") {
+      return (
+        <AccessDeniedScreen
+          user={access.user}
+          userChurchSlug={access.userChurchSlug}
+          requestedChurchSlug={access.requestedChurchSlug}
+        />
+      );
+    }
+  }
 
   // 1. Busca Server-Side com prioridade no Supabase (Nuvem VPS) e fallback no Prisma (Local)
   let tenantData: {

@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Church, Bell, ArrowLeftRight, UserPlus } from "lucide-react";
+import { Church, Bell, ArrowLeftRight, UserPlus, HelpCircle, LogOut } from "lucide-react";
 import { MemberSignupDialog } from "@/components/member-signup-dialog";
+import { HelpGuideDialog } from "@/components/help-guide-dialog";
+import { logoutUser } from "@/app/actions/tenant";
 
 interface AppHeaderProps {
   slug: string;
@@ -92,21 +94,32 @@ export function AppHeader({
             </span>
           </Link>
 
-          <Link
-            href="/"
-            className="text-[11px] font-bold text-amber-500 hover:text-amber-400 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20"
-            title="Ir para o Portal Horeb"
-          >
-            HOREB
-          </Link>
+          {/* Guia & Manual */}
+          <HelpGuideDialog
+            triggerButton={
+              <button
+                type="button"
+                aria-label="Manual e Ajuda"
+                title="Manual e Central de Ajuda"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
+            }
+          />
 
+          {/* Sair / Logout */}
           <button
             type="button"
-            aria-label="Notificações"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors relative"
+            onClick={async () => {
+              await logoutUser();
+              window.location.href = "/";
+            }}
+            aria-label="Encerrar Sessão"
+            title="Encerrar Sessão (Sair)"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
           >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>

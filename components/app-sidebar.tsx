@@ -16,11 +16,15 @@ import {
   PlusCircle,
   Sparkles,
   Tv,
+  HelpCircle,
+  LogOut,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CreateChurchDialog } from "@/components/create-church-dialog";
+import { HelpGuideDialog } from "@/components/help-guide-dialog";
+import { logoutUser } from "@/app/actions/tenant";
 
 interface Branch {
   id: string;
@@ -251,7 +255,7 @@ export function AppSidebar({
       </div>
 
       {/* Pastoral Footer */}
-      <div className="p-4 border-t border-border/60 bg-muted/20">
+      <div className="p-4 border-t border-border/60 bg-muted/20 space-y-3">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
             <ShieldCheck className="w-4 h-4 text-primary" />
@@ -260,6 +264,35 @@ export function AppSidebar({
             <p className="text-xs font-semibold text-foreground truncate">Portal da Igreja</p>
             <p className="text-[10px] text-muted-foreground truncate">Lynx EMS Sistemas • Horeb</p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2 pt-1 border-t border-border/40">
+          <HelpGuideDialog
+            triggerButton={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 flex-1 text-[11px] font-bold text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10 justify-start gap-1.5 cursor-pointer"
+              >
+                <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
+                <span>Manual & Guia</span>
+              </Button>
+            }
+          />
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={async () => {
+              await logoutUser();
+              window.location.href = "/";
+            }}
+            className="h-8 px-2 text-[11px] font-bold text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 gap-1.5 cursor-pointer"
+            title="Encerrar Sessão"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Sair</span>
+          </Button>
         </div>
       </div>
     </aside>

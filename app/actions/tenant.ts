@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { generateActivationCode, sendActivationCodeEmail } from "@/lib/mail";
 import { isValidEmail, sanitizeSlug } from "@/lib/validators";
+import { createSession, destroySession, getSession } from "@/lib/session";
+import { isFeatureAllowedForPlan } from "@/lib/plans";
 
 export interface RegisterMasterParams {
   masterName: string;
@@ -241,8 +243,17 @@ export async function loginUser(email: string, rawPassword: string) {
       return { success: false, error: "E-mail ou senha incorretos." };
     }
 
-    // Se for SUPERADMIN, redirecionar direto para o painel Super Admin
+    // Se for SUPERADMIN, criar sessão e redirecionar direto para o painel Super Admin
     if (user.role === "SUPERADMIN") {
+      await createSession({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        role: "SUPERADMIN",
+        tenantId: user.tenantId,
+        tenantSlug: user.tenant?.slug || "matriz",
+      });
+
       return {
         success: true,
         user: {
@@ -285,6 +296,16 @@ export async function loginUser(email: string, rawPassword: string) {
       };
     }
 
+    // Gravar Cookie de Sessão HTTP-Only no Navegador
+    await createSession({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      tenantId: user.tenantId,
+      tenantSlug: user.tenant.slug,
+    });
+
     return {
       success: true,
       user: {
@@ -299,6 +320,18 @@ export async function loginUser(email: string, rawPassword: string) {
   } catch (error: any) {
     return { success: false, error: "Erro ao processar login." };
   }
+}
+
+// Logout do Usuário e Limpeza da Sessão
+export async function logoutUser() {
+  await destroySession();
+  revalidatePath("/");
+  return { success: true, redirectUrl: "/" };
+}
+
+// Obter Usuário da Sessão Atual
+export async function getCurrentSessionUser() {
+  return await getSession();
 }
 
 // 3. Cria uma Filial vinculada à Matriz
@@ -316,6 +349,14 @@ export async function createBranchChurch(params: CreateBranchParams) {
 
     if (!parentTenant) {
       return { success: false, error: "Igreja sede (matriz) não encontrada." };
+    }
+
+    // Verificar se o plano da Matriz permite múltiplas congregações (Plano Premium)
+    if (!isFeatureAllowedForPlan(parentTenant.plan, "BRANCHES")) {
+      return {
+        success: false,
+        error: `A congregação sede está atualmente no Plano ${parentTenant.plan}. O cadastro de múltiplas congregações (Matriz e Filiais integradas) é um recurso exclusivo do Plano Premium.`,
+      };
     }
 
     const existingSlug = await prisma.tenant.findUnique({

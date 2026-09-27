@@ -26,10 +26,12 @@ import {
   User,
   QrCode,
   Coins,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { updateChurchSettings } from "@/app/actions/members";
+import { logoutUser } from "@/app/actions/tenant";
 import { CreateChurchDialog } from "@/components/create-church-dialog";
 
 interface ChurchSettingsProps {
@@ -629,6 +631,34 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
             <p className="text-[11px] text-zinc-400 leading-relaxed">
               Plataforma com motor multi-tenant e segurança em nuvem. Desenvolvido por Lynx EMS Sistemas.
             </p>
+          </div>
+
+          {/* Card de Sessão e Desconexão */}
+          <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 shadow-xl space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <LogOut className="w-4 h-4 text-rose-400" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-white">
+                  Sessão & Desconexão
+                </h3>
+              </div>
+            </div>
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Deseja encerrar sua sessão neste dispositivo? Para voltar a acessar os dados internos da congregação, será necessário fazer login novamente.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                await logoutUser();
+                window.location.href = "/";
+              }}
+              className="w-full text-xs font-bold gap-2 border-rose-500/30 hover:border-rose-500 text-rose-400 hover:bg-rose-500/10 h-10 rounded-xl cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Encerrar Sessão (Sair)</span>
+            </Button>
           </div>
         </div>
       </div>

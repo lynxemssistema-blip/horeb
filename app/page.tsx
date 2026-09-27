@@ -30,10 +30,20 @@ import {
   Layers,
   ChevronRight,
   CreditCard,
+  HelpCircle,
+  ShieldAlert,
 } from "lucide-react";
 import { getPromotionConfig } from "@/app/actions/superadmin";
+import { HelpGuideDialog } from "@/components/help-guide-dialog";
 
-export default async function HomePage() {
+export default async function HomePage(props: {
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const searchParams = props.searchParams ? await props.searchParams : {};
+  const isAuthRequired = searchParams.auth === "required";
+  const isAdminAuthRequired = searchParams.auth === "admin_required";
+  const churchSlug = typeof searchParams.church === "string" ? searchParams.church : null;
+
   const [tenants, promoRes] = await Promise.all([
     prisma.tenant.findMany({
       include: {
@@ -49,6 +59,21 @@ export default async function HomePage() {
     <div className="min-h-screen bg-[#070709] text-zinc-100 flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200 relative overflow-x-hidden">
       {/* Ferramentas Nativas para Celular (PWA Banner & Instalação) */}
       <NativeMobileTools />
+
+      {/* Botão Flutuante de Ajuda & Guia Completo */}
+      <div className="fixed bottom-6 right-6 z-50 shadow-2xl">
+        <HelpGuideDialog
+          triggerButton={
+            <Button
+              className="h-12 px-4 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-black font-black text-xs shadow-[0_10px_30px_rgba(245,158,11,0.4)] gap-2 transition-all hover:scale-105 active:scale-95 cursor-pointer border border-amber-400/40"
+            >
+              <HelpCircle className="w-4 h-4 text-black" />
+              <span className="hidden sm:inline">Guia de Uso & Dúvidas</span>
+              <span className="sm:hidden">Ajuda</span>
+            </Button>
+          }
+        />
+      </div>
 
       {/* Luz Ambiente / Ambient Glow no Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
@@ -70,6 +95,36 @@ export default async function HomePage() {
               priority
             />
           </div>
+
+          {/* Banner de Autenticação Necessária (Isolamento de Tenants) */}
+          {isAuthRequired && (
+            <div className="w-full max-w-xl p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs sm:text-sm flex items-start gap-3.5 shadow-2xl backdrop-blur-md animate-in fade-in-0 slide-in-from-top-4 duration-300">
+              <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1 text-left">
+                <p className="font-black text-amber-300">
+                  🔒 Acesso Restrito à Congregação {churchSlug ? `(${churchSlug.toUpperCase()})` : ""}
+                </p>
+                <p className="text-zinc-300 leading-relaxed text-xs">
+                  Por política de isolamento e segurança, o acesso aos dados internos e ferramentas da congregação é exclusivo para membros e líderes logados. Faça login abaixo com sua conta ou cadastre sua igreja.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Banner de Autenticação Necessária (Super Admin) */}
+          {isAdminAuthRequired && (
+            <div className="w-full max-w-xl p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs sm:text-sm flex items-start gap-3.5 shadow-2xl backdrop-blur-md animate-in fade-in-0 slide-in-from-top-4 duration-300">
+              <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1 text-left">
+                <p className="font-black text-amber-300">
+                  🔒 Acesso Restrito ao Painel Executivo Super Admin
+                </p>
+                <p className="text-zinc-300 leading-relaxed text-xs">
+                  A área /admin é reservada aos administradores da Lynx EMS Sistemas. Faça login abaixo com a conta credenciada de Super Admin para prosseguir.
+                </p>
+              </div>
+            </div>
+          )}
 
           <a href="#origem-horeb" className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-xs font-bold tracking-widest uppercase shadow-sm backdrop-blur-md hover:bg-amber-500/20 transition-colors">
             <Sparkles className="w-3.5 h-3.5" />
@@ -119,6 +174,18 @@ export default async function HomePage() {
                   className="h-12 px-5 border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] hover:text-white text-zinc-200 font-bold text-sm rounded-xl gap-2 backdrop-blur-md transition-all hover:scale-105 cursor-pointer"
                 >
                   <span>Já Sou Líder • Fazer Login</span>
+                </Button>
+              }
+            />
+
+            <HelpGuideDialog
+              triggerButton={
+                <Button
+                  variant="outline"
+                  className="h-12 px-5 border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-sm rounded-xl gap-2 backdrop-blur-md transition-all hover:scale-105 cursor-pointer"
+                >
+                  <HelpCircle className="w-4 h-4 text-amber-400" />
+                  <span>Como Funciona • Guia</span>
                 </Button>
               }
             />

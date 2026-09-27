@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { isFeatureAllowedForPlan } from "@/lib/plans";
+import { PlanLockCard } from "@/components/plan-lock-card";
 import {
   Card,
   CardContent,
@@ -38,6 +40,20 @@ export default async function CelulasPage({ params }: CelulasPageProps) {
   });
 
   if (!tenant) notFound();
+
+  // Controle de Plano: Células é exclusivo dos Planos Gestão e Premium
+  if (!isFeatureAllowedForPlan(tenant.plan, "CELLS")) {
+    return (
+      <PlanLockCard
+        churchSlug={tenant.slug}
+        churchName={tenant.name}
+        currentPlan={tenant.plan}
+        featureKey="CELLS"
+        featureName="Células e Pequenos Grupos nos Lares"
+        featureDescription="O módulo de Células permite cadastrar e gerenciar redes de pequenos grupos familiares nos lares, com endereços, líderes designados e relatórios de frequência."
+      />
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-8">

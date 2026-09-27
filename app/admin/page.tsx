@@ -1,4 +1,6 @@
 import React from "react";
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/session";
 import { SuperAdminDashboard } from "@/components/superadmin-dashboard";
 import {
   getSuperAdminMetrics,
@@ -15,6 +17,11 @@ export const metadata = {
 };
 
 export default async function AdminPage() {
+  const session = await getSession();
+  if (!session || session.role !== "SUPERADMIN") {
+    redirect("/?auth=admin_required");
+  }
+
   const [metricsRes, tenantsRes, plansRes, usersRes, emailDataRes, promoRes] =
     await Promise.all([
       getSuperAdminMetrics(),
