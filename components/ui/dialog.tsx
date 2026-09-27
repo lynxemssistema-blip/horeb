@@ -31,7 +31,7 @@ function DialogOverlay({
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/80 backdrop-blur-md duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 z-50 bg-black/85 backdrop-blur-md duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}
@@ -50,39 +50,39 @@ function DialogContent({
   return (
     <DialogPortal>
       <DialogOverlay />
-      <DialogPrimitive.Popup
-        data-slot="dialog-content"
-        className={cn(
-          "fixed z-50 flex flex-col w-[94vw] max-w-lg bg-zinc-950 text-sm text-foreground ring-1 ring-white/10 shadow-2xl duration-200 outline-none",
-          // Centralizado sempre no centro absoluto da tela em todas as resoluções
-          "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-h-[90dvh] rounded-3xl border border-white/15",
-          // Animações suaves de abertura e fechamento
-          "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
-          "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-          className
-        )}
-        style={{
-          WebkitOverflowScrolling: "touch",
-          overscrollBehaviorY: "contain",
-        }}
-        {...props}
-      >
-        {children}
-        {showCloseButton && (
-          <DialogPrimitive.Close
-            data-slot="dialog-close"
-            render={
-              <button
-                type="button"
-                className="absolute top-3.5 right-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors z-50 cursor-pointer"
-              />
-            }
-          >
-            <XIcon className="w-4 h-4" />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
-        )}
-      </DialogPrimitive.Popup>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto pointer-events-none">
+        <DialogPrimitive.Popup
+          data-slot="dialog-content"
+          className={cn(
+            "pointer-events-auto relative z-50 flex flex-col w-[94vw] max-w-lg bg-zinc-950 text-sm text-foreground ring-1 ring-white/10 shadow-2xl rounded-3xl border border-white/15 outline-none max-h-[88dvh] my-auto duration-200",
+            // Animações suaves de abertura e fechamento
+            "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
+            "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            className
+          )}
+          style={{
+            WebkitOverflowScrolling: "touch",
+            overscrollBehaviorY: "contain",
+          }}
+          {...props}
+        >
+          {children}
+          {showCloseButton && (
+            <DialogPrimitive.Close
+              data-slot="dialog-close"
+              render={
+                <button
+                  type="button"
+                  className="absolute top-3.5 right-4 w-9 h-9 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors z-50 cursor-pointer"
+                />
+              }
+            >
+              <XIcon className="w-4 h-4" />
+              <span className="sr-only">Close</span>
+            </DialogPrimitive.Close>
+          )}
+        </DialogPrimitive.Popup>
+      </div>
     </DialogPortal>
   )
 }

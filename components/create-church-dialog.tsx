@@ -300,7 +300,7 @@ export function CreateChurchDialog({
         />
 
         {/* Modal rigorosamente centralizado no meio da tela com viewport responsivo e scroll interno */}
-        <DialogContent className="w-[94vw] max-w-lg max-h-[88dvh] flex flex-col p-0 overflow-hidden bg-zinc-950 border border-white/10 rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.9),0_0_50px_rgba(245,158,11,0.06)] relative text-zinc-100">
+        <DialogContent className="w-[94vw] max-w-lg max-h-[88dvh] flex flex-col p-0 overflow-hidden bg-zinc-950 border border-white/10 rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.9),0_0_50px_rgba(245,158,11,0.06)] text-zinc-100">
           {/* Glow de Iluminação */}
           <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-80 h-32 bg-amber-500/15 blur-3xl rounded-full" />
 
@@ -356,7 +356,7 @@ export function CreateChurchDialog({
             {/* TAB 1: MATRIZ */}
             <TabsContent
               value="master"
-              className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4 touch-pan-y overscroll-contain"
+              className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-4 space-y-4 touch-pan-y overscroll-contain"
             >
               <form onSubmit={handleRegisterMaster} className="space-y-4">
                 {/* 1. Credenciais Master */}
@@ -605,7 +605,7 @@ export function CreateChurchDialog({
             {/* TAB 2: FILIAL */}
             <TabsContent
               value="branch"
-              className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4 touch-pan-y overscroll-contain"
+              className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-4 space-y-4 touch-pan-y overscroll-contain"
             >
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-zinc-300">
                 <span className="font-bold text-amber-400 block mb-0.5">Estrutura Completa de Filial</span>
@@ -746,7 +746,7 @@ export function CreateChurchDialog({
             {/* TAB 3: LOGIN */}
             <TabsContent
               value="login"
-              className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4 touch-pan-y overscroll-contain"
+              className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-4 space-y-4 touch-pan-y overscroll-contain"
             >
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="rounded-2xl bg-zinc-900/60 border border-white/[0.07] p-4 space-y-3 backdrop-blur-sm">
