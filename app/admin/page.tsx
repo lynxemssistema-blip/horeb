@@ -10,6 +10,8 @@ import {
   getEmailCenterData,
   getPromotionConfig,
 } from "@/app/actions/superadmin";
+import { getAgentProfiles } from "@/app/actions/agent";
+import { getRolePermissions } from "@/app/actions/permissions";
 
 export const metadata = {
   title: "Super Admin • Horeb por Lynx EMS Sistemas",
@@ -22,7 +24,7 @@ export default async function AdminPage() {
     redirect("/?auth=admin_required");
   }
 
-  const [metricsRes, tenantsRes, plansRes, usersRes, emailDataRes, promoRes] =
+  const [metricsRes, tenantsRes, plansRes, usersRes, emailDataRes, promoRes, agentsRes, permissionsRes] =
     await Promise.all([
       getSuperAdminMetrics(),
       getAllTenants(),
@@ -30,6 +32,8 @@ export default async function AdminPage() {
       getAllUsers(),
       getEmailCenterData(),
       getPromotionConfig(),
+      getAgentProfiles(null), // null = agentes globais
+      getRolePermissions()
     ]);
 
   return (
@@ -43,6 +47,9 @@ export default async function AdminPage() {
       inboxTotal={emailDataRes.inboxTotal || 0}
       imapConnected={emailDataRes.imapConnected || false}
       initialPromoConfig={promoRes.config}
+      user={session}
+      initialAgents={agentsRes?.profiles || []}
+      initialPermissions={permissionsRes.permissions || []}
     />
   );
 }

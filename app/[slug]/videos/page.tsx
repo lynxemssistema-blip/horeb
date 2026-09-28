@@ -8,9 +8,12 @@ interface VideosPageProps {
   }>;
 }
 
+import { getUserAccessRules } from "@/app/actions/permissions";
+
 export default async function VideosPage({ params }: VideosPageProps) {
   const { slug } = await params;
   const res = await getChurchVideos(slug);
+  const rules = await getUserAccessRules();
 
   if (!res.success || !res.tenant) {
     notFound();
@@ -20,6 +23,7 @@ export default async function VideosPage({ params }: VideosPageProps) {
     <ChurchVideosManager
       tenant={res.tenant}
       initialVideos={res.videos || []}
+      allowedActions={rules?.allowedActions || []}
     />
   );
 }

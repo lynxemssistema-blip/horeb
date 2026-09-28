@@ -25,6 +25,7 @@ import {
   KeyRound,
   RefreshCw,
 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -54,6 +55,7 @@ interface MemberUser {
   id: string;
   name: string;
   email: string;
+  avatarUrl?: string | null;
   role: string;
   roleLabel: string;
   isEmailVerified: boolean;
@@ -77,6 +79,7 @@ interface ChurchMembersManagerProps {
   isMatriz: boolean;
   allNetworkChurches: ChurchOption[];
   initialUsers: MemberUser[];
+  allowedActions: string[];
 }
 
 export function ChurchMembersManager({
@@ -84,6 +87,7 @@ export function ChurchMembersManager({
   isMatriz,
   allNetworkChurches,
   initialUsers,
+  allowedActions = [],
 }: ChurchMembersManagerProps) {
   const [users, setUsers] = useState<MemberUser[]>(initialUsers);
   const [selectedFilterChurch, setSelectedFilterChurch] = useState<string>("ALL");
@@ -322,21 +326,25 @@ export function ChurchMembersManager({
 
           {/* Botões de Ação Master */}
           <div className="flex items-center gap-2.5 flex-wrap w-full md:w-auto">
-            <Button
-              onClick={() => setShowInviteModal(true)}
-              className="flex-1 md:flex-initial h-11 bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/15 font-bold text-xs rounded-xl shadow-lg gap-2 cursor-pointer"
-            >
-              <Mail className="w-4 h-4 text-amber-400" />
-              <span>Gerar Convite / Enviar E-mail</span>
-            </Button>
+            {(allowedActions.includes("create_member") || allowedActions.includes("ALL")) && (
+              <>
+                <Button
+                  onClick={() => setShowInviteModal(true)}
+                  className="flex-1 md:flex-initial h-11 bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/15 font-bold text-xs rounded-xl shadow-lg gap-2 cursor-pointer"
+                >
+                  <Mail className="w-4 h-4 text-amber-400" />
+                  <span>Gerar Convite / Enviar E-mail</span>
+                </Button>
 
-            <Button
-              onClick={() => setShowCreateModal(true)}
-              className="flex-1 md:flex-initial h-11 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:brightness-110 text-black font-black text-xs rounded-xl shadow-lg shadow-amber-500/25 gap-2 cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>+ Novo Usuário / Membro</span>
-            </Button>
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex-1 md:flex-initial h-11 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:brightness-110 text-black font-black text-xs rounded-xl shadow-lg shadow-amber-500/25 gap-2 cursor-pointer"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>+ Novo Usuário / Membro</span>
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -441,9 +449,12 @@ export function ChurchMembersManager({
                   <tr key={u.id} className="hover:bg-white/[0.02] transition-colors">
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-white/[0.08] border border-white/10 flex items-center justify-center font-bold text-white text-xs shrink-0">
-                          {u.name.substring(0, 2).toUpperCase()}
-                        </div>
+                        <Avatar className="w-8 h-8 rounded-full border border-white/15 ring-1 ring-white/10 shrink-0">
+                          {u.avatarUrl && <AvatarImage src={u.avatarUrl} alt={u.name} />}
+                          <AvatarFallback className="bg-white/[0.08] font-bold text-white text-xs">
+                            {u.name.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="min-w-0">
                           <p className="font-bold text-white truncate">{u.name}</p>
                           <p className="text-[11px] text-zinc-400 font-mono truncate">{u.email}</p>
@@ -506,7 +517,7 @@ export function ChurchMembersManager({
                     </td>
 
                     <td className="px-4 py-3.5 text-right">
-                      {u.role !== "SUPERADMIN" && (
+                      {u.role !== "SUPERADMIN" && (allowedActions.includes("create_member") || allowedActions.includes("ALL")) && (
                         <Button
                           variant="ghost"
                           size="sm"

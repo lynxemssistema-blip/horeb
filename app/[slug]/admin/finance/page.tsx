@@ -9,6 +9,8 @@ interface FinancePageProps {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
+import { getUserAccessRules } from "@/app/actions/permissions";
+
 export default async function AdminFinancePage({
   params,
   searchParams,
@@ -30,6 +32,16 @@ export default async function AdminFinancePage({
 
   // 2. Verificar Sessão e RBAC
   const access = await checkChurchAccess(slug);
+  const rules = await getUserAccessRules();
+  
+  // Bloquear acesso se não tiver permissão para /admin/finance
+  if (rules && !rules.allowedMenus.includes("ALL")) {
+    const hasFinanceAccess = rules.allowedMenus.some(menu => "/admin/finance".endsWith(menu));
+    if (!hasFinanceAccess) {
+      redirect(`/${slug}`);
+    }
+  }
+
   let effectiveRole = "MASTER"; // Default para visualização/teste administrativo
 
   if (access.authorized) {

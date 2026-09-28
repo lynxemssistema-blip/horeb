@@ -20,6 +20,8 @@ import {
   LogOut,
   Wallet,
   Receipt,
+  Bot,
+  Calendar,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -44,6 +46,7 @@ interface AppSidebarProps {
   isMatriz: boolean;
   parent?: { name: string; slug: string } | null;
   branches?: Branch[];
+  accessRules?: { allowedMenus: string[], allowedActions: string[] } | null;
 }
 
 export function AppSidebar({
@@ -55,6 +58,7 @@ export function AppSidebar({
   isMatriz,
   parent,
   branches = [],
+  accessRules,
 }: AppSidebarProps) {
   const pathname = usePathname();
 
@@ -64,6 +68,12 @@ export function AppSidebar({
       href: `/${slug}`,
       icon: Home,
       exact: true,
+    },
+    {
+      name: "Check-in de Alma (Devocional)",
+      href: `/${slug}/devocional`,
+      icon: Sparkles,
+      highlightBadge: "IA",
     },
     {
       name: "Gestão Financeira (ERP)",
@@ -87,6 +97,11 @@ export function AppSidebar({
       icon: Tv,
     },
     {
+      name: "Agenda & Eventos",
+      href: `/${slug}/agenda`,
+      icon: Calendar,
+    },
+    {
       name: "Ministérios da Igreja",
       href: `/${slug}/ministerios`,
       icon: Sparkles,
@@ -107,6 +122,31 @@ export function AppSidebar({
       icon: Settings,
     },
   ];
+
+  let filteredNavigation = navigation;
+
+  // Filter based on access rules if not ALL
+  if (accessRules && !accessRules.allowedMenus.includes("ALL")) {
+    filteredNavigation = navigation.filter((item) => {
+      // Check if item.href ends with one of the allowed menus
+      // e.g., allowed: "/celulas", href: "/igreja-a/celulas"
+      return accessRules.allowedMenus.some((allowed) => item.href.endsWith(allowed)) || item.exact; 
+      // Keep exact path (Início / Dashboard) always available
+    });
+  }
+
+  // Adiciona 'Agentes de IA' apenas se for Matriz
+  if (isMatriz) {
+    const agentsHref = `/${slug}/admin/agentes`;
+    if (accessRules?.allowedMenus.includes("ALL") || accessRules?.allowedMenus.some(allowed => agentsHref.endsWith(allowed))) {
+      filteredNavigation.push({
+        name: "Configurar IA (Agentes)",
+        href: agentsHref,
+        icon: Bot,
+        highlightBadge: "SUPER",
+      } as any);
+    }
+  }
 
   return (
     <aside className="hidden md:flex flex-col w-64 lg:w-72 border-r border-border bg-card/60 backdrop-blur-md min-h-screen sticky top-0 shrink-0">
@@ -149,7 +189,7 @@ export function AppSidebar({
         <div className="px-3 pb-2 text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
           Menu Principal
         </div>
-        {navigation.map((item) => {
+        {filteredNavigation.map((item) => {
           const isActive = item.exact
             ? pathname === item.href
             : pathname.startsWith(item.href);
@@ -222,27 +262,29 @@ export function AppSidebar({
               )}
 
               {/* Botão para a Matriz Cadastrar Nova Filial */}
-              <div className="px-2 pt-2">
-                <CreateChurchDialog
-                  defaultTab="branch"
-                  parentTenantId={tenantId}
-                  existingTenants={
-                    tenantId
-                      ? [{ id: tenantId, name, slug, primaryColor }]
-                      : []
-                  }
-                  triggerButton={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-xs font-bold gap-1.5 h-9 border-dashed border-primary/40 hover:border-primary text-primary hover:bg-primary/10 transition-all cursor-pointer"
-                    >
-                      <PlusCircle className="w-3.5 h-3.5" />
-                      <span>+ Cadastrar Nova Filial</span>
-                    </Button>
-                  }
-                />
-              </div>
+              {(!accessRules || accessRules.allowedActions?.includes("ALL") || accessRules.allowedActions?.includes("create_church")) && (
+                <div className="px-2 pt-2">
+                  <CreateChurchDialog
+                    defaultTab="branch"
+                    parentTenantId={tenantId}
+                    existingTenants={
+                      tenantId
+                        ? [{ id: tenantId, name, slug, primaryColor }]
+                        : []
+                    }
+                    triggerButton={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs font-bold gap-1.5 h-9 border-dashed border-primary/40 hover:border-primary text-primary hover:bg-primary/10 transition-all cursor-pointer"
+                      >
+                        <PlusCircle className="w-3.5 h-3.5" />
+                        <span>+ Cadastrar Nova Filial</span>
+                      </Button>
+                    }
+                  />
+                </div>
+              )}
             </div>
           )}
 

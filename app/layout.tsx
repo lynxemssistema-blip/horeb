@@ -37,12 +37,17 @@ export const metadata: Metadata = {
 };
 
 import { Toaster } from "@/components/ui/sonner";
+import { getSession } from "@/lib/session";
+import { RoleImpersonator } from "@/components/role-impersonator";
+import { cookies } from "next/headers";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getSession();
+
   return (
     <html
       lang="pt-BR"
@@ -52,7 +57,30 @@ export default function RootLayout({
       <body className="min-h-[100dvh] flex flex-col bg-[#070709] text-zinc-100 overflow-x-hidden">
         {children}
         <Toaster position="top-center" richColors closeButton />
+        {(session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN") && (
+          <RoleImpersonatorWrapper session={session} />
+        )}
       </body>
     </html>
+  );
+}
+
+// Criando um componente de wrapper para buscar os perfis do banco sem atrasar o layout principal
+import { getRolePermissions } from "@/app/actions/permissions";
+async function RoleImpersonatorWrapper({ session }: { session: any }) {
+  const permissionsRes = await getRolePermissions();
+  const dbRoles = permissionsRes.permissions || [];
+  
+  const customRoles = dbRoles.map((r: any) => ({
+    value: r.role,
+    label: r.description ? `${r.role} (${r.description})` : r.role
+  }));
+
+  return (
+    <RoleImpersonator 
+      originalRole={session.originalRole || session.role} 
+      effectiveRole={session.role}
+      customRoles={customRoles}
+    />
   );
 }

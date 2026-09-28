@@ -32,7 +32,10 @@ import {
   PlusCircle,
   UserPlus,
   Tv,
+  Bot,
 } from "lucide-react";
+import { getSession } from "@/lib/session";
+import { getUserAccessRules } from "@/app/actions/permissions";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -61,6 +64,22 @@ export default async function TenantDashboardPage({ params }: PageProps) {
 
   const pastor = tenant.users[0];
   const isMatriz = !tenant.parentId;
+
+  const session = await getSession();
+  let allowedMenus: string[] = [];
+  let allowedActions: string[] = [];
+  
+  if (session && session.userId) {
+    const rules = await getUserAccessRules();
+    if (rules) {
+      allowedMenus = rules.allowedMenus || [];
+      allowedActions = rules.allowedActions || [];
+    }
+  }
+
+  // Helper function to check menu access
+  const canSeeMenu = (menu: string) => allowedMenus.includes(menu) || allowedMenus.includes("ALL");
+  const canDoAction = (action: string) => allowedActions.includes(action) || allowedActions.includes("ALL");
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-6">
@@ -217,15 +236,17 @@ export default async function TenantDashboardPage({ params }: PageProps) {
                       Contribuir PIX
                     </Button>
                   </Link>
-                  <Link href={`/${slug}/admin/finance`} className="flex-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-xs font-bold border-amber-500/30 text-amber-400 hover:bg-amber-500/10 cursor-pointer"
-                    >
-                      Tesouraria (ERP)
-                    </Button>
-                  </Link>
+                  {canSeeMenu("/admin/finance") && (
+                    <Link href={`/${slug}/admin/finance`} className="flex-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs font-bold border-amber-500/30 text-amber-400 hover:bg-amber-500/10 cursor-pointer"
+                      >
+                        Tesouraria (ERP)
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -247,21 +268,63 @@ export default async function TenantDashboardPage({ params }: PageProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
-                <PrayerRequestDialog
-                  tenantSlug={slug}
-                  triggerButton={
+                <div className="flex gap-2 mt-2">
+                  <PrayerRequestDialog
+                    tenantSlug={slug}
+                    triggerButton={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-xs font-semibold hover:border-primary hover:text-primary cursor-pointer"
+                      >
+                        Enviar Pedido
+                      </Button>
+                    }
+                  />
+                  <Link href={`/${slug}/devocional`} className="flex-1">
                     <Button
-                      variant="outline"
+                      variant="default"
                       size="sm"
-                      className="w-full mt-2 text-xs font-semibold hover:border-primary hover:text-primary"
+                      className="w-full text-xs font-bold gap-1 shadow-xs cursor-pointer"
                     >
-                      Enviar Pedido
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Check-in</span>
                     </Button>
-                  }
-                />
+                  </Link>
+                </div>
               </CardContent>
             </Card>
           </div>
+
+          {/* Card: Agente Devocional IA */}
+          {canSeeMenu("/devocional") && (
+            <Link href={`/${slug}/devocional`} className="group block focus:outline-none">
+              <Card className="h-full border-border/80 hover:border-primary/50 hover:shadow-md transition-all duration-200">
+                <CardHeader className="pb-2">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <CardTitle className="text-base font-semibold group-hover:text-primary transition-colors flex items-center justify-between">
+                    <span>Agente Devocional IA</span>
+                    <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-primary" />
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Comunicação, ensino e mentoria com inteligência artificial baseada na bíblia.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-2 text-xs font-semibold border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                    Iniciar Devocional
+                  </Button>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
           {/* Card 3: Check-in Kids */}
           <Link href={`/${slug}/kids`} className="group block focus:outline-none">
@@ -317,8 +380,8 @@ export default async function TenantDashboardPage({ params }: PageProps) {
             </Card>
           </Link>
 
-          {/* Card 5: Agenda e Cultos */}
-          <div className="group block focus:outline-none">
+          {/* Card 5: Agenda e Eventos */}
+          <Link href={`/${slug}/agenda`} className="group block focus:outline-none">
             <Card className="h-full border-border/80 hover:border-primary/50 hover:shadow-md transition-all duration-200 flex flex-col justify-between">
               <CardHeader className="pb-2">
                 <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
@@ -326,19 +389,23 @@ export default async function TenantDashboardPage({ params }: PageProps) {
                 </div>
                 <CardTitle className="text-base font-semibold group-hover:text-primary transition-colors flex items-center justify-between">
                   <span>Agenda & Eventos</span>
+                  <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-primary" />
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Cultos semanais: Terças (Oração), Quartas (Ensino) e Domingos (Família).
+                  Cultos semanais, congressos, vigílias e programações especiais.
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="text-[11px] text-muted-foreground bg-muted/60 p-2 rounded-lg mt-2 flex items-center justify-between">
-                  <span>Domingo às 19:00</span>
-                  <span className="font-semibold text-primary">Culto Principal</span>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2 text-xs font-semibold hover:border-primary hover:text-primary cursor-pointer"
+                >
+                  Ver Agenda Completa
+                </Button>
               </CardContent>
             </Card>
-          </div>
+          </Link>
 
           {/* Card: Cultos & Vídeos Online */}
           <Link href={`/${slug}/videos`} className="group block focus:outline-none">
@@ -449,7 +516,7 @@ export default async function TenantDashboardPage({ params }: PageProps) {
 
                 {/* Ações da Rede de Igrejas */}
                 <div className="pt-2 flex flex-col gap-1.5">
-                  {isMatriz && (
+                  {isMatriz && canDoAction("create_church") && (
                     <CreateChurchDialog
                       defaultTab="branch"
                       parentTenantId={tenant.id}
@@ -474,16 +541,18 @@ export default async function TenantDashboardPage({ params }: PageProps) {
                     />
                   )}
 
-                  <Link href={`/${slug}/membros`}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-xs font-bold gap-1.5 h-9 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30 transition-all cursor-pointer"
-                    >
-                      <Users className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Controle de Membros & Níveis de Acesso</span>
-                    </Button>
-                  </Link>
+                  {canSeeMenu("/membros") && (
+                    <Link href={`/${slug}/membros`}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs font-bold gap-1.5 h-9 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30 transition-all cursor-pointer"
+                      >
+                        <Users className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Controle de Membros & Níveis de Acesso</span>
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               </CardContent>
             </Card>

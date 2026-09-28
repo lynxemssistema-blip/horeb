@@ -53,6 +53,8 @@ export async function generateMetadata({
   };
 }
 
+import { getUserAccessRules } from "@/app/actions/permissions";
+
 export default async function TenantLayout({
   children,
   params,
@@ -76,6 +78,9 @@ export default async function TenantLayout({
       );
     }
   }
+
+  // Busca regras de acesso (RBAC) dinâmicas do banco de dados
+  const accessRules = await getUserAccessRules();
 
   // 1. Busca Server-Side com prioridade no Supabase (Nuvem VPS) e fallback no Prisma (Local)
   let tenantData: {
@@ -185,6 +190,7 @@ export default async function TenantLayout({
         isMatriz={isMatriz}
         parent={tenant.parent}
         branches={tenant.branches}
+        accessRules={accessRules}
       />
 
       {/* Conteúdo Principal com Header e BottomNav */}
@@ -199,6 +205,7 @@ export default async function TenantLayout({
           branches={tenant.branches}
           userRole={access.effectiveRole}
           userName={access.user.name}
+          userAvatar={access.user.avatarUrl}
         />
 
         <main className="flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-10 max-w-7xl w-full mx-auto px-3 sm:px-6 pt-3 sm:pt-6 pl-[max(0.75rem,env(safe-area-inset-left,0px))] pr-[max(0.75rem,env(safe-area-inset-right,0px))]">

@@ -51,6 +51,7 @@ interface ChurchVideosManagerProps {
     primaryColor: string;
   };
   initialVideos: VideoItem[];
+  allowedActions: string[];
 }
 
 const CATEGORIES = [
@@ -62,7 +63,7 @@ const CATEGORIES = [
   "Especial",
 ];
 
-export function ChurchVideosManager({ tenant, initialVideos }: ChurchVideosManagerProps) {
+export function ChurchVideosManager({ tenant, initialVideos, allowedActions = [] }: ChurchVideosManagerProps) {
   const router = useRouter();
   const [videos, setVideos] = useState<VideoItem[]>(initialVideos);
   const [selectedCategory, setSelectedCategory] = useState("Todos");
@@ -177,14 +178,16 @@ export function ChurchVideosManager({ tenant, initialVideos }: ChurchVideosManag
           </div>
 
           <Dialog open={openModal} onOpenChange={setOpenModal}>
-            <DialogTrigger
-              render={
-                <Button className="h-11 text-xs font-black bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:brightness-110 text-white rounded-xl shadow-lg shadow-red-500/20 gap-2 cursor-pointer shrink-0">
-                  <PlusCircle className="w-4 h-4" />
-                  <span>+ Adicionar Vídeo YouTube</span>
-                </Button>
-              }
-            />
+            {(allowedActions.includes("create_video") || allowedActions.includes("ALL")) && (
+              <DialogTrigger
+                render={
+                  <Button className="h-11 text-xs font-black bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:brightness-110 text-white rounded-xl shadow-lg shadow-red-500/20 gap-2 cursor-pointer shrink-0">
+                    <PlusCircle className="w-4 h-4" />
+                    <span>+ Adicionar Vídeo YouTube</span>
+                  </Button>
+                }
+              />
+            )}
 
             <DialogContent className="max-w-lg w-[94vw] bg-zinc-950 border border-white/10 rounded-3xl p-0 overflow-hidden shadow-2xl">
               <div className="p-5 sm:p-6 border-b border-white/10">
@@ -432,14 +435,16 @@ export function ChurchVideosManager({ tenant, initialVideos }: ChurchVideosManag
                     {video.category}
                   </span>
 
-                  <button
-                    type="button"
-                    onClick={(e) => handleDeleteVideo(video.id, e)}
-                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 hover:bg-red-600 text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-                    title="Excluir vídeo"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {(allowedActions.includes("delete_video") || allowedActions.includes("ALL")) && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteVideo(video.id, e)}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 hover:bg-red-600 text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                      title="Excluir vídeo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
 
                 <div className="p-4 space-y-1.5">

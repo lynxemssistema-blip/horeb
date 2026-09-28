@@ -5,7 +5,9 @@ export interface SessionData {
   userId: string;
   email: string;
   name: string;
+  avatarUrl?: string | null;
   role: string;
+  originalRole?: string;
   tenantId: string;
   tenantSlug: string;
 }
@@ -28,7 +30,18 @@ export async function getSession(): Promise<SessionData | null> {
     const cookieStore = await cookies();
     const cookie = cookieStore.get(SESSION_COOKIE_NAME);
     if (!cookie?.value) return null;
-    return JSON.parse(cookie.value) as SessionData;
+    const session = JSON.parse(cookie.value) as SessionData;
+    
+    // Aplica o papel simulado se existir
+    if (session.role === "SUPERADMIN") {
+      const simulatedRole = cookieStore.get("horeb_simulated_role")?.value;
+      if (simulatedRole) {
+        session.originalRole = "SUPERADMIN"; // guarda o original
+        session.role = simulatedRole; // injeta o simulado para a aplicação
+      }
+    }
+    
+    return session;
   } catch {
     return null;
   }
@@ -58,8 +71,9 @@ export async function checkChurchAccess(slug: string): Promise<AccessCheckResult
   }
 
   // Super Admin (Edson Manoel / Lynx EMS) tem acesso irrestrito
-  if (session.role === "SUPERADMIN") {
-    return { authorized: true, user: session, effectiveRole: "SUPERADMIN" };
+  const isSuperAdmin = session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN";
+  if (isSuperAdmin) {
+    return { authorized: true, user: session, effectiveRole: session.role };
   }
 
   // Igreja de cadastro principal do usuário

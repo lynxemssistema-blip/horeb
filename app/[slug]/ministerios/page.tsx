@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { getChurchMinistries } from "@/app/actions/ministries";
 import { ChurchMinistriesManager } from "@/components/church-ministries-manager";
+import { getSession } from "@/lib/session";
+import { getUserAccessRules } from "@/app/actions/permissions";
 import { isFeatureAllowedForPlan } from "@/lib/plans";
 import { PlanLockCard } from "@/components/plan-lock-card";
 
@@ -32,11 +34,22 @@ export default async function MinisteriosPage({ params }: MinisteriosPageProps) 
     );
   }
 
+  const session = await getSession();
+  let allowedActions: string[] = [];
+
+  if (session && session.userId && res.tenant) {
+    const rules = await getUserAccessRules();
+    if (rules) {
+      allowedActions = rules.allowedActions || [];
+    }
+  }
+
   return (
     <ChurchMinistriesManager
       tenant={res.tenant}
       initialMinistries={res.ministries || []}
       potentialLeaders={res.potentialLeaders || []}
+      allowedActions={allowedActions}
     />
   );
 }

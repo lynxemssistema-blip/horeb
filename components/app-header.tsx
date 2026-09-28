@@ -17,6 +17,7 @@ interface AppHeaderProps {
   branches?: { id: string; name: string; slug: string; primaryColor: string }[];
   userRole?: string;
   userName?: string;
+  userAvatar?: string | null;
 }
 
 export function AppHeader({
@@ -29,6 +30,7 @@ export function AppHeader({
   branches = [],
   userRole,
   userName,
+  userAvatar,
 }: AppHeaderProps) {
   // Alvo de alternância dinâmico
   const targetBranch = branches[0];
@@ -78,17 +80,32 @@ export function AppHeader({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          {/* Badge & Atalho de Acesso do Usuário Master */}
-          {(userRole === "ADMIN" || userRole === "SUPERADMIN") && (
-            <Link
-              href={`/${slug}/membros`}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-300 text-xs font-bold transition-all shadow-sm"
-              title="Você é o Usuário Master desta igreja. Clique para gerenciar membros e níveis de acesso."
-            >
-              <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="hidden sm:inline">Master ({userName ? userName.split(" ")[0] : "Admin"})</span>
-              <span className="sm:hidden text-[10px]">Acessos</span>
-            </Link>
+          {/* Badge & Atalho de Acesso do Usuário com Foto de Perfil */}
+          {userName && (
+            <div className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 rounded-full bg-muted/60 border border-border">
+              <Avatar className="h-6 w-6 ring-1 ring-primary/30">
+                {userAvatar && <AvatarImage src={userAvatar} alt={userName} />}
+                <AvatarFallback className="text-[10px] font-bold bg-primary text-primary-foreground">
+                  {userName.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+
+              {(userRole === "ADMIN" || userRole === "SUPERADMIN") ? (
+                <Link
+                  href={`/${slug}/membros`}
+                  className="flex items-center gap-1 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors"
+                  title="Você é o Usuário Master desta igreja. Clique para gerenciar membros e níveis de acesso."
+                >
+                  <Crown className="w-3 h-3 text-amber-400 shrink-0" />
+                  <span className="hidden sm:inline">Master ({userName.split(" ")[0]})</span>
+                  <span className="sm:hidden text-[10px]">Master</span>
+                </Link>
+              ) : (
+                <span className="text-xs font-semibold text-foreground hidden sm:inline">
+                  {userName.split(" ")[0]}
+                </span>
+              )}
+            </div>
           )}
 
           {/* Botão de Auto-Cadastro de Membro nesta Igreja */}

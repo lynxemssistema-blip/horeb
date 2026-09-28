@@ -108,7 +108,7 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
 
     // 2. Gerar Código de Ativação de 6 Dígitos
     // 2. Criar o Usuário Master da Igreja (já nasce ativo e autenticado como Administrador/Master)
-    const isSuperAdmin = cleanEmail === "edsonmanoel2012@gmail.com";
+    const isSuperAdmin = cleanEmail === "edsonmanoel2012@gmail.com" || cleanEmail === "lynxemssistema@gmail.com";
 
     const user = await prisma.user.create({
       data: {
@@ -264,14 +264,51 @@ export async function loginUser(email: string, rawPassword: string) {
       });
     }
 
+    // Buscar todos os acessos do usuário a diferentes igrejas
+    const accesses = await prisma.userChurchAccess.findMany({
+      where: { userId: user.id },
+      include: { tenant: true },
+    });
+
+    if (accesses.length > 1) {
+      // Usuário tem acesso a mais de uma igreja. Gravar sessão parcial ou apenas redirecionar para a escolha
+      // Vamos gravar a sessão com a igreja principal (tenantId do User) e ele escolhe lá
+      await createSession({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role, // Papel base
+        tenantId: user.tenantId,
+        tenantSlug: user.tenant.slug,
+      });
+
+      return {
+        success: true,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          tenantSlug: user.tenant.slug,
+        },
+        redirectUrl: `/select-church`,
+      };
+    }
+
+    // Se só tem 1 igreja (ou nenhuma no access, o que é estranho, mas usamos a base)
+    const targetTenantSlug = accesses.length === 1 ? accesses[0].tenant.slug : user.tenant.slug;
+    const targetTenantId = accesses.length === 1 ? accesses[0].tenantId : user.tenantId;
+    const targetRole = accesses.length === 1 ? accesses[0].role : user.role;
+
     // Gravar Cookie de Sessão HTTP-Only no Navegador
     await createSession({
       userId: user.id,
       email: user.email,
       name: user.name,
-      role: user.role,
-      tenantId: user.tenantId,
-      tenantSlug: user.tenant.slug,
+      avatarUrl: (user as any).avatarUrl || null,
+      role: targetRole,
+      tenantId: targetTenantId,
+      tenantSlug: targetTenantSlug,
     });
 
     return {
@@ -280,10 +317,11 @@ export async function loginUser(email: string, rawPassword: string) {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role,
-        tenantSlug: user.tenant.slug,
+        avatarUrl: (user as any).avatarUrl || null,
+        role: targetRole,
+        tenantSlug: targetTenantSlug,
       },
-      redirectUrl: `/${user.tenant.slug}`,
+      redirectUrl: `/${targetTenantSlug}`,
     };
   } catch (error: any) {
     return { success: false, error: "Erro ao processar login." };

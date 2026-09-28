@@ -56,7 +56,10 @@ import {
   Gift,
   Sliders,
   Check,
+  Bot,
 } from "lucide-react";
+import { AgentManager } from "@/app/[slug]/admin/agentes/AgentManager";
+import { RolePermissionsManager } from "@/components/role-permissions-manager";
 
 interface SuperAdminDashboardProps {
   metrics: any;
@@ -68,6 +71,9 @@ interface SuperAdminDashboardProps {
   inboxTotal: number;
   imapConnected: boolean;
   initialPromoConfig?: any;
+  user?: any;
+  initialAgents?: any[];
+  initialPermissions?: any[];
 }
 
 export function SuperAdminDashboard({
@@ -80,6 +86,9 @@ export function SuperAdminDashboard({
   inboxTotal,
   imapConnected,
   initialPromoConfig,
+  user,
+  initialAgents = [],
+  initialPermissions = [],
 }: SuperAdminDashboardProps) {
   const [tenants, setTenants] = useState(initialTenants);
   const [plans, setPlans] = useState(initialPlans);
@@ -366,7 +375,7 @@ export function SuperAdminDashboard({
             <div className="hidden sm:flex items-center gap-2 bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-1.5 text-xs text-zinc-300">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>
-                Logado como: <strong>Edson Manoel</strong> (edsonmanoel2012@gmail.com)
+                Logado como: <strong>{user?.name || "Super Admin"}</strong> ({user?.email || "admin@lynxems.com.br"})
               </span>
             </div>
 
@@ -384,52 +393,66 @@ export function SuperAdminDashboard({
         </div>
       </header>
 
-      {/* Conteúdo Principal */}
-      <main className="max-w-7xl mx-auto w-full px-4 sm:px-8 py-8 space-y-8 flex-1">
-        {/* Navegação por Abas do Super Admin - BOTÕES COM ALTO CONTRASTE E VISIBILIDADE TOTAL */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 w-full bg-zinc-950/90 border border-white/15 p-2 rounded-2xl gap-2 shadow-2xl backdrop-blur-xl">
-          {[
-            { id: "overview", label: "1. Visão Geral (MRR)", icon: TrendingUp },
-            { id: "tenants", label: "2. Assinaturas & Igrejas", icon: Building2 },
-            { id: "plans", label: "3. Planos Comerciais", icon: Layers },
-            { id: "users", label: "4. Usuários & Ativação", icon: Users },
-            { id: "emails", label: "5. Central de E-mails", icon: Mail },
-            { id: "promo", label: "6. Promoção (100)", icon: Gift, badge: "Outubro" },
-          ].map((tab) => {
-            const isActive = activeTab === tab.id;
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-black text-xs transition-all cursor-pointer select-none",
-                  isActive
-                    ? "bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-black shadow-lg shadow-amber-500/30 border border-amber-300 font-black scale-[1.02]"
-                    : "bg-zinc-900 text-zinc-100 hover:text-white hover:bg-zinc-800 border border-zinc-700/80 hover:border-amber-500/50 shadow-sm"
-                )}
-              >
-                <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-black" : "text-amber-400")} />
-                <span className="truncate">{tab.label}</span>
-                {tab.badge && (
-                  <span
+      {/* Conteúdo Principal com Sidebar */}
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-8 py-8 flex flex-col md:flex-row gap-6 lg:gap-8 flex-1">
+        
+        {/* Menu Vertical (Sidebar) */}
+        <aside className="w-full md:w-64 shrink-0 space-y-2 relative">
+          <div className="sticky top-24 space-y-2">
+            <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3 px-3">
+              Menu do Sistema
+            </div>
+            <div className="flex flex-col gap-1">
+              {[
+                { id: "overview", label: "Visão Geral (MRR)", icon: TrendingUp },
+                { id: "tenants", label: "Igrejas (Assinaturas)", icon: Building2 },
+                { id: "plans", label: "Planos Comerciais", icon: Layers },
+                { id: "users", label: "Usuários & Ativação", icon: Users },
+                { id: "emails", label: "Central de E-mails", icon: Mail },
+                { id: "agents", label: "Agentes de IA", icon: Bot, badge: "NOVO" },
+                { id: "permissions", label: "Controle de Acessos", icon: ShieldCheck },
+                { id: "promo", label: "Promoção Especial", icon: Gift, badge: "Outubro" },
+              ].map((tab) => {
+                const isActive = activeTab === tab.id;
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
                     className={cn(
-                      "text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase ml-0.5 shrink-0",
+                      "flex items-center justify-between py-3 px-4 rounded-2xl font-bold text-sm transition-all cursor-pointer select-none",
                       isActive
-                        ? "bg-black/20 text-black"
-                        : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                        ? "bg-gradient-to-r from-amber-500 to-yellow-500 text-black shadow-lg shadow-amber-500/20 scale-[1.02]"
+                        : "bg-transparent text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04]"
                     )}
                   >
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+                    <div className="flex items-center gap-3">
+                      <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-black" : "text-amber-400")} />
+                      <span className="truncate">{tab.label}</span>
+                    </div>
+                    {tab.badge && (
+                      <span
+                        className={cn(
+                          "text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase shrink-0",
+                          isActive
+                            ? "bg-black/20 text-black"
+                            : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                        )}
+                      >
+                        {tab.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
+        {/* Área de Conteúdo */}
+        <main className="flex-1 min-w-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
 
           {/* ========================================================================= */}
           {/* TAB 1: VISÃO GERAL & MRR                                                  */}
@@ -514,14 +537,19 @@ export function SuperAdminDashboard({
                     Modo Super Admin • Acesso Irrestrito (Edson Manoel)
                   </h3>
                   <p className="text-xs text-zinc-400">
-                    Você possui autoridade master para impersonar qualquer igreja, gerenciar
-                    assinaturas, criar planos, alterar a promoção de outubro e inspecionar mensagens
-                    SMTP/IMAP.
+                    Você possui autoridade master para gerenciar assinaturas, criar planos, configurar agentes de IA e inspecionar todo o sistema.
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-3 pt-2">
+                <Button
+                  onClick={() => setActiveTab("agents")}
+                  className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs h-10 px-4 rounded-xl gap-2 shadow-lg shadow-amber-500/20"
+                >
+                  <Bot className="w-4 h-4" />
+                  <span>Configurar Agentes IA</span>
+                </Button>
                 <Button
                   onClick={() => setActiveTab("tenants")}
                   className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs h-10 px-4 rounded-xl"
@@ -704,6 +732,22 @@ export function SuperAdminDashboard({
                 </table>
               </div>
             </div>
+          </TabsContent>
+
+          {/* ========================================================================= */}
+          {/* TAB: AGENTES DE IA                                                        */}
+          {/* ========================================================================= */}
+          <TabsContent value="agents" className="space-y-6">
+            <div className="p-1 rounded-3xl bg-white/[0.02] border border-white/[0.05] shadow-2xl">
+              <AgentManager initialProfiles={initialAgents} tenantId={""} />
+            </div>
+          </TabsContent>
+
+          {/* ========================================================================= */}
+          {/* TAB: CONTROLE DE ACESSOS (RBAC)                                           */}
+          {/* ========================================================================= */}
+          <TabsContent value="permissions" className="space-y-6">
+            <RolePermissionsManager initialPermissions={initialPermissions} />
           </TabsContent>
 
           {/* ========================================================================= */}
@@ -1393,7 +1437,8 @@ export function SuperAdminDashboard({
             </div>
           </TabsContent>
         </Tabs>
-      </main>
+        </main>
+      </div>
 
       {/* Modal Criar / Editar Plano */}
       {showPlanModal && (

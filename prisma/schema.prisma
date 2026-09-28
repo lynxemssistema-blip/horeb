@@ -44,6 +44,11 @@ model Tenant {
   ministries   Ministry[]
   videos       ChurchVideo[]
   transactions Transaction[]
+  moodCheckIns MoodCheckIn[]
+  prayerRequests PrayerRequest[]
+  events         Event[]
+  agentProfiles  AgentProfile[]
+  conversations  Conversation[]
 
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -53,6 +58,7 @@ model User {
   id               String      @id @default(cuid())
   name             String
   email            String      @unique
+  avatarUrl        String?     // Foto de perfil do usuário (URL ou Base64)
   password         String?     // Senha criptografada (bcrypt)
   role             String      @default("MEMBER") // SUPERADMIN, ADMIN, PASTOR, LEADER, MEMBER
   isEmailVerified  Boolean     @default(false)
@@ -67,6 +73,9 @@ model User {
   ledMinistries    Ministry[]  @relation("MinistryLeader")
   cpf              String?     // CPF para relatório de Imposto de Renda (IRPF)
   transactions     Transaction[] @relation("MemberTransactions")
+  conversations    Conversation[]
+  ministryMembers  MinistryMember[]
+  assignedTasks    MinistryTask[]
 
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -81,11 +90,69 @@ model Ministry {
   schedule    String?  // ex: "Domingos às 17h"
   color       String   @default("#8b5cf6")
   icon        String   @default("Sparkles")
+  logoUrl     String?  // Imagem/logotipo do ministério
   tenantId    String
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  // Workspace de Ministérios
+  members     MinistryMember[]
+  meetings    MinistryMeeting[]
+  tasks       MinistryTask[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model MinistryMember {
+  id             String   @id @default(cuid())
+  ministryId     String
+  ministry       Ministry @relation(fields: [ministryId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String   @default("VOLUNTEER") // LEADER, VOLUNTEER
+  customFunction String?  // Ex: "Vocalista", "Baterista", "Intercessor", "Recepção", "Sonoplasta"
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([ministryId, userId])
+}
+
+model MinistryMeeting {
+  id          String         @id @default(cuid())
+  ministryId  String
+  ministry    Ministry       @relation(fields: [ministryId], references: [id], onDelete: Cascade)
+  title       String
+  date        DateTime
+  type        String         @default("REUNIAO") // REUNIAO, ENSAIO
+  minute      MeetingMinute?
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model MeetingMinute {
+  id          String          @id @default(cuid())
+  meetingId   String          @unique
+  meeting     MinistryMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  content     String          // Texto longo da ata
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model MinistryTask {
+  id          String    @id @default(cuid())
+  ministryId  String
+  ministry    Ministry  @relation(fields: [ministryId], references: [id], onDelete: Cascade)
+  title       String
+  dueDate     DateTime
+  assigneeId  String?
+  assignee    User?     @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  status      String    @default("PENDING") // PENDING, COMPLETED
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model UserChurchAccess {
@@ -131,6 +198,23 @@ model ChurchVideo {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Event {
+  id              String   @id @default(cuid())
+  title           String
+  slogan          String?  // subtítulo curto de impacto
+  description     String?
+  imageUrl        String?  // banner do evento
+  startDate       DateTime
+  endDate         DateTime?
+  isPublic        Boolean  @default(true)
+  isGlobalFeature Boolean  @default(false)
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Transaction {
@@ -208,4 +292,91 @@ model PromotionConfig {
   ctaText         String   @default("Garantir Minha Vaga (50% OFF)")
 
   updatedAt       DateTime @updatedAt
+}
+
+model MoodCheckIn {
+  id        String   @id @default(cuid())
+  mood      String   // FELIZ, CANSADO, ANSIOSO, TRISTE
+  date      DateTime @default(now())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PrayerRequest {
+  id         String   @id @default(cuid())
+  content    String
+  isRedAlert Boolean  @default(false)
+  status     String   @default("ACTIVE")
+  date       DateTime @default(now())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ==========================================
+// Módulo de IA (Agentes, Orquestrador e Chat)
+// ==========================================
+
+model AgentProfile {
+  id             String   @id @default(cuid())
+  name           String   // Nome do Agente (ex: Orquestrador, Pastor Conselheiro)
+  type           String   @default("EXPERT") // ORCHESTRATOR, EXPERT
+  systemPrompt   String   // As instruções de como a IA deve se comportar
+  model          String   @default("gemini-1.5-flash") // Qual modelo do Gemini usar
+  temperature    Float    @default(0.7) // Grau de criatividade
+  isActive       Boolean  @default(true)
+  
+  tenantId       String?  // Se null, é um agente global (Sede/Master). Se preenchido, é específico da filial
+  tenant         Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  conversations  Conversation[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Conversation {
+  id             String   @id @default(cuid())
+  title          String?  // Título gerado automaticamente pela IA
+  
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  agentProfileId String?
+  agentProfile   AgentProfile? @relation(fields: [agentProfileId], references: [id], onDelete: SetNull)
+
+  messages       Message[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  role           String   // USER, MODEL, SYSTEM
+  content        String
+  
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime @default(now())
+}
+
+model RolePermission {
+  id          String   @id @default(cuid())
+  role        String   @unique // ADMIN, PASTOR, LEADER, FINANCIAL, KIDS, MEMBER
+  menuItems   String   // JSON string array of allowed menus (e.g., "['/celulas', '/doar']")
+  actions     String   @default("[]") // JSON string array of allowed actions (e.g., "['add_video']")
+  description String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

@@ -10,7 +10,7 @@ import {
   sendMemberInvitationEmail,
 } from "@/lib/mail";
 import { ROLE_LABELS } from "@/lib/constants";
-import { createSession } from "@/lib/session";
+import { createSession, getSession } from "@/lib/session";
 
 // 1. Obter membros e toda a rede de igrejas (Matriz + Filiais)
 export async function getChurchNetworkMembers(churchSlug: string) {
@@ -116,6 +116,7 @@ export async function getChurchNetworkMembers(churchSlug: string) {
         id: u.id,
         name: u.name,
         email: u.email,
+        avatarUrl: u.avatarUrl,
         role: u.role,
         roleLabel: ROLE_LABELS[u.role] || u.role,
         isEmailVerified: u.isEmailVerified,
@@ -639,6 +640,31 @@ export async function removeUserChurchAccess(params: {
     });
     return { success: true };
   } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// 10. Atualiza a foto de perfil do usuário (avatarUrl)
+export async function updateUserAvatar(userId: string, avatarUrl: string) {
+  try {
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl },
+    });
+
+    // Se o usuário atualizou o próprio avatar, atualiza a sessão também
+    const session = await getSession();
+    if (session && session.userId === userId) {
+      await createSession({
+        ...session,
+        avatarUrl,
+      });
+    }
+
+    revalidatePath("/", "layout");
+    return { success: true, user: updated };
+  } catch (error: any) {
+    console.error("Erro ao atualizar avatar do usuário:", error);
     return { success: false, error: error.message };
   }
 }
