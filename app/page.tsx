@@ -35,6 +35,8 @@ import {
 } from "lucide-react";
 import { getPromotionConfig } from "@/app/actions/superadmin";
 import { HelpGuideDialog } from "@/components/help-guide-dialog";
+import { getSession } from "@/lib/session";
+import { redirect } from "next/navigation";
 
 export default async function HomePage(props: {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -43,6 +45,20 @@ export default async function HomePage(props: {
   const isAuthRequired = searchParams.auth === "required";
   const isAdminAuthRequired = searchParams.auth === "admin_required";
   const churchSlug = typeof searchParams.church === "string" ? searchParams.church : null;
+  const isSwitching = searchParams.switch === "true" || searchParams.select === "true";
+
+  // Se o usuário logado acessar a raiz "/", redireciona imediatamente para a página principal da sua igreja
+  if (!isAuthRequired && !isAdminAuthRequired && !isSwitching) {
+    const session = await getSession();
+    if (session && session.tenantSlug) {
+      if (session.role === "SUPERADMIN") {
+        redirect("/admin");
+      } else {
+        redirect(`/${session.tenantSlug}`);
+      }
+    }
+  }
+
 
   const [tenants, promoRes] = await Promise.all([
     prisma.tenant.findMany({

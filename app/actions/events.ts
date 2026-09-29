@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getSession } from "@/lib/session";
 
 export interface CreateEventInput {
   title: string;
@@ -28,8 +29,37 @@ export async function createEvent(
   try {
     const isMaster = userRole === "MASTER" || userRole === "SUPERADMIN";
 
-    // Regras de negócio inegociáveis
-    const effectiveTenantId = isMaster && data.targetTenantId ? data.targetTenantId : currentTenantId;
+    // Regras de negócio: determina o alvo inicial
+    const rawTarget = isMaster && data.targetTenantId ? data.targetTenantId : currentTenantId;
+
+    // Resolve tenant por id ou por slug (aceita tanto ID cuid quanto slug como 'feker', 'matriz')
+    let tenant = await prisma.tenant.findFirst({
+      where: {
+        OR: [
+          { id: rawTarget },
+          { slug: rawTarget },
+        ],
+      },
+      select: { id: true, slug: true, name: true },
+    });
+
+    if (!tenant && currentTenantId) {
+      tenant = await prisma.tenant.findFirst({
+        where: {
+          OR: [
+            { id: currentTenantId },
+            { slug: currentTenantId },
+          ],
+        },
+        select: { id: true, slug: true, name: true },
+      });
+    }
+
+    if (!tenant) {
+      return { success: false, error: `Congregação não encontrada com ID ou slug '${rawTarget}'.` };
+    }
+
+    const effectiveTenantId = tenant.id;
     const effectiveIsGlobalFeature = isMaster ? Boolean(data.isGlobalFeature) : false;
     const effectiveIsPublic = data.isPublic !== undefined ? Boolean(data.isPublic) : true;
 
@@ -52,7 +82,11 @@ export async function createEvent(
       },
     });
 
-    revalidatePath("/", "layout");
+    try {
+      revalidatePath("/", "layout");
+      revalidatePath(`/${tenant.slug}/agenda`);
+      revalidatePath(`/${tenant.slug}/admin/eventos`);
+    } catch {}
     return { success: true, event };
   } catch (error: any) {
     console.error("Erro ao criar evento:", error);
@@ -69,9 +103,22 @@ export async function createEvent(
 export async function getEventsFeed(
   currentTenantId: string,
   isUserLoggedIn: boolean = false,
-  periodFilter: "ALL" | "WEEK" | "MONTH" = "ALL"
+  periodFilter: "ALL" | "WEEK" | "MONTH" = "ALL",
+  includeInactive: boolean = false
 ) {
   try {
+    const tenant = await prisma.tenant.findFirst({
+      where: {
+        OR: [
+          { id: currentTenantId },
+          { slug: currentTenantId },
+        ],
+      },
+      select: { id: true },
+    });
+
+    const realTenantId = tenant ? tenant.id : currentTenantId;
+
     const now = new Date();
     let dateFilter: any = {};
 
@@ -97,7 +144,7 @@ export async function getEventsFeed(
 
     const whereClause: any = {
       OR: [
-        { tenantId: currentTenantId },
+        { tenantId: realTenantId },
         { isGlobalFeature: true },
       ],
       ...dateFilter,
@@ -105,6 +152,11 @@ export async function getEventsFeed(
 
     if (!isUserLoggedIn) {
       whereClause.isPublic = true;
+    }
+
+    // Se não tiver permissão para ver inativos (Master/Pastor), só busca eventos ativos
+    if (!includeInactive) {
+      whereClause.isActive = true;
     }
 
     const events = await prisma.event.findMany({
@@ -131,6 +183,9 @@ export async function getEventsFeed(
         endDate: e.endDate ? e.endDate.toISOString() : null,
         isPublic: e.isPublic,
         isGlobalFeature: e.isGlobalFeature,
+        isActive: e.isActive,
+        isPaid: e.isPaid,
+        price: e.price,
         tenantId: e.tenantId,
         tenant: e.tenant,
       })),
@@ -140,6 +195,7 @@ export async function getEventsFeed(
     return { success: false, error: error.message, events: [] };
   }
 }
+
 
 /**
  * 3. seedMockEvents():
@@ -190,6 +246,39 @@ export async function seedMockEvents(tenantSlug: string = "matriz") {
         endDate: null,
         isPublic: true,
         isGlobalFeature: false,
+        isActive: true,
+        isPaid: false,
+        price: null,
+        tenantId: tenant.id,
+      },
+      {
+        title: "Culto de Celebração",
+        slogan: "Uma noite de adoração, comunhão e palavra profética",
+        description:
+          "Entrada gratuita e livre para toda a família. Reserve seu lugar via RSVP no app e garanta sua credencial com QR Code!",
+        imageUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=80",
+        startDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2), // Daqui a 2 dias
+        endDate: null,
+        isPublic: true,
+        isGlobalFeature: false,
+        isActive: true,
+        isPaid: false,
+        price: null,
+        tenantId: tenant.id,
+      },
+      {
+        title: "Acampamento Jovem",
+        slogan: "Imersão espiritual, workshops, louvor e amizade cristã",
+        description:
+          "O evento mais esperado da juventude! Três dias inesquecíveis com hospedagem, alimentação e preleções especiais. Ingressos nominais protegidos por QR Code individual.",
+        imageUrl: "https://images.unsplash.com/photo-1478147427282-58a87a120781?auto=format&fit=crop&w=1200&q=80",
+        startDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 10), // Daqui a 10 dias
+        endDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 13),
+        isPublic: true,
+        isGlobalFeature: true,
+        isActive: true,
+        isPaid: true,
+        price: 150.0,
         tenantId: tenant.id,
       },
     ];
@@ -203,6 +292,8 @@ export async function seedMockEvents(tenantSlug: string = "matriz") {
 
     try {
       revalidatePath("/", "layout");
+      revalidatePath(`/${tenant.slug}/agenda`);
+      revalidatePath(`/${tenant.slug}/admin/eventos`);
     } catch {}
     return { success: true, count: mockEvents.length };
   } catch (error: any) {
@@ -213,10 +304,315 @@ export async function seedMockEvents(tenantSlug: string = "matriz") {
 
 export async function deleteEvent(eventId: string) {
   try {
+    const session = await getSession();
+    const effectiveUserId = session?.userId;
+    const effectiveRole = session?.role || "GUEST";
+
+    const isMaster =
+      effectiveRole === "SUPERADMIN" ||
+      effectiveRole === "ADMIN" ||
+      effectiveRole === "MASTER";
+    const isPastor = effectiveRole === "PASTOR";
+
+    let hasPermission = isMaster || isPastor;
+
+    if (!hasPermission && effectiveUserId) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: effectiveUserId },
+        select: { role: true, isPastoralCounselor: true },
+      });
+      if (
+        dbUser?.role === "SUPERADMIN" ||
+        dbUser?.role === "ADMIN" ||
+        dbUser?.role === "PASTOR" ||
+        dbUser?.isPastoralCounselor
+      ) {
+        hasPermission = true;
+      }
+    }
+
+    if (!hasPermission) {
+      return {
+        success: false,
+        error: "Permissão negada. Apenas administradores e pastores podem excluir eventos.",
+      };
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: { tenant: { select: { slug: true } } },
+    });
+
+    if (!event) {
+      return { success: false, error: "Evento não encontrado." };
+    }
+
     await prisma.event.delete({ where: { id: eventId } });
-    revalidatePath("/", "layout");
+
+    try {
+      revalidatePath("/", "layout");
+      if (event.tenant?.slug) {
+        revalidatePath(`/${event.tenant.slug}/agenda`);
+        revalidatePath(`/${event.tenant.slug}/admin/eventos`);
+      }
+    } catch {}
+
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * toggleEventActive(eventId, userRole):
+ * Permite que usuários Master e Pastores ativem ou desativem um evento.
+ */
+export async function toggleEventActive(eventId: string, userRole?: string) {
+  try {
+    const session = await getSession();
+    const effectiveUserId = session?.userId;
+    const effectiveRole = userRole || session?.role || "GUEST";
+
+    const isMaster =
+      effectiveRole === "SUPERADMIN" ||
+      effectiveRole === "ADMIN" ||
+      effectiveRole === "MASTER";
+    const isPastor = effectiveRole === "PASTOR";
+
+    let hasPermission = isMaster || isPastor;
+
+    if (!hasPermission && effectiveUserId) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: effectiveUserId },
+        select: { role: true, isPastoralCounselor: true },
+      });
+      if (
+        dbUser?.role === "SUPERADMIN" ||
+        dbUser?.role === "ADMIN" ||
+        dbUser?.role === "PASTOR" ||
+        dbUser?.isPastoralCounselor
+      ) {
+        hasPermission = true;
+      }
+    }
+
+    if (!hasPermission) {
+      return {
+        success: false,
+        error: "Permissão negada. Apenas administradores e pastores podem ativar ou desativar eventos.",
+      };
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: { tenant: { select: { slug: true } } },
+    });
+
+    if (!event) {
+      return { success: false, error: "Evento não encontrado." };
+    }
+
+    const newActiveState = !event.isActive;
+
+    const updated = await prisma.event.update({
+      where: { id: eventId },
+      data: { isActive: newActiveState },
+    });
+
+    try {
+      revalidatePath("/", "layout");
+      if (event.tenant?.slug) {
+        revalidatePath(`/${event.tenant.slug}/agenda`);
+        revalidatePath(`/${event.tenant.slug}/admin/eventos`);
+      }
+    } catch {}
+
+    return {
+      success: true,
+      isActive: updated.isActive,
+      message: updated.isActive ? "Evento ativado com sucesso!" : "Evento desativado com sucesso!",
+    };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Erro ao alterar status do evento." };
+  }
+}
+
+export interface UpdateEventInput {
+  id: string;
+  title: string;
+  slogan?: string | null;
+  description?: string | null;
+  imageUrl?: string | null;
+  startDate: string | Date;
+  endDate?: string | Date | null;
+  isPublic?: boolean;
+  isGlobalFeature?: boolean;
+  isActive?: boolean;
+  isPaid?: boolean;
+  price?: number | null;
+}
+
+/**
+ * 4. updateEvent(data, userRole, currentTenantId):
+ * Permite que usuários Master (SUPERADMIN, ADMIN) e Pastores editem eventos existentes.
+ */
+export async function updateEvent(
+  data: UpdateEventInput,
+  userRole?: string,
+  currentTenantId?: string
+) {
+  try {
+    const session = await getSession();
+    const effectiveUserId = session?.userId;
+    const effectiveRole = userRole || session?.role || "GUEST";
+
+    const isMaster =
+      effectiveRole === "SUPERADMIN" ||
+      effectiveRole === "ADMIN" ||
+      effectiveRole === "MASTER";
+    const isPastor = effectiveRole === "PASTOR";
+
+    let hasPermission = isMaster || isPastor;
+
+    if (!hasPermission && effectiveUserId) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: effectiveUserId },
+        select: { role: true, isPastoralCounselor: true },
+      });
+      if (
+        dbUser?.role === "SUPERADMIN" ||
+        dbUser?.role === "ADMIN" ||
+        dbUser?.role === "PASTOR" ||
+        dbUser?.isPastoralCounselor
+      ) {
+        hasPermission = true;
+      }
+    }
+
+    if (!hasPermission) {
+      return {
+        success: false,
+        error: "Permissão negada. Apenas administradores e pastores podem editar eventos.",
+      };
+    }
+
+    const existing = await prisma.event.findUnique({
+      where: { id: data.id },
+      include: { tenant: { select: { id: true, slug: true } } },
+    });
+
+    if (!existing) {
+      return { success: false, error: "Evento não encontrado para edição." };
+    }
+
+    const effectiveIsGlobalFeature =
+      isMaster || isPastor
+        ? data.isGlobalFeature !== undefined
+          ? Boolean(data.isGlobalFeature)
+          : existing.isGlobalFeature
+        : existing.isGlobalFeature;
+
+    const effectiveIsPublic =
+      data.isPublic !== undefined ? Boolean(data.isPublic) : existing.isPublic;
+
+    const effectiveIsActive =
+      data.isActive !== undefined ? Boolean(data.isActive) : existing.isActive;
+
+    const effectiveIsPaid =
+      data.isPaid !== undefined ? Boolean(data.isPaid) : existing.isPaid;
+
+    const effectivePrice =
+      data.price !== undefined ? (data.price !== null ? Number(data.price) : null) : existing.price;
+
+    const updated = await prisma.event.update({
+      where: { id: data.id },
+      data: {
+        title: data.title.trim(),
+        slogan: data.slogan !== undefined ? (data.slogan ? data.slogan.trim() : null) : existing.slogan,
+        description: data.description !== undefined ? (data.description ? data.description.trim() : null) : existing.description,
+        imageUrl: data.imageUrl !== undefined ? (data.imageUrl || null) : existing.imageUrl,
+        startDate: data.startDate ? new Date(data.startDate) : existing.startDate,
+        endDate: data.endDate !== undefined ? (data.endDate ? new Date(data.endDate) : null) : existing.endDate,
+        isPublic: effectiveIsPublic,
+        isGlobalFeature: effectiveIsGlobalFeature,
+        isActive: effectiveIsActive,
+        isPaid: effectiveIsPaid,
+        price: effectivePrice,
+      },
+      include: {
+        tenant: {
+          select: { id: true, name: true, slug: true, primaryColor: true },
+        },
+      },
+    });
+
+    try {
+      revalidatePath("/", "layout");
+      if (existing.tenant?.slug) {
+        revalidatePath(`/${existing.tenant.slug}/agenda`);
+        revalidatePath(`/${existing.tenant.slug}/admin/eventos`);
+      }
+    } catch {}
+
+    return {
+      success: true,
+      event: {
+        id: updated.id,
+        title: updated.title,
+        slogan: updated.slogan,
+        description: updated.description,
+        imageUrl: updated.imageUrl,
+        startDate: updated.startDate.toISOString(),
+        endDate: updated.endDate ? updated.endDate.toISOString() : null,
+        isPublic: updated.isPublic,
+        isGlobalFeature: updated.isGlobalFeature,
+        isActive: updated.isActive,
+        isPaid: updated.isPaid,
+        price: updated.price,
+        tenantId: updated.tenantId,
+        tenant: updated.tenant,
+      },
+    };
+  } catch (error: any) {
+    console.error("Erro ao atualizar evento:", error);
+    return { success: false, error: error.message || "Erro ao atualizar evento." };
+  }
+}
+
+
+export async function getEventById(eventId: string) {
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        tenant: {
+          select: { id: true, name: true, slug: true, primaryColor: true },
+        },
+      },
+    });
+
+    if (!event) {
+      return { success: false, error: "Evento não encontrado." };
+    }
+
+    return {
+      success: true,
+      event: {
+        id: event.id,
+        title: event.title,
+        slogan: event.slogan,
+        description: event.description,
+        imageUrl: event.imageUrl,
+        startDate: event.startDate.toISOString(),
+        endDate: event.endDate ? event.endDate.toISOString() : null,
+        isPublic: event.isPublic,
+        isGlobalFeature: event.isGlobalFeature,
+        tenantId: event.tenantId,
+        tenant: event.tenant,
+      },
+    };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+

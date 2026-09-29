@@ -47,6 +47,13 @@ interface AppSidebarProps {
   parent?: { name: string; slug: string } | null;
   branches?: Branch[];
   accessRules?: { allowedMenus: string[], allowedActions: string[] } | null;
+  currentUser?: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl?: string | null;
+    role: string;
+  } | null;
 }
 
 export function AppSidebar({
@@ -59,6 +66,7 @@ export function AppSidebar({
   parent,
   branches = [],
   accessRules,
+  currentUser,
 }: AppSidebarProps) {
   const pathname = usePathname();
 
@@ -309,45 +317,80 @@ export function AppSidebar({
         </div>
       </div>
 
-      {/* Pastoral Footer */}
-      <div className="p-4 border-t border-border/60 bg-muted/20 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-            <ShieldCheck className="w-4 h-4 text-primary" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-foreground truncate">Portal da Igreja</p>
-            <p className="text-[10px] text-muted-foreground truncate">Lynx EMS Sistemas • Horeb</p>
-          </div>
-        </div>
+      {/* User Profile Card & Footer */}
+      <div className="p-3 border-t border-border/80 bg-muted/20 space-y-2">
+        {currentUser ? (
+          <div className="p-2.5 rounded-2xl bg-card border border-border/80 shadow-xs flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="relative shrink-0">
+                <Avatar className="h-9 w-9 ring-2 ring-primary/20">
+                  {currentUser.avatarUrl && <AvatarImage src={currentUser.avatarUrl} alt={currentUser.name} />}
+                  <AvatarFallback className="bg-primary text-primary-foreground font-bold text-xs">
+                    {currentUser.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-card rounded-full" title="Conectado" />
+              </div>
 
-        <div className="flex items-center gap-2 pt-1 border-t border-border/40">
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-foreground truncate" title={currentUser.name}>
+                  {currentUser.name}
+                </p>
+                <p className="text-[10px] text-muted-foreground truncate" title={currentUser.email}>
+                  {currentUser.email}
+                </p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded-md bg-primary/10 text-primary border border-primary/20">
+                    {currentUser.role === "ADMIN" || currentUser.role === "SUPERADMIN"
+                      ? "Master / Admin"
+                      : currentUser.role === "PASTOR"
+                      ? "Pastor"
+                      : currentUser.role === "LEADER"
+                      ? "Líder"
+                      : "Membro"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={async () => {
+                await logoutUser();
+                window.location.href = "/";
+              }}
+              className="h-8 w-8 rounded-xl text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 shrink-0 cursor-pointer"
+              title="Sair da Conta"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 p-1">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <ShieldCheck className="w-4 h-4 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-foreground truncate">Portal da Igreja</p>
+              <p className="text-[10px] text-muted-foreground truncate">Lynx EMS Sistemas • Horeb</p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-1 px-1 text-[11px] text-muted-foreground">
           <HelpGuideDialog
             triggerButton={
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2 flex-1 text-[11px] font-bold text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10 justify-start gap-1.5 cursor-pointer"
+              <button
+                type="button"
+                className="flex items-center gap-1 hover:text-amber-400 transition-colors cursor-pointer"
               >
                 <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
                 <span>Manual & Guia</span>
-              </Button>
+              </button>
             }
           />
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={async () => {
-              await logoutUser();
-              window.location.href = "/";
-            }}
-            className="h-8 px-2 text-[11px] font-bold text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 gap-1.5 cursor-pointer"
-            title="Encerrar Sessão"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Sair</span>
-          </Button>
+          <span className="text-[10px]">Horeb • Lynx EMS</span>
         </div>
       </div>
     </aside>

@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PrayerRequestDialog } from "@/components/prayer-request-dialog";
+import { PastoralCounselingTrigger } from "@/components/pastoral-counseling-trigger";
 import { CreateChurchDialog } from "@/components/create-church-dialog";
 import { MemberSignupDialog } from "@/components/member-signup-dialog";
 import {
@@ -55,7 +56,13 @@ export default async function TenantDashboardPage({ params }: PageProps) {
       ministries: true,
       videos: true,
       users: {
-        where: { role: "PASTOR" },
+        where: {
+          OR: [
+            { role: "PASTOR" },
+            { isPastoralCounselor: true },
+            { role: "ADMIN" },
+          ],
+        },
       },
     },
   });
@@ -588,14 +595,21 @@ export default async function TenantDashboardPage({ params }: PageProps) {
                 </p>
               </div>
             </div>
-            <PrayerRequestDialog
-              tenantSlug={slug}
-              triggerButton={
-                <Button variant="outline" size="sm" className="text-xs">
-                  Falar com Pastor
-                </Button>
-              }
-            />
+            <div className="flex items-center gap-2">
+              <PastoralCounselingTrigger
+                slug={slug}
+                isOnline={pastor?.isLiveAvailable}
+                pastorName={pastor?.name}
+              />
+              <PrayerRequestDialog
+                tenantSlug={slug}
+                triggerButton={
+                  <Button variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground">
+                    Pedir Oração
+                  </Button>
+                }
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

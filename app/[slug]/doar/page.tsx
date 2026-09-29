@@ -175,8 +175,8 @@ export default function DoarPage() {
                 Destino da Contribuição
               </label>
               <Tabs
-                defaultValue={category}
-                onValueChange={(val) => setCategory(val)}
+                value={category}
+                onValueChange={(val) => setCategory(val as string)}
                 className="w-full"
               >
                 <TabsList className="grid grid-cols-3 w-full h-10 bg-muted/70 p-1 rounded-xl">

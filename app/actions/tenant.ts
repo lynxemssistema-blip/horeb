@@ -205,28 +205,40 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
   }
 }
 
-// 2. Login de Usuário com E-mail e Senha
-export async function loginUser(email: string, rawPassword: string) {
+// 2. Login de Usuário com E-mail ou Nome e Senha
+export async function loginUser(identifier: string, rawPassword: string) {
   try {
-    const cleanEmail = email?.trim().toLowerCase();
-    if (!isValidEmail(cleanEmail)) {
-      return { success: false, error: "Informe um e-mail válido." };
+    const clean = identifier?.trim();
+    if (!clean) {
+      return { success: false, error: "Informe seu e-mail ou nome de usuário." };
     }
 
-    // Super Admin Master Hardcoded check ou busca no banco
-    const user = await prisma.user.findUnique({
-      where: { email: cleanEmail },
+    if (!rawPassword) {
+      return { success: false, error: "Informe sua senha." };
+    }
+
+    const cleanLower = clean.toLowerCase();
+
+    // Busca usuário por e-mail ou por nome (flexível para facilitar login móvel no Safari)
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: cleanLower },
+          { name: { contains: clean } },
+        ],
+      },
       include: { tenant: true },
     });
 
     if (!user || !user.password) {
-      return { success: false, error: "E-mail ou senha incorretos." };
+      return { success: false, error: "E-mail/usuário ou senha incorretos." };
     }
 
     const passwordMatches = await bcrypt.compare(rawPassword, user.password);
     if (!passwordMatches) {
-      return { success: false, error: "E-mail ou senha incorretos." };
+      return { success: false, error: "E-mail/usuário ou senha incorretos." };
     }
+
 
     // Se for SUPERADMIN, criar sessão e redirecionar direto para o painel Super Admin
     if (user.role === "SUPERADMIN") {

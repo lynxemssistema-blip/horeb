@@ -49,6 +49,7 @@ model Tenant {
   events         Event[]
   agentProfiles  AgentProfile[]
   conversations  Conversation[]
+  pastoralAppointments PastoralAppointment[]
 
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -76,6 +77,17 @@ model User {
   conversations    Conversation[]
   ministryMembers  MinistryMember[]
   assignedTasks    MinistryTask[]
+
+  // Atendimento Pastoral & Agenda
+  isPastoralCounselor    Boolean     @default(false)
+  isLiveAvailable        Boolean     @default(false)
+  pastoralTitle          String?     // ex: "Pastor Titular", "Pastora Auxiliar"
+  pastoralBio            String?     // Breve descrição / especialidades
+  pastoralPhone          String?     // Contato direto ou WhatsApp
+  pastoralScheduleConfig String?     // JSON com dias da semana e horários disponíveis
+
+  pastoralAppointmentsAsPastor PastoralAppointment[] @relation("PastorAppointments")
+  pastoralAppointmentsAsMember PastoralAppointment[] @relation("MemberAppointments")
 
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -210,12 +222,33 @@ model Event {
   endDate         DateTime?
   isPublic        Boolean  @default(true)
   isGlobalFeature Boolean  @default(false)
+  isActive        Boolean  @default(true) // Master ou Pastor pode ativar e desativar o evento
+  isPaid          Boolean  @default(false) // Evento Pago ou Gratuito (RSVP)
+  price           Float?   // Preço por ingresso (ex: 150.0)
   tenantId        String
   tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  tickets         Ticket[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+model Ticket {
+  id         String   @id @default(uuid()) // UUID para o QR Code
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  buyerEmail String   // E-mail do comprador
+  guestName  String   // Nome na credencial
+  status     String   @default("VALID") // VALID, USED, CANCELLED
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([buyerEmail])
+  @@index([eventId])
+}
+
 
 model Transaction {
   id            String   @id @default(cuid())
@@ -380,3 +413,55 @@ model RolePermission {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// ==========================================
+// Módulo de Atendimento Pastoral & Agenda
+// ==========================================
+
+model PastoralAppointment {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  pastorId      String
+  pastor        User     @relation("PastorAppointments", fields: [pastorId], references: [id], onDelete: Cascade)
+
+  userId        String?
+  user          User?    @relation("MemberAppointments", fields: [userId], references: [id], onDelete: SetNull)
+
+  userName      String
+  userEmail     String?
+  userPhone     String?
+
+  type          String   @default("LIVE") // "LIVE" (ao vivo agora) ou "SCHEDULED" (agendado)
+  scheduledDate String?  // Data no formato YYYY-MM-DD para agendamentos
+  scheduledTime String?  // Horário no formato HH:mm (ex: "14:30")
+  scheduledAt   DateTime? // DateTime completo para ordenação e filtro
+
+  status        String   @default("WAITING") // "WAITING" (aguardando pastor), "IN_PROGRESS", "COMPLETED", "CANCELLED"
+  subject       String?  // Assunto / Motivo inicial
+  pastorNotes   String?  // Anotações particulares do pastor (sigilosas)
+
+  messages      PastoralMessage[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, pastorId, status])
+}
+
+model PastoralMessage {
+  id            String   @id @default(cuid())
+  appointmentId String
+  appointment   PastoralAppointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  senderId      String?
+  senderName    String
+  senderRole    String   // "MEMBER" ou "PASTOR"
+  content       String
+
+  createdAt     DateTime @default(now())
+
+  @@index([appointmentId])
+}
+

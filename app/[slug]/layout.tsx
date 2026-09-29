@@ -191,6 +191,13 @@ export default async function TenantLayout({
         parent={tenant.parent}
         branches={tenant.branches}
         accessRules={accessRules}
+        currentUser={{
+          id: access.user.userId,
+          name: access.user.name,
+          email: access.user.email,
+          avatarUrl: access.user.avatarUrl,
+          role: access.effectiveRole,
+        }}
       />
 
       {/* Conteúdo Principal com Header e BottomNav */}
@@ -203,6 +210,13 @@ export default async function TenantLayout({
           isMatriz={isMatriz}
           parent={tenant.parent}
           branches={tenant.branches}
+          currentUser={{
+            id: access.user.userId,
+            name: access.user.name,
+            email: access.user.email,
+            avatarUrl: access.user.avatarUrl,
+            role: access.effectiveRole,
+          }}
           userRole={access.effectiveRole}
           userName={access.user.name}
           userAvatar={access.user.avatarUrl}

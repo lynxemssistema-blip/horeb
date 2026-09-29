@@ -14,12 +14,22 @@ import {
   MessageSquare,
   ShieldCheck,
   ChevronDown,
+  PhoneCall,
+  HeartHandshake,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { processVoiceMessage, processTextMessage } from "@/app/actions/chat";
+import {
+  processVoiceMessage,
+  processTextMessage,
+  getUserConversation,
+  resetUserConversation,
+} from "@/app/actions/chat";
+import { getChurchPastors } from "@/app/actions/pastoral";
+import { PastoralCounselingDialog } from "@/components/pastoral-counseling-dialog";
 
 interface Message {
   id: string;
@@ -51,37 +61,124 @@ export function OrchestratorChat({
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeAgent, setActiveAgent] = useState<string>("Orquestrador Horeb");
 
+  // Atendimento Pastoral Humano Direto
+  const [isPastoralDialogOpen, setIsPastoralDialogOpen] = useState(false);
+  const [onlinePastorsCount, setOnlinePastorsCount] = useState(0);
+  const [pastoralTopic, setPastoralTopic] = useState("");
+
+  // Persistência e Continuidade de Conversa
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Mensagem inicial de boas-vindas acolhedora do Orquestrador
+  // Monitora disponibilidade de pastores da igreja em tempo real
   useEffect(() => {
-    let initialGreeting =
-      "Graça e Paz! Sou o Agente Conselheiro da sua igreja. Como posso ajudar ou orar por você hoje?";
+    let isMounted = true;
+    async function checkPastors() {
+      try {
+        const res = await getChurchPastors(tenantSlug);
+        if (res.success && isMounted) {
+          setOnlinePastorsCount(res.onlineCount || 0);
+        }
+      } catch {}
+    }
+    checkPastors();
+    const interval = setInterval(checkPastors, 6000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [tenantSlug]);
 
-    if (initialMood) {
-      if (initialMood.key === "FELIZ") {
-        initialGreeting = `Graça e Paz! Que bênção saber que você está ${initialMood.label.toLowerCase()} hoje! ${initialMood.emoji} Quer compartilhar seu testemunho ou celebrar algo que Deus fez?`;
-      } else if (initialMood.key === "CANSADO") {
-        initialGreeting = `Graça e Paz. Sinto que você está com o corpo ou a mente exausta hoje. ${initialMood.emoji} Jesus disse: 'Vinde a mim todos os cansados e eu vos aliviarei'. Conte-me o que está pesando no seu coração.`;
-      } else if (initialMood.key === "ANSIOSO") {
-        initialGreeting = `Graça e Paz. Respire fundo, você está em um lugar seguro. ${initialMood.emoji} O que tem deixado seu coração aflito ou preocupado com o amanhã? Deixe-me orar com você.`;
-      } else if (initialMood.key === "TRISTE") {
-        initialGreeting = `Graça e Paz, meu irmão(ã). Deus conhece cada lágrima silenciosa. ${initialMood.emoji} Estou aqui para te ouvir com todo carinho e interceder por sua vida. Desabafe comigo.`;
+  // Carrega e continua a conversa de onde o usuário parou (histórico contínuo)
+  useEffect(() => {
+    let isMounted = true;
+    async function loadHistory() {
+      setIsLoadingHistory(true);
+      try {
+        const res = await getUserConversation(tenantSlug);
+        if (res.success && isMounted) {
+          if (res.conversationId) setConversationId(res.conversationId);
+          if (res.agentName) setActiveAgent(res.agentName);
+
+          if (res.messages && res.messages.length > 0) {
+            setMessages(
+              res.messages.map((m: any) => ({
+                id: m.id,
+                role: m.role,
+                content: m.content,
+                agentName: m.agentName || res.agentName || "Pastor Conselheiro",
+                timestamp: new Date(m.timestamp),
+              }))
+            );
+          } else {
+            // Conversa sem histórico anterior: exibe mensagem inicial calorosa
+            let initialGreeting =
+              "Graça e Paz! Sou o Agente Conselheiro da sua igreja. Como posso ajudar ou orar por você hoje?";
+
+            if (initialMood) {
+              if (initialMood.key === "FELIZ") {
+                initialGreeting = `Graça e Paz! Que bênção saber que você está ${initialMood.label.toLowerCase()} hoje! ${initialMood.emoji} Quer compartilhar seu testemunho ou celebrar algo que Deus fez?`;
+              } else if (initialMood.key === "CANSADO") {
+                initialGreeting = `Graça e Paz. Sinto que você está com o corpo ou a mente exausta hoje. ${initialMood.emoji} Jesus disse: 'Vinde a mim todos os cansados e eu vos aliviarei'. Conte-me o que está pesando no seu coração.`;
+              } else if (initialMood.key === "ANSIOSO") {
+                initialGreeting = `Graça e Paz. Respire fundo, você está em um lugar seguro. ${initialMood.emoji} O que tem deixado seu coração aflito ou preocupado com o amanhã? Deixe-me orar com você.`;
+              } else if (initialMood.key === "TRISTE") {
+                initialGreeting = `Graça e Paz, meu irmão(ã). Deus conhece cada lágrima silenciosa. ${initialMood.emoji} Estou aqui para te ouvir com todo carinho e interceder por sua vida. Desabafe comigo.`;
+              }
+            }
+
+            setMessages([
+              {
+                id: "welcome-1",
+                role: "assistant",
+                content: initialGreeting,
+                agentName: "Orquestrador Pastoral",
+                timestamp: new Date(),
+              },
+            ]);
+          }
+        }
+      } catch (e) {
+        console.error("Falha ao carregar histórico pastoral:", e);
+      } finally {
+        if (isMounted) setIsLoadingHistory(false);
       }
     }
 
-    setMessages([
-      {
-        id: "welcome-1",
-        role: "assistant",
-        content: initialGreeting,
-        agentName: "Orquestrador Pastoral",
-        timestamp: new Date(),
-      },
-    ]);
-  }, [initialMood]);
+    loadHistory();
+    return () => {
+      isMounted = false;
+    };
+  }, [tenantSlug, initialMood]);
+
+  // Reiniciar diálogo / Começar novo assunto arquivando o anterior
+  const handleResetConversation = async () => {
+    try {
+      setIsProcessing(true);
+      const res = await resetUserConversation(tenantSlug);
+      if (res.success && res.conversationId) {
+        setConversationId(res.conversationId);
+        setMessages([
+          {
+            id: Date.now().toString(),
+            role: "assistant",
+            content: "Graça e Paz! Iniciamos um novo momento de oração e conversa. Como posso acolher o seu coração agora?",
+            agentName: "Orquestrador Pastoral",
+            timestamp: new Date(),
+          },
+        ]);
+        toast.info("Novo diálogo iniciado com o pastor.");
+      }
+    } catch {
+      toast.error("Erro ao reiniciar conversa.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   // Scroll automático
   useEffect(() => {
@@ -110,9 +207,11 @@ export function OrchestratorChat({
         message: text,
         tenantSlug,
         moodContext: initialMood ? `${initialMood.label} (${initialMood.sublabel})` : undefined,
+        conversationId,
       });
 
       if (res.success && res.textResponse) {
+        if (res.conversationId) setConversationId(res.conversationId);
         if (res.agentName) setActiveAgent(res.agentName);
         const assistantMsg: Message = {
           id: (Date.now() + 1).toString(),
@@ -172,10 +271,13 @@ export function OrchestratorChat({
         const base64Data = (reader.result as string).split(",")[1];
         const formData = new FormData();
         formData.append("audio", base64Data);
+        formData.append("tenantSlug", tenantSlug);
         formData.append("tenantId", tenantSlug);
+        if (conversationId) formData.append("conversationId", conversationId);
 
         const res = await processVoiceMessage(formData);
         if (res.success && res.textResponse) {
+          if (res.conversationId) setConversationId(res.conversationId);
           if (res.userTranscription) {
             setMessages((prev) => [
               ...prev,
@@ -251,18 +353,58 @@ export function OrchestratorChat({
           </div>
         </div>
 
-        {onResetMood && (
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Botão de Falar com Pastor Direto com Indicador Ao Vivo */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setPastoralTopic(inputText || (messages[messages.length - 1]?.content) || "");
+              setIsPastoralDialogOpen(true);
+            }}
+            className={`text-xs font-bold gap-1.5 h-8 px-2.5 sm:px-3 rounded-xl cursor-pointer transition-all shadow-xs ${
+              onlinePastorsCount > 0
+                ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 ring-1 ring-emerald-500/30"
+                : "border-border text-foreground hover:bg-muted"
+            }`}
+            title="Conversar diretamente com um pastor da congregação"
+          >
+            <PhoneCall className={`w-3.5 h-3.5 ${onlinePastorsCount > 0 ? "text-emerald-500 animate-pulse" : "text-primary"}`} />
+            <span className="hidden xs:inline">Falar com Pastor</span>
+            <span className="xs:hidden">Pastor</span>
+            {onlinePastorsCount > 0 && (
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+            )}
+          </Button>
+
+          {/* Botão de Novo Diálogo / Reiniciar Histórico */}
           <Button
             variant="ghost"
             size="sm"
-            onClick={onResetMood}
+            onClick={handleResetConversation}
             className="text-xs text-muted-foreground hover:text-foreground gap-1.5 h-8 px-2.5 rounded-xl cursor-pointer"
-            title="Alterar sentimento"
+            title="Iniciar novo assunto e arquivar conversa anterior"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Check-in</span>
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="hidden lg:inline">Novo Diálogo</span>
           </Button>
-        )}
+
+          {onResetMood && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onResetMood}
+              className="text-xs text-muted-foreground hover:text-foreground gap-1.5 h-8 px-2.5 rounded-xl cursor-pointer"
+              title="Alterar sentimento"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Check-in</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Área de Mensagens (Chat Scroll) */}
@@ -324,6 +466,25 @@ export function OrchestratorChat({
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Barra de Apoio Pastoral Rápida */}
+      <div className="px-4 py-2 bg-muted/20 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <HeartHandshake className="w-3.5 h-3.5 text-primary" />
+          <span>Deseja conversar diretamente com um pastor?</span>
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            setPastoralTopic(inputText);
+            setIsPastoralDialogOpen(true);
+          }}
+          className="text-primary hover:underline font-bold flex items-center gap-1 cursor-pointer"
+        >
+          <span>{onlinePastorsCount > 0 ? "Chamar Pastor Online" : "Ver Agenda de Atendimento"}</span>
+          <span className="text-[10px]">→</span>
+        </button>
+      </div>
+
       {/* Input de Mensagem (Texto & Voz Integrados) */}
       <div className="p-3 sm:p-4 bg-muted/30 border-t border-border/60">
         <form onSubmit={handleSendText} className="flex items-end gap-2">
@@ -372,6 +533,14 @@ export function OrchestratorChat({
           </Button>
         </form>
       </div>
+
+      {/* Modal Interativo de Atendimento Pastoral */}
+      <PastoralCounselingDialog
+        isOpen={isPastoralDialogOpen}
+        onClose={() => setIsPastoralDialogOpen(false)}
+        slug={tenantSlug}
+        initialTopic={pastoralTopic}
+      />
     </div>
   );
 }

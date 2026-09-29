@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { GoogleGenAI } from "@google/genai";
+import { getSession } from "@/lib/session";
 
 // Inicializa o SDK do Gemini
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -56,14 +57,141 @@ async function getOrSeedAgents(tenantId?: string | null) {
   return agents;
 }
 
+/**
+ * Carrega a conversa anterior do usuário com o agente pastoral ou inicializa uma nova.
+ * Garante que a conversa continue exatamente de onde parou.
+ */
+export async function getUserConversation(tenantSlug: string) {
+  try {
+    const session = await getSession();
+    const tenant = await prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true, name: true },
+    });
+
+    if (!tenant) {
+      return { success: false, error: "Igreja não encontrada.", messages: [] };
+    }
+
+    // Busca usuário ativo no banco
+    let userId = session?.userId;
+    if (!userId) {
+      // Se não logado por sessão, busca o primeiro membro ou admin de fallback para vincular
+      const fallbackUser = await prisma.user.findFirst({
+        where: { tenantId: tenant.id },
+        select: { id: true },
+      });
+      if (fallbackUser) userId = fallbackUser.id;
+    }
+
+    if (!userId) {
+      return { success: true, conversationId: null, messages: [] };
+    }
+
+    // Busca a conversa mais recente desse usuário nesta igreja
+    let conversation = await prisma.conversation.findFirst({
+      where: {
+        userId,
+        tenantId: tenant.id,
+      },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        agentProfile: true,
+        messages: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+    // Se não existir, cria a conversa inicial
+    if (!conversation) {
+      const agents = await getOrSeedAgents(tenant.id);
+      conversation = await prisma.conversation.create({
+        data: {
+          userId,
+          tenantId: tenant.id,
+          title: "Acompanhamento Pastoral Contínuo",
+          agentProfileId: agents[0]?.id || null,
+        },
+        include: {
+          agentProfile: true,
+          messages: true,
+        },
+      });
+    }
+
+    const formattedMessages = conversation.messages.map((m) => ({
+      id: m.id,
+      role: m.role.toLowerCase() === "user" ? ("user" as const) : ("assistant" as const),
+      content: m.content,
+      agentName: conversation?.agentProfile?.name || "Pastor Conselheiro",
+      timestamp: m.createdAt,
+    }));
+
+    return {
+      success: true,
+      conversationId: conversation.id,
+      agentName: conversation.agentProfile?.name || "Pastor Conselheiro",
+      messages: formattedMessages,
+      hasHistory: formattedMessages.length > 0,
+    };
+  } catch (error: any) {
+    console.error("Erro ao carregar histórico de conversa pastoral:", error);
+    return { success: false, error: error.message, messages: [] };
+  }
+}
+
+/**
+ * Cria uma nova conversa em branco para reiniciar o histórico se o usuário desejar.
+ */
+export async function resetUserConversation(tenantSlug: string) {
+  try {
+    const session = await getSession();
+    const tenant = await prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true },
+    });
+
+    if (!tenant) return { success: false, error: "Igreja não encontrada." };
+
+    let userId = session?.userId;
+    if (!userId) {
+      const fallbackUser = await prisma.user.findFirst({
+        where: { tenantId: tenant.id },
+        select: { id: true },
+      });
+      if (fallbackUser) userId = fallbackUser.id;
+    }
+
+    if (!userId) return { success: false, error: "Usuário não autenticado." };
+
+    const agents = await getOrSeedAgents(tenant.id);
+    const newConv = await prisma.conversation.create({
+      data: {
+        userId,
+        tenantId: tenant.id,
+        title: `Check-in de Alma (${new Date().toLocaleDateString("pt-BR")})`,
+        agentProfileId: agents[0]?.id || null,
+      },
+    });
+
+    return { success: true, conversationId: newConv.id };
+  } catch (error: any) {
+    console.error("Erro ao reiniciar conversa:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function processTextMessage({
   message,
   tenantSlug,
   moodContext,
+  conversationId,
 }: {
   message: string;
   tenantSlug: string;
   moodContext?: string;
+  conversationId?: string | null;
 }) {
   try {
     if (!message.trim()) {
@@ -73,6 +201,17 @@ export async function processTextMessage({
     const tenant = await prisma.tenant.findUnique({
       where: { slug: tenantSlug },
     });
+
+    if (!tenant) return { success: false, error: "Igreja não encontrada." };
+
+    // 1. Garante ou recupera a conversa persistente
+    let currentConvId = conversationId;
+    if (!currentConvId) {
+      const convRes = await getUserConversation(tenantSlug);
+      if (convRes.success && convRes.conversationId) {
+        currentConvId = convRes.conversationId;
+      }
+    }
 
     const agents = await getOrSeedAgents(tenant?.id);
     const agentOptions = agents.map((a) => ({ id: a.id, name: a.name }));
@@ -114,30 +253,83 @@ REGRA ESTRITA: Retorne APENAS um JSON válido no formato exato:
     }
 
     const selectedAgent = agents.find((a) => a.id === selectedAgentId) || agents[0];
-    const systemInstruction = `${selectedAgent.systemPrompt}\n\nContexto: Você está conversando com um membro da congregação '${tenant?.name || "Igreja"}'. Se o usuário expressar tristeza, ansiedade, cansaço ou alegria, responda com empatia profunda, trazendo versículos relevantes e uma oração carinhosa. Seja direto, acolhedor e consolador.`;
+    const systemInstruction = `${selectedAgent.systemPrompt}\n\nContexto: Você está conversando com um membro da congregação '${tenant?.name || "Igreja"}'. Se o usuário expressar tristeza, ansiedade, cansaço ou alegria, responda com empatia profunda, trazendo versículos relevantes e uma oração carinhosa. Mantenha a continuidade da conversa com base nas mensagens anteriores trocadas. Seja acolhedor e consolador.`;
 
     const modelName =
       selectedAgent.model === "gemini-1.5-flash"
         ? "gemini-3.6-flash"
         : selectedAgent.model || "gemini-3.6-flash";
 
+    // 2. Busca histórico recente de mensagens da conversa (últimas 12 mensagens) para dar memória ao Gemini
+    let conversationHistory: any[] = [];
+    if (currentConvId) {
+      const pastMessages = await prisma.message.findMany({
+        where: { conversationId: currentConvId },
+        orderBy: { createdAt: "asc" },
+        take: 12,
+      });
+
+      conversationHistory = pastMessages.map((m) => ({
+        role: m.role === "USER" ? ("user" as const) : ("model" as const),
+        parts: [{ text: m.content }],
+      }));
+    }
+
+    // Adiciona a nova mensagem do usuário no contexto enviado para a IA
+    conversationHistory.push({
+      role: "user" as const,
+      parts: [{ text: message }],
+    });
+
     // =========================================================================
-    // PASSO 2: O ESPECIALISTA RESPONDE
+    // PASSO 2: O ESPECIALISTA RESPONDE COM BASE NO HISTÓRICO COMPLETO
     // =========================================================================
     const finalRes = await ai.models.generateContent({
       model: modelName,
-      contents: [{ role: "user", parts: [{ text: message }] }],
+      contents: conversationHistory,
       config: {
         systemInstruction,
         temperature: selectedAgent.temperature || 0.7,
       },
     });
 
+    const textResponse = finalRes.text || "Estou com você em oração neste momento. Que a paz de Deus reine em seu coração.";
+
+    // =========================================================================
+    // PASSO 3: PERSISTE AMBAS AS MENSAGENS NO BANCO DE DADOS
+    // =========================================================================
+    if (currentConvId) {
+      await prisma.$transaction([
+        prisma.message.create({
+          data: {
+            conversationId: currentConvId,
+            role: "USER",
+            content: message.trim(),
+          },
+        }),
+        prisma.message.create({
+          data: {
+            conversationId: currentConvId,
+            role: "MODEL",
+            content: textResponse,
+          },
+        }),
+        prisma.conversation.update({
+          where: { id: currentConvId },
+          data: {
+            updatedAt: new Date(),
+            agentProfileId: selectedAgent.id,
+          },
+        }),
+      ]);
+    }
+
     return {
       success: true,
-      textResponse: finalRes.text,
+      textResponse,
       agentName: selectedAgent.name,
       agentType: selectedAgent.type,
+      conversationId: currentConvId,
     };
   } catch (error: any) {
     console.error("Erro ao processar mensagem com Gemini:", error);
@@ -151,17 +343,29 @@ REGRA ESTRITA: Retorne APENAS um JSON válido no formato exato:
 export async function processVoiceMessage(formData: FormData) {
   try {
     const audioBase64 = formData.get("audio") as string;
-    const tenantId = formData.get("tenantId") as string;
+    const tenantSlug = formData.get("tenantSlug") as string || formData.get("tenantId") as string;
     let conversationId = formData.get("conversationId") as string | null;
 
-    if (!audioBase64 || !tenantId) {
+    if (!audioBase64 || !tenantSlug) {
       return { success: false, error: "Áudio ou identificação não fornecidos." };
     }
 
-    // 1. Buscar ou semear agentes
-    const agents = await getOrSeedAgents(tenantId);
+    const tenant = await prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+    });
 
-    const agentOptions = agents.map(a => ({
+    if (!tenant) return { success: false, error: "Igreja não encontrada." };
+
+    if (!conversationId) {
+      const convRes = await getUserConversation(tenantSlug);
+      if (convRes.success && convRes.conversationId) {
+        conversationId = convRes.conversationId;
+      }
+    }
+
+    // 1. Buscar agentes
+    const agents = await getOrSeedAgents(tenant.id);
+    const agentOptions = agents.map((a) => ({
       id: a.id,
       name: a.name,
     }));
@@ -190,57 +394,99 @@ REGRA ESTRITA: Retorne APENAS um objeto JSON válido. Não inclua blocos de cód
           role: "user",
           parts: [
             { inlineData: { data: audioBase64, mimeType: "audio/webm" } },
-            { text: orchestratorPrompt }
-          ]
-        }
+            { text: orchestratorPrompt },
+          ],
+        },
       ],
-      config: { temperature: 0.1 } // Baixa temperatura para JSON estruturado
+      config: { temperature: 0.1 },
     });
 
     let orchestratorData;
     try {
       const textVal = orchestratorRes.text || "{}";
-      const rawText = textVal.replace(/```json/g, '').replace(/```/g, '').trim();
+      const rawText = textVal.replace(/```json/g, "").replace(/```/g, "").trim();
       orchestratorData = JSON.parse(rawText);
     } catch (e) {
       console.error("Falha ao fazer parse do orquestrador:", orchestratorRes.text);
-      // Fallback
       orchestratorData = {
-        transcription: "Não consegui transcrever perfeitamente.",
-        selectedAgentId: agents[0].id
+        transcription: "Gostaria de uma palavra pastoral de conforto e oração.",
+        selectedAgentId: agents[0].id,
       };
     }
 
-    // Identificar qual agente foi escolhido
-    const selectedAgent = agents.find(a => a.id === orchestratorData.selectedAgentId) || agents[0];
-    const systemInstruction = selectedAgent.systemPrompt;
+    const selectedAgent = agents.find((a) => a.id === orchestratorData.selectedAgentId) || agents[0];
+    const systemInstruction = `${selectedAgent.systemPrompt}\n\nContexto: Membro da igreja '${tenant.name}'. Mantenha a conversa acolhedora, pastoral e contextualizada com as mensagens anteriores.`;
     const modelName = selectedAgent.model === "gemini-1.5-flash" ? "gemini-3.6-flash" : (selectedAgent.model || "gemini-3.6-flash");
 
+    // Histórico prévio
+    let conversationHistory: any[] = [];
+    if (conversationId) {
+      const pastMessages = await prisma.message.findMany({
+        where: { conversationId },
+        orderBy: { createdAt: "asc" },
+        take: 12,
+      });
+
+      conversationHistory = pastMessages.map((m) => ({
+        role: m.role === "USER" ? ("user" as const) : ("model" as const),
+        parts: [{ text: m.content }],
+      }));
+    }
+
+    conversationHistory.push({
+      role: "user" as const,
+      parts: [{ text: orchestratorData.transcription }],
+    });
+
     // =========================================================================
-    // PASSO 2: O ESPECIALISTA RESPONDE (Usando a transcrição, é mais rápido)
+    // PASSO 2: O ESPECIALISTA RESPONDE COM BASE NO HISTÓRICO
     // =========================================================================
     const finalRes = await ai.models.generateContent({
       model: modelName,
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: orchestratorData.transcription }]
-        }
-      ],
+      contents: conversationHistory,
       config: {
         systemInstruction,
         temperature: selectedAgent.temperature || 0.7,
-      }
+      },
     });
 
-    const textResponse = finalRes.text;
+    const textResponse = finalRes.text || "Recebo o seu desabafo em meu coração e uno minha fé à sua.";
 
-    return { 
-      success: true, 
+    // =========================================================================
+    // PASSO 3: PERSISTE AS MENSAGENS NO BANCO
+    // =========================================================================
+    if (conversationId) {
+      await prisma.$transaction([
+        prisma.message.create({
+          data: {
+            conversationId,
+            role: "USER",
+            content: `🎤 "${orchestratorData.transcription}"`,
+          },
+        }),
+        prisma.message.create({
+          data: {
+            conversationId,
+            role: "MODEL",
+            content: textResponse,
+          },
+        }),
+        prisma.conversation.update({
+          where: { id: conversationId },
+          data: {
+            updatedAt: new Date(),
+            agentProfileId: selectedAgent.id,
+          },
+        }),
+      ]);
+    }
+
+    return {
+      success: true,
       textResponse,
       agentName: selectedAgent.name,
       userTranscription: orchestratorData.transcription,
-      conversationId: "mock-id-for-now" 
+      conversationId,
     };
   } catch (error: any) {
     console.error("Erro ao processar voz no Gemini:", error);
