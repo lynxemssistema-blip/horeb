@@ -96,7 +96,13 @@ export async function destroySession() {
 }
 
 export type AccessCheckResult =
-  | { authorized: true; user: SessionData; effectiveRole: string }
+  | {
+      authorized: true;
+      user: SessionData;
+      effectiveRole: string;
+      targetTenantId: string;
+      targetTenantSlug: string;
+    }
   | { authorized: false; reason: "NOT_LOGGED_IN" }
   | {
       authorized: false;
@@ -113,25 +119,37 @@ export async function checkChurchAccess(slug: string): Promise<AccessCheckResult
     return { authorized: false, reason: "NOT_LOGGED_IN" };
   }
 
-  // Super Admin (Lynx EMS) tem acesso irrestrito a todas as congregações
-  const isSuperAdmin = session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN";
-  if (isSuperAdmin) {
-    return { authorized: true, user: session, effectiveRole: session.role };
-  }
-
-  // Igreja de cadastro principal do usuário
-  if (session.tenantSlug === slug) {
-    return { authorized: true, user: session, effectiveRole: session.role };
-  }
-
-  // Buscar congregação de destino para validar hierarquia
+  // Buscar congregação de destino para validar existência e metadados
   const targetTenant = await prisma.tenant.findUnique({
     where: { slug },
-    select: { id: true, name: true, parentId: true },
+    select: { id: true, name: true, slug: true, parentId: true },
   });
 
   if (!targetTenant) {
     return { authorized: false, reason: "NOT_LOGGED_IN" };
+  }
+
+  // Super Admin (Lynx EMS) tem acesso irrestrito a todas as congregações
+  const isSuperAdmin = session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN";
+  if (isSuperAdmin) {
+    return {
+      authorized: true,
+      user: session,
+      effectiveRole: "SUPERADMIN",
+      targetTenantId: targetTenant.id,
+      targetTenantSlug: targetTenant.slug,
+    };
+  }
+
+  // Igreja de cadastro principal do usuário
+  if (session.tenantSlug === slug) {
+    return {
+      authorized: true,
+      user: session,
+      effectiveRole: session.role,
+      targetTenantId: targetTenant.id,
+      targetTenantSlug: targetTenant.slug,
+    };
   }
 
   // REGRA DE HIERARQUIA: Se o usuário é ADMIN ou PASTOR da Igreja Sede Matriz,
@@ -140,7 +158,13 @@ export async function checkChurchAccess(slug: string): Promise<AccessCheckResult
     (session.role === "ADMIN" || session.role === "PASTOR") &&
     targetTenant.parentId === session.tenantId
   ) {
-    return { authorized: true, user: session, effectiveRole: session.role };
+    return {
+      authorized: true,
+      user: session,
+      effectiveRole: session.role,
+      targetTenantId: targetTenant.id,
+      targetTenantSlug: targetTenant.slug,
+    };
   }
 
   // Verificar na tabela de acessos multi-igreja explícita
@@ -154,7 +178,13 @@ export async function checkChurchAccess(slug: string): Promise<AccessCheckResult
   });
 
   if (access) {
-    return { authorized: true, user: session, effectiveRole: access.role };
+    return {
+      authorized: true,
+      user: session,
+      effectiveRole: access.role,
+      targetTenantId: targetTenant.id,
+      targetTenantSlug: targetTenant.slug,
+    };
   }
 
   return {
@@ -198,7 +228,7 @@ export async function requirePermission(
     return {
       authorized: true,
       user: access.user,
-      tenantId: access.user.tenantId,
+      tenantId: access.targetTenantId,
       role,
     };
   }
@@ -207,7 +237,7 @@ export async function requirePermission(
     return {
       authorized: true,
       user: access.user,
-      tenantId: access.user.tenantId,
+      tenantId: access.targetTenantId,
       role,
     };
   }

@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { generateActivationCode, sendActivationCodeEmail } from "@/lib/mail";
 import { isValidEmail, sanitizeSlug } from "@/lib/validators";
-import { createSession, destroySession, getSession } from "@/lib/session";
+import { createSession, destroySession, getSession, checkChurchAccess } from "@/lib/session";
 import { isFeatureAllowedForPlan } from "@/lib/plans";
 
 export interface RegisterMasterParams {
@@ -345,6 +345,38 @@ export async function logoutUser() {
   await destroySession();
   revalidatePath("/");
   return { success: true, redirectUrl: "/" };
+}
+
+// Alternar congregação ativa na sessão (Acesso Multi-Igrejas e Super Admin)
+export async function switchChurchAction(targetSlug: string) {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return { success: false, error: "Não autenticado." };
+    }
+
+    const access = await checkChurchAccess(targetSlug);
+    if (!access.authorized) {
+      return { success: false, error: "Você não possui autorização para acessar esta congregação." };
+    }
+
+    await createSession({
+      userId: session.userId,
+      email: session.email,
+      name: session.name,
+      avatarUrl: session.avatarUrl || null,
+      role: access.effectiveRole,
+      tenantId: access.targetTenantId,
+      tenantSlug: access.targetTenantSlug,
+    });
+
+    revalidatePath("/");
+    revalidatePath(`/${targetSlug}`);
+
+    return { success: true, redirectUrl: `/${targetSlug}` };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Erro ao alternar congregação." };
+  }
 }
 
 // Obter Usuário da Sessão Atual

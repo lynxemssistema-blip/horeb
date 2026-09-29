@@ -22,6 +22,7 @@ import {
   Receipt,
   Bot,
   Calendar,
+  Crown,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -156,6 +157,16 @@ export function AppSidebar({
     }
   }
 
+  // Atalho exclusivo para Super Admin
+  if (currentUser?.role === "SUPERADMIN") {
+    filteredNavigation.unshift({
+      name: "Painel Super Admin",
+      href: "/admin",
+      icon: Crown,
+      highlightBadge: "MASTER",
+    } as any);
+  }
+
   return (
     <aside className="hidden md:flex flex-col w-64 lg:w-72 border-r border-border bg-card/60 backdrop-blur-md min-h-screen sticky top-0 shrink-0">
       {/* Brand Header */}
@@ -236,6 +247,22 @@ export function AppSidebar({
             <span>Rede de Igrejas</span>
             <Building2 className="w-3.5 h-3.5" />
           </div>
+
+          {/* Atalho Master para Superadmin alternar entre todas as congregações */}
+          {currentUser?.role === "SUPERADMIN" && (
+            <div className="px-2 mb-3">
+              <Link href="/select-church">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs font-black gap-1.5 h-9 bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-300 transition-all cursor-pointer shadow-xs"
+                >
+                  <Crown className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Ver Todas as Igrejas</span>
+                </Button>
+              </Link>
+            </div>
+          )}
 
           {/* If Mother Church, show branches and Add Branch Button */}
           {isMatriz && (

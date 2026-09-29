@@ -585,6 +585,96 @@ export function SuperAdminDashboard({
                 </Button>
               </div>
             </div>
+
+            {/* Seção de Acesso Rápido a Todas as Congregações */}
+            <div className="space-y-4 pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-lg font-black text-white flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-amber-400" />
+                    <span>Todas as Congregações Cadastradas ({tenants.length})</span>
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Acesso direto e irrestrito: entre em qualquer congregação com autoridade de Super Admin.
+                  </p>
+                </div>
+
+                <Button
+                  onClick={() => setActiveTab("tenants")}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-3 rounded-xl border-white/10 bg-white/[0.04] text-xs font-bold text-zinc-300 hover:text-white"
+                >
+                  <span>Gerenciar Assinaturas & Planos</span>
+                  <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                {tenants.map((t) => {
+                  const isMatriz = !t.parentId;
+                  return (
+                    <div
+                      key={t.id}
+                      className="p-4 rounded-2xl bg-zinc-900/80 border border-white/[0.08] hover:border-amber-500/40 hover:bg-zinc-800/80 transition-all flex flex-col justify-between gap-3 shadow-lg relative overflow-hidden group"
+                    >
+                      <div
+                        className="absolute top-0 left-0 right-0 h-1"
+                        style={{ backgroundColor: t.primaryColor || "#f59e0b" }}
+                      />
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
+                              style={{ backgroundColor: t.primaryColor || "#f59e0b" }}
+                            />
+                            <h4 className="font-bold text-white text-sm truncate group-hover:text-amber-400 transition-colors">
+                              {t.name}
+                            </h4>
+                          </div>
+
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-zinc-400 shrink-0">
+                            {isMatriz ? "Matriz" : "Filial"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
+                          <span>/{t.slug}</span>
+                          <span className="text-[11px] font-sans">
+                            {t._count?.users || t.users?.length || 0} membros
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2 border-t border-white/[0.06]">
+                        <Link href={`/${t.slug}`} className="flex-1">
+                          <Button
+                            size="sm"
+                            className="w-full h-8 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black gap-1.5 shadow-sm"
+                          >
+                            <span>Entrar no App</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </Button>
+                        </Link>
+                        <Link href={`/${t.slug}/admin/finance`} target="_blank">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 px-2.5 rounded-xl text-xs font-bold border-white/10 bg-white/[0.04] hover:bg-white/10 text-zinc-200 gap-1"
+                            title="Abrir ERP Financeiro"
+                          >
+                            <span>ERP</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </TabsContent>
 
           {/* ========================================================================= */}
@@ -715,15 +805,28 @@ export function SuperAdminDashboard({
 
                           {/* Ações Impersonate */}
                           <td className="py-3 px-4 text-right">
-                            <Link href={`/${t.slug}`} target="_blank">
-                              <Button
-                                size="sm"
-                                className="h-8 px-3 rounded-lg text-xs font-bold bg-white/[0.08] hover:bg-white/[0.15] text-zinc-100 gap-1.5"
-                              >
-                                <span>Acessar App</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </Button>
-                            </Link>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Link href={`/${t.slug}`}>
+                                <Button
+                                  size="sm"
+                                  className="h-8 px-3 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black gap-1.5 shadow-sm"
+                                >
+                                  <span>Entrar no App</span>
+                                  <ArrowRight className="w-3 h-3" />
+                                </Button>
+                              </Link>
+                              <Link href={`/${t.slug}/admin/finance`} target="_blank">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 px-2.5 rounded-lg text-xs font-bold border-white/10 bg-white/[0.04] hover:bg-white/10 text-zinc-200 gap-1"
+                                  title="Abrir ERP Financeiro"
+                                >
+                                  <span>ERP</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </Button>
+                              </Link>
+                            </div>
                           </td>
                         </tr>
                       );

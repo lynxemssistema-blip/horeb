@@ -162,18 +162,42 @@ export function AppHeader({
             primaryColor={primaryColor}
           />
 
-          {/* Quick Demo Switcher */}
-          <Link
-            href={`/${switchTargetSlug}`}
-            className="flex items-center gap-1 text-xs font-medium px-2 sm:px-2.5 py-1 rounded-full bg-muted hover:bg-muted/80 text-foreground transition-colors border border-border min-h-[32px]"
-            title={`Alternar para ${switchTargetSlug}`}
-          >
-            <ArrowLeftRight className="w-3 h-3 text-primary shrink-0" />
-            <span className="hidden sm:inline">{switchTargetLabel}</span>
-            <span className="sm:hidden text-[10px] font-semibold">
-              {isMatriz ? "FILIAL" : "SEDE"}
-            </span>
-          </Link>
+          {/* Painel Executivo Master para Super Admin */}
+          {userRole === "SUPERADMIN" && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-1.5 text-xs font-black px-2.5 sm:px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 text-amber-300 border border-amber-500/40 transition-all shadow-sm shrink-0"
+              title="Ir para o Painel Global Super Admin"
+            >
+              <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="hidden sm:inline">Painel Master</span>
+            </Link>
+          )}
+
+          {/* Quick Church Switcher */}
+          {userRole === "SUPERADMIN" ? (
+            <Link
+              href="/select-church"
+              className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-muted hover:bg-muted/80 text-foreground transition-colors border border-border shrink-0 min-h-[32px]"
+              title="Visualizar e alternar entre todas as congregações cadastradas"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="hidden sm:inline">Todas as Igrejas</span>
+              <span className="sm:hidden text-[10px] font-semibold">IGREJAS</span>
+            </Link>
+          ) : (
+            <Link
+              href={`/${switchTargetSlug}`}
+              className="flex items-center gap-1 text-xs font-medium px-2 sm:px-2.5 py-1 rounded-full bg-muted hover:bg-muted/80 text-foreground transition-colors border border-border min-h-[32px]"
+              title={`Alternar para ${switchTargetSlug}`}
+            >
+              <ArrowLeftRight className="w-3 h-3 text-primary shrink-0" />
+              <span className="hidden sm:inline">{switchTargetLabel}</span>
+              <span className="sm:hidden text-[10px] font-semibold">
+                {isMatriz ? "FILIAL" : "SEDE"}
+              </span>
+            </Link>
+          )}
 
           {/* Guia & Manual */}
           <HelpGuideDialog
