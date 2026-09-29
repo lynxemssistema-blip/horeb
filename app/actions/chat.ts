@@ -7,6 +7,27 @@ import { getSession } from "@/lib/session";
 // Inicializa o SDK do Gemini
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+// Helper para extrair primeiro nome carinhoso ou título ministerial
+function formatFirstName(fullName?: string | null): string {
+  if (!fullName || !fullName.trim()) return "";
+  const clean = fullName.trim();
+  const parts = clean.split(/\s+/);
+  const firstLower = parts[0].toLowerCase();
+  if (
+    firstLower.startsWith("pastor") ||
+    firstLower.startsWith("pra") ||
+    firstLower.startsWith("pr.") ||
+    firstLower.startsWith("bispo") ||
+    firstLower.startsWith("rev")
+  ) {
+    return parts.slice(0, 2).join(" ");
+  }
+  if (parts.length > 1 && parts[0].length <= 3) {
+    return `${parts[0]} ${parts[1]}`;
+  }
+  return parts[0];
+}
+
 // Garante que existam agentes padrões caso o banco esteja vazio
 async function getOrSeedAgents(tenantId?: string | null) {
   let agents = await prisma.agentProfile.findMany({
@@ -75,18 +96,31 @@ export async function getUserConversation(tenantSlug: string) {
 
     // Busca usuário ativo no banco
     let userId = session?.userId;
+    let userName = session?.name || null;
+
     if (!userId) {
       // Se não logado por sessão, busca o primeiro membro ou admin de fallback para vincular
       const fallbackUser = await prisma.user.findFirst({
         where: { tenantId: tenant.id },
-        select: { id: true },
+        select: { id: true, name: true },
       });
-      if (fallbackUser) userId = fallbackUser.id;
+      if (fallbackUser) {
+        userId = fallbackUser.id;
+        if (!userName) userName = fallbackUser.name;
+      }
+    } else if (!userName) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      });
+      if (dbUser?.name) userName = dbUser.name;
     }
 
     if (!userId) {
-      return { success: true, conversationId: null, messages: [] };
+      return { success: true, conversationId: null, messages: [], userName: null, firstName: "" };
     }
+
+    const firstName = formatFirstName(userName);
 
     // Busca a conversa mais recente desse usuário nesta igreja
     let conversation = await prisma.conversation.findFirst({
@@ -134,6 +168,8 @@ export async function getUserConversation(tenantSlug: string) {
       agentName: conversation.agentProfile?.name || "Pastor Conselheiro",
       messages: formattedMessages,
       hasHistory: formattedMessages.length > 0,
+      userName,
+      firstName,
     };
   } catch (error: any) {
     console.error("Erro ao carregar histórico de conversa pastoral:", error);
@@ -253,7 +289,28 @@ REGRA ESTRITA: Retorne APENAS um JSON válido no formato exato:
     }
 
     const selectedAgent = agents.find((a) => a.id === selectedAgentId) || agents[0];
-    const systemInstruction = `${selectedAgent.systemPrompt}\n\nContexto: Você está conversando com um membro da congregação '${tenant?.name || "Igreja"}'. Se o usuário expressar tristeza, ansiedade, cansaço ou alegria, responda com empatia profunda, trazendo versículos relevantes e uma oração carinhosa. Mantenha a continuidade da conversa com base nas mensagens anteriores trocadas. Seja acolhedor e consolador.`;
+
+    // Buscar informações do usuário para personalização humana e afetuosa
+    const session = await getSession();
+    let userName = session?.name;
+    if (!userName && currentConvId) {
+      const conv = await prisma.conversation.findUnique({
+        where: { id: currentConvId },
+        include: { user: { select: { name: true } } },
+      });
+      if (conv?.user?.name) userName = conv.user.name;
+    }
+    const firstName = formatFirstName(userName);
+
+    const systemInstruction = `${selectedAgent.systemPrompt}
+
+DIRETRIZES FUNDAMENTAIS DE CUIDADO PASTORAL E ACOLHIMENTO:
+1. TRATAMENTO PESSOAL PELO PRIMEIRO NOME: Você está falando diretamente com ${firstName ? `"${firstName}"` : "um irmão(ã)"}, membro querido(a) da congregação '${tenant?.name || "Igreja"}'. SEMPRE se dirija a ${firstName ? `"${firstName}"` : "ele(a)"} pelo primeiro nome de forma calorosa, afetuosa, respeitosa e natural ao longo do diálogo.
+2. HUMANIZAÇÃO PROFUNDA: Escreva com o coração de um pastor ou conselheiro espiritual sábio, amoroso, empático e presente. Use uma linguagem viva, calorosa, acolhedora e próxima, como um amigo e guia espiritual sentado ao lado dele ouvindo com carinho. NUNCA pareça um assistente virtual robótico ou uma IA técnica distante.
+3. ESCUTA ATIVA & EMPATIA: Acolha suas dores, incertezas, cansaço ou alegrias compartilhadas com sensibilidade genuína e compaixão cristã sincera.
+4. PALAVRA VIVA: Traga versículos bíblicos de alívio e esperança de maneira suave e reconfortante, aplicando à realidade de ${firstName || "sua vida"}.
+5. ORAÇÃO FINAL: Conclua sempre com uma oração carinhosa, pastoral e pessoal, intercedendo diretamente pela vida, paz e fortalecimento de ${firstName ? firstName : "ele(a)"}.
+6. CONTINUIDADE: Considere o histórico das mensagens trocadas para manter a conversa fluida e coerente.`;
 
     const modelName =
       selectedAgent.model === "gemini-1.5-flash"
@@ -415,7 +472,26 @@ REGRA ESTRITA: Retorne APENAS um objeto JSON válido. Não inclua blocos de cód
     }
 
     const selectedAgent = agents.find((a) => a.id === orchestratorData.selectedAgentId) || agents[0];
-    const systemInstruction = `${selectedAgent.systemPrompt}\n\nContexto: Membro da igreja '${tenant.name}'. Mantenha a conversa acolhedora, pastoral e contextualizada com as mensagens anteriores.`;
+
+    // Buscar informações do usuário
+    const session = await getSession();
+    let userName = session?.name;
+    if (!userName && conversationId) {
+      const conv = await prisma.conversation.findUnique({
+        where: { id: conversationId },
+        include: { user: { select: { name: true } } },
+      });
+      if (conv?.user?.name) userName = conv.user.name;
+    }
+    const firstName = formatFirstName(userName);
+
+    const systemInstruction = `${selectedAgent.systemPrompt}
+
+DIRETRIZES DE ATENDIMENTO PASTORAL E ACOLHIMENTO HUMANO (RESPOSTA A ÁUDIO):
+1. TRATAMENTO PESSOAL PELO PRIMEIRO NOME: Você ouviu o áudio enviado por ${firstName ? `"${firstName}"` : "um irmão(ã)"}, membro querido(a) da igreja '${tenant.name}'. Chame ${firstName ? `"${firstName}"` : "ele(a)"} pelo primeiro nome com profundo carinho e sensibilidade pastoral ao longo de toda a resposta.
+2. HUMANIZAÇÃO E LEITURA AFETIVA: O usuário gravou sua própria voz e abriu o coração. Sua resposta precisa soar viva, profundamente humana, empática e acolhedora, como um pastor ou conselheiro sábio ao lado dele(a). NUNCA seja frio ou robótico.
+3. CONFORTO E PALAVRA: Valide o que foi falado no áudio com amor cristão, ministre paz e traga uma palavra bíblica consoladora.
+4. ORAÇÃO NOMINAL: Termine sempre orando diretamente por ${firstName ? firstName : "ele(a)"}, pedindo graça, forças e paz de Deus sobre a vida dele(a).`;
     const modelName = selectedAgent.model === "gemini-1.5-flash" ? "gemini-3.6-flash" : (selectedAgent.model || "gemini-3.6-flash");
 
     // Histórico prévio

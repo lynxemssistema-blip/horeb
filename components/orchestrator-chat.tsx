@@ -6,6 +6,9 @@ import {
   Square,
   Loader2,
   Volume2,
+  VolumeX,
+  Play,
+  Pause,
   Sparkles,
   Send,
   Bot,
@@ -37,14 +40,17 @@ interface Message {
   content: string;
   agentName?: string;
   timestamp: Date;
+  audioBlobUrl?: string;
+  isVoice?: boolean;
 }
 
 interface OrchestratorChatProps {
   tenantSlug: string;
+  userName?: string | null;
   initialMood?: {
     key: string;
     label: string;
-    emoji: string;
+    emoji?: string;
     sublabel: string;
   } | null;
   onResetMood?: () => void;
@@ -52,6 +58,7 @@ interface OrchestratorChatProps {
 
 export function OrchestratorChat({
   tenantSlug,
+  userName,
   initialMood,
   onResetMood,
 }: OrchestratorChatProps) {
@@ -70,9 +77,200 @@ export function OrchestratorChat({
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true);
 
+  // Sistema Avançado de Áudio (Ouvir a qualquer momento: o que enviou ou o que a AI gerou)
+  const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
+  const [isAudioPaused, setIsAudioPaused] = useState<boolean>(false);
+  const [audioSourceType, setAudioSourceType] = useState<"speech" | "blob" | null>(null);
+  const [playbackRate, setPlaybackRate] = useState<number>(1.0);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Carregar vozes do navegador para síntese natural em português
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    const loadVoices = () => {
+      const avail = window.speechSynthesis.getVoices();
+      if (avail.length > 0) setVoices(avail);
+    };
+
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+
+    return () => {
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
+  }, []);
+
+  // Limpeza de áudio ao desmontar
+  useEffect(() => {
+    return () => {
+      if (audioElementRef.current) {
+        audioElementRef.current.pause();
+        audioElementRef.current = null;
+      }
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  // Limpar texto de caracteres especiais/markdown para pronúncia natural
+  const cleanTextForSpeech = (raw: string): string => {
+    return raw
+      .replace(/^🎤\s*"?/, "")
+      .replace(/"$/, "")
+      .replace(/[*#_~`>]/g, "")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .trim();
+  };
+
+  // Parar qualquer áudio tocando no momento
+  const stopAllAudio = () => {
+    if (audioElementRef.current) {
+      audioElementRef.current.pause();
+      audioElementRef.current.currentTime = 0;
+      audioElementRef.current = null;
+    }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setPlayingMessageId(null);
+    setIsAudioPaused(false);
+    setAudioSourceType(null);
+  };
+
+  // Reproduzir fala usando SpeechSynthesis com voz natural pt-BR
+  const playWithSpeechSynthesis = (id: string, content: string) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      toast.error("Síntese de voz não suportada neste navegador.");
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const text = cleanTextForSpeech(content);
+    if (!text) return;
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "pt-BR";
+    utterance.rate = playbackRate;
+    utterance.pitch = 1.0;
+
+    // Buscar melhor voz em português disponível
+    const ptVoices = voices.filter((v) => v.lang.startsWith("pt"));
+    const bestVoice =
+      ptVoices.find(
+        (v) =>
+          v.name.includes("Google") ||
+          v.name.includes("Luciana") ||
+          v.name.includes("Felipe") ||
+          v.name.includes("Daniel") ||
+          v.name.includes("Maria") ||
+          v.name.includes("Natural")
+      ) || ptVoices[0];
+
+    if (bestVoice) utterance.voice = bestVoice;
+
+    utterance.onstart = () => {
+      setPlayingMessageId(id);
+      setIsAudioPaused(false);
+      setAudioSourceType("speech");
+    };
+
+    utterance.onend = () => {
+      setPlayingMessageId(null);
+      setIsAudioPaused(false);
+      setAudioSourceType(null);
+    };
+
+    utterance.onerror = (e) => {
+      console.error("SpeechSynthesis error:", e);
+      setPlayingMessageId(null);
+      setIsAudioPaused(false);
+      setAudioSourceType(null);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Alternar Reprodução / Pausa / Troca de Áudio
+  const togglePlayMessage = (
+    id: string,
+    content: string,
+    audioBlobUrl?: string
+  ) => {
+    // Se clicou na mesma mensagem que já está ativa
+    if (playingMessageId === id) {
+      if (isAudioPaused) {
+        // Continuar reprodução
+        if (audioSourceType === "blob" && audioElementRef.current) {
+          audioElementRef.current.play();
+          setIsAudioPaused(false);
+        } else if (audioSourceType === "speech" && window.speechSynthesis) {
+          window.speechSynthesis.resume();
+          setIsAudioPaused(false);
+        }
+      } else {
+        // Pausar
+        if (audioSourceType === "blob" && audioElementRef.current) {
+          audioElementRef.current.pause();
+          setIsAudioPaused(true);
+        } else if (audioSourceType === "speech" && window.speechSynthesis) {
+          window.speechSynthesis.pause();
+          setIsAudioPaused(true);
+        }
+      }
+      return;
+    }
+
+    // Parar mensagem anterior antes de iniciar nova
+    stopAllAudio();
+
+    // Se possui arquivo de áudio original gravado pelo microfone do usuário
+    if (audioBlobUrl) {
+      try {
+        const audio = new Audio(audioBlobUrl);
+        audio.playbackRate = playbackRate;
+        audio.onended = () => {
+          setPlayingMessageId(null);
+          setIsAudioPaused(false);
+          setAudioSourceType(null);
+        };
+        audio.onerror = () => {
+          playWithSpeechSynthesis(id, content);
+        };
+        audioElementRef.current = audio;
+        setPlayingMessageId(id);
+        setIsAudioPaused(false);
+        setAudioSourceType("blob");
+        audio.play().catch(() => {
+          playWithSpeechSynthesis(id, content);
+        });
+      } catch {
+        playWithSpeechSynthesis(id, content);
+      }
+      return;
+    }
+
+    // Caso contrário, sintetiza o texto em voz pastoral calorosa
+    playWithSpeechSynthesis(id, content);
+  };
+
+  // Alternar velocidade da voz (1x, 1.25x, 1.5x)
+  const cyclePlaybackRate = () => {
+    const nextRate = playbackRate === 1.0 ? 1.25 : playbackRate === 1.25 ? 1.5 : 1.0;
+    setPlaybackRate(nextRate);
+    if (audioElementRef.current) {
+      audioElementRef.current.playbackRate = nextRate;
+    }
+    toast.info(`Velocidade de leitura: ${nextRate}x`);
+  };
 
   // Monitora disponibilidade de pastores da igreja em tempo real
   useEffect(() => {
@@ -104,6 +302,10 @@ export function OrchestratorChat({
           if (res.conversationId) setConversationId(res.conversationId);
           if (res.agentName) setActiveAgent(res.agentName);
 
+          const userFirstName =
+            res.firstName ||
+            (userName ? userName.trim().split(/\s+/)[0] : "");
+
           if (res.messages && res.messages.length > 0) {
             setMessages(
               res.messages.map((m: any) => ({
@@ -112,22 +314,25 @@ export function OrchestratorChat({
                 content: m.content,
                 agentName: m.agentName || res.agentName || "Pastor Conselheiro",
                 timestamp: new Date(m.timestamp),
+                isVoice: m.content.startsWith("🎤") || m.content.includes("🎤"),
               }))
             );
           } else {
-            // Conversa sem histórico anterior: exibe mensagem inicial calorosa
-            let initialGreeting =
-              "Graça e Paz! Sou o Agente Conselheiro da sua igreja. Como posso ajudar ou orar por você hoje?";
+            // Conversa sem histórico anterior: exibe mensagem inicial calorosa e personalizada
+            let initialGreeting = userFirstName
+              ? `Graça e Paz, ${userFirstName}! Sou o Conselheiro Pastoral da sua igreja. Como posso acolher seu coração e orar por você hoje?`
+              : "Graça e Paz! Sou o Conselheiro Pastoral da sua igreja. Como posso acolher seu coração e orar por você hoje?";
 
             if (initialMood) {
+              const namePart = userFirstName ? `, ${userFirstName}` : "";
               if (initialMood.key === "FELIZ") {
-                initialGreeting = `Graça e Paz! Que bênção saber que você está ${initialMood.label.toLowerCase()} hoje! ${initialMood.emoji} Quer compartilhar seu testemunho ou celebrar algo que Deus fez?`;
+                initialGreeting = `Graça e Paz${namePart}! Que bênção saber que você está ${initialMood.label.toLowerCase()} hoje! Quer compartilhar seu testemunho ou celebrar algo especial que Deus fez em sua vida?`;
               } else if (initialMood.key === "CANSADO") {
-                initialGreeting = `Graça e Paz. Sinto que você está com o corpo ou a mente exausta hoje. ${initialMood.emoji} Jesus disse: 'Vinde a mim todos os cansados e eu vos aliviarei'. Conte-me o que está pesando no seu coração.`;
+                initialGreeting = `Graça e Paz${namePart}. Compreendo que seu corpo ou sua mente estão pedindo descanso hoje. Jesus nos convidou: 'Vinde a mim todos os que estais cansados e sobrecarregados, e eu vos aliviarei'. Conte-me o que está pesando no seu coração.`;
               } else if (initialMood.key === "ANSIOSO") {
-                initialGreeting = `Graça e Paz. Respire fundo, você está em um lugar seguro. ${initialMood.emoji} O que tem deixado seu coração aflito ou preocupado com o amanhã? Deixe-me orar com você.`;
+                initialGreeting = `Graça e Paz${namePart}. Respire fundo com calma, você está em um espaço seguro e acolhedor. O que tem trazido aflição ou incertezas sobre o amanhã ao seu coração? Deixe-me orar com você.`;
               } else if (initialMood.key === "TRISTE") {
-                initialGreeting = `Graça e Paz, meu irmão(ã). Deus conhece cada lágrima silenciosa. ${initialMood.emoji} Estou aqui para te ouvir com todo carinho e interceder por sua vida. Desabafe comigo.`;
+                initialGreeting = `Graça e Paz${namePart}. Deus conhece cada lágrima silenciosa e cuida de cada detalhe da sua dor. Estou aqui para te ouvir com todo amor cristão e interceder por você. Desabafe comigo.`;
               }
             }
 
@@ -153,20 +358,24 @@ export function OrchestratorChat({
     return () => {
       isMounted = false;
     };
-  }, [tenantSlug, initialMood]);
+  }, [tenantSlug, initialMood, userName]);
 
   // Reiniciar diálogo / Começar novo assunto arquivando o anterior
   const handleResetConversation = async () => {
     try {
+      stopAllAudio();
       setIsProcessing(true);
       const res = await resetUserConversation(tenantSlug);
       if (res.success && res.conversationId) {
         setConversationId(res.conversationId);
+        const userFirstName = userName ? userName.trim().split(/\s+/)[0] : "";
         setMessages([
           {
             id: Date.now().toString(),
             role: "assistant",
-            content: "Graça e Paz! Iniciamos um novo momento de oração e conversa. Como posso acolher o seu coração agora?",
+            content: userFirstName
+              ? `Graça e Paz, ${userFirstName}! Iniciamos um novo momento de oração e conversa. Como posso acolher o seu coração agora?`
+              : "Graça e Paz! Iniciamos um novo momento de oração e conversa. Como posso acolher o seu coração agora?",
             agentName: "Orquestrador Pastoral",
             timestamp: new Date(),
           },
@@ -180,7 +389,7 @@ export function OrchestratorChat({
     }
   };
 
-  // Scroll automático
+  // Scroll automático ao adicionar mensagens
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isProcessing]);
@@ -213,8 +422,9 @@ export function OrchestratorChat({
       if (res.success && res.textResponse) {
         if (res.conversationId) setConversationId(res.conversationId);
         if (res.agentName) setActiveAgent(res.agentName);
+        const assistantMsgId = (Date.now() + 1).toString();
         const assistantMsg: Message = {
-          id: (Date.now() + 1).toString(),
+          id: assistantMsgId,
           role: "assistant",
           content: res.textResponse,
           agentName: res.agentName || "Pastor Conselheiro",
@@ -233,6 +443,7 @@ export function OrchestratorChat({
 
   // Gravação de Áudio/Voz
   const startRecording = async () => {
+    stopAllAudio();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: "audio/webm" });
@@ -265,6 +476,7 @@ export function OrchestratorChat({
   const handleAudioSend = async (blob: Blob) => {
     setIsProcessing(true);
     try {
+      const audioBlobUrl = URL.createObjectURL(blob);
       const reader = new FileReader();
       reader.readAsDataURL(blob);
       reader.onloadend = async () => {
@@ -278,14 +490,19 @@ export function OrchestratorChat({
         const res = await processVoiceMessage(formData);
         if (res.success && res.textResponse) {
           if (res.conversationId) setConversationId(res.conversationId);
+          const userMsgId = Date.now().toString();
+          const assistantMsgId = (Date.now() + 1).toString();
+
           if (res.userTranscription) {
             setMessages((prev) => [
               ...prev,
               {
-                id: Date.now().toString(),
+                id: userMsgId,
                 role: "user",
                 content: `🎤 "${res.userTranscription}"`,
                 timestamp: new Date(),
+                audioBlobUrl,
+                isVoice: true,
               },
             ]);
           }
@@ -295,7 +512,7 @@ export function OrchestratorChat({
           setMessages((prev) => [
             ...prev,
             {
-              id: (Date.now() + 1).toString(),
+              id: assistantMsgId,
               role: "assistant",
               content: res.textResponse!,
               agentName: res.agentName || "Pastor Conselheiro",
@@ -303,12 +520,10 @@ export function OrchestratorChat({
             },
           ]);
 
-          // Tentar falar em áudio pelo navegador se disponível
-          if (typeof window !== "undefined" && window.speechSynthesis) {
-            const utterance = new SpeechSynthesisUtterance(res.textResponse);
-            utterance.lang = "pt-BR";
-            window.speechSynthesis.speak(utterance);
-          }
+          // Iniciar a reprodução do áudio da resposta gerada pela IA automaticamente com controles interativos
+          setTimeout(() => {
+            playWithSpeechSynthesis(assistantMsgId, res.textResponse!);
+          }, 350);
         } else {
           toast.error(res.error || "Erro ao processar áudio.");
         }
@@ -321,7 +536,7 @@ export function OrchestratorChat({
   };
 
   return (
-    <div className="flex flex-col h-[75vh] sm:h-[80vh] bg-card border border-border/80 rounded-3xl shadow-2xl overflow-hidden backdrop-blur-md">
+    <div className="flex flex-col h-[78vh] sm:h-[82vh] bg-card border border-border/80 rounded-3xl shadow-2xl overflow-hidden backdrop-blur-md">
       {/* Top Bar com Status do Especialista Conectado */}
       <div className="px-4 sm:px-6 py-3.5 bg-muted/40 border-b border-border/60 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -338,15 +553,15 @@ export function OrchestratorChat({
                 {activeAgent}
               </h2>
               <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                IA Ativa
+                IA Pastoral
               </span>
             </div>
             <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-              <span>Orquestrador Multi-Especialista</span>
+              <span>Acolhimento & Oração</span>
               {initialMood && (
                 <>
                   <span>•</span>
-                  <span>Sentindo-se {initialMood.label} {initialMood.emoji}</span>
+                  <span>Sentindo-se {initialMood.label}</span>
                 </>
               )}
             </p>
@@ -407,10 +622,12 @@ export function OrchestratorChat({
         </div>
       </div>
 
-      {/* Área de Mensagens (Chat Scroll) */}
+      {/* Área de Mensagens (Chat Scroll com Reprodutor de Áudio Integrado) */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
         {messages.map((msg) => {
           const isUser = msg.role === "user";
+          const isPlayingThis = playingMessageId === msg.id;
+
           return (
             <motion.div
               key={msg.id}
@@ -430,18 +647,139 @@ export function OrchestratorChat({
               </div>
 
               <div
-                className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm leading-relaxed ${
+                className={`max-w-[85%] sm:max-w-[78%] rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm leading-relaxed ${
                   isUser
                     ? "bg-primary text-primary-foreground rounded-tr-none shadow-md"
                     : "bg-muted/70 text-foreground border border-border/60 rounded-tl-none"
                 }`}
               >
                 {!isUser && msg.agentName && (
-                  <p className="text-[10px] font-bold text-primary mb-1 uppercase tracking-wider">
-                    {msg.agentName}
-                  </p>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[10px] font-bold text-primary uppercase tracking-wider">
+                      {msg.agentName}
+                    </p>
+                    <span className="text-[9px] text-muted-foreground">
+                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
                 )}
+
+                {/* Conteúdo textual da mensagem */}
                 <p className="whitespace-pre-wrap">{msg.content}</p>
+
+                {/* =========================================================================
+                    REPRODUTOR DE ÁUDIO INTERATIVO (OUVIR A QUALQUER MOMENTO)
+                   ========================================================================= */}
+                {isUser ? (
+                  /* Áudio da Mensagem do Usuário (o que ele enviou) */
+                  <div className="mt-2.5 pt-2 border-t border-primary-foreground/20 flex items-center justify-between gap-2 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => togglePlayMessage(msg.id, msg.content, msg.audioBlobUrl)}
+                      className={`h-6 px-2.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+                        isPlayingThis
+                          ? "bg-white text-primary shadow-xs ring-2 ring-white/50"
+                          : "text-primary-foreground/90 bg-white/15 hover:bg-white/25"
+                      }`}
+                      title="Ouvir mensagem de voz do usuário a qualquer momento"
+                    >
+                      {isPlayingThis && !isAudioPaused ? (
+                        <>
+                          <Pause className="w-2.5 h-2.5 fill-current" />
+                          <span>Pausar meu áudio</span>
+                        </>
+                      ) : isPlayingThis && isAudioPaused ? (
+                        <>
+                          <Play className="w-2.5 h-2.5 fill-current" />
+                          <span>Continuar meu áudio</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-2.5 h-2.5 fill-current" />
+                          <span>{msg.audioBlobUrl || msg.isVoice ? "Ouvir meu áudio" : "Ouvir o que enviei"}</span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Equalizador animado quando tocando */}
+                    {isPlayingThis && !isAudioPaused && (
+                      <div className="flex items-end gap-0.5 h-3 px-1">
+                        <span className="w-1 bg-white rounded-full animate-bounce [animation-delay:-0.3s] h-3" />
+                        <span className="w-1 bg-white rounded-full animate-bounce [animation-delay:-0.15s] h-3.5" />
+                        <span className="w-1 bg-white rounded-full animate-bounce h-2" />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Áudio da Mensagem da IA Pastoral (o que a IA gerou) */
+                  <div className="mt-3 pt-2.5 border-t border-border/50 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => togglePlayMessage(msg.id, msg.content, msg.audioBlobUrl)}
+                        className={`h-7 px-3 rounded-full text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                          isPlayingThis
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm ring-2 ring-primary/30"
+                            : "bg-background/90 hover:bg-primary/10 text-foreground border-border hover:border-primary/50"
+                        }`}
+                        title="Ouvir a resposta do conselheiro em voz pastoral"
+                      >
+                        {isPlayingThis && !isAudioPaused ? (
+                          <>
+                            <Pause className="w-3 h-3 fill-current" />
+                            <span>Pausar áudio</span>
+                          </>
+                        ) : isPlayingThis && isAudioPaused ? (
+                          <>
+                            <Play className="w-3 h-3 fill-current" />
+                            <span>Continuar áudio</span>
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-3.5 h-3.5 text-primary" />
+                            <span>Ouvir Reflexão</span>
+                          </>
+                        )}
+                      </Button>
+
+                      {/* Equalizador animado em tempo real */}
+                      {isPlayingThis && !isAudioPaused && (
+                        <div className="flex items-end gap-0.5 h-3.5 px-1">
+                          <span className="w-1 bg-primary rounded-full animate-bounce [animation-delay:-0.3s] h-3" />
+                          <span className="w-1 bg-amber-400 rounded-full animate-bounce [animation-delay:-0.15s] h-3.5" />
+                          <span className="w-1 bg-primary rounded-full animate-bounce h-2" />
+                          <span className="w-1 bg-amber-400 rounded-full animate-bounce [animation-delay:-0.4s] h-3" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {/* Seletor de Velocidade (1.0x, 1.25x, 1.5x) */}
+                      <button
+                        type="button"
+                        onClick={cyclePlaybackRate}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground border border-border/50 transition-colors"
+                        title="Ajustar velocidade da voz pastoral"
+                      >
+                        {playbackRate}x
+                      </button>
+
+                      {/* Botão de Parar Áudio */}
+                      {isPlayingThis && (
+                        <button
+                          type="button"
+                          onClick={stopAllAudio}
+                          className="text-[10px] text-muted-foreground hover:text-destructive p-1 rounded-md transition-colors"
+                          title="Parar áudio"
+                        >
+                          <Square className="w-2.5 h-2.5 fill-current" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           );
@@ -458,7 +796,7 @@ export function OrchestratorChat({
             </div>
             <div className="bg-muted/50 border border-border/50 rounded-2xl rounded-tl-none p-3 flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              <span>Ouvindo seu coração e consultando a Palavra...</span>
+              <span>Ouvindo com carinho e orando com a Palavra...</span>
             </div>
           </motion.div>
         )}
@@ -470,7 +808,7 @@ export function OrchestratorChat({
       <div className="px-4 py-2 bg-muted/20 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <HeartHandshake className="w-3.5 h-3.5 text-primary" />
-          <span>Deseja conversar diretamente com um pastor?</span>
+          <span>Deseja conversar diretamente com um pastor da igreja?</span>
         </span>
         <button
           type="button"
@@ -515,7 +853,7 @@ export function OrchestratorChat({
                   handleSendText();
                 }
               }}
-              placeholder={isRecording ? "Gravando seu áudio..." : "Escreva seu desabafo ou dúvida..."}
+              placeholder={isRecording ? "Gravando seu áudio pastoral..." : "Escreva seu desabafo, pedido ou dúvida..."}
               disabled={isRecording || isProcessing}
               rows={1}
               className="resize-none min-h-[44px] max-h-32 text-xs sm:text-sm py-3 px-3.5 rounded-2xl bg-card border-border/80 focus-visible:ring-1 focus-visible:ring-primary"

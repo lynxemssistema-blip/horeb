@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Church, Bell, ArrowLeftRight, UserPlus, HelpCircle, LogOut, Crown, ShieldCheck, HeartHandshake } from "lucide-react";
+import { Church, Bell, ArrowLeftRight, User, UserPlus, HelpCircle, LogOut, Crown, ShieldCheck, HeartHandshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MemberSignupDialog } from "@/components/member-signup-dialog";
 import { HelpGuideDialog } from "@/components/help-guide-dialog";
@@ -280,6 +280,15 @@ export function AppHeader({
             </div>
 
             <div className="pt-2 flex flex-col gap-2">
+              <Link
+                href={`/${slug}/perfil`}
+                onClick={() => setIsProfileOpen(false)}
+                className="w-full h-11 rounded-xl font-bold bg-amber-500 hover:bg-amber-400 text-black flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-500/20"
+              >
+                <User className="w-4 h-4" />
+                <span>Meu Perfil (Dados, Senha e Foto)</span>
+              </Link>
+
               {(userRole === "ADMIN" || userRole === "SUPERADMIN") && (
                 <Link
                   href={`/${slug}/membros`}

@@ -23,6 +23,7 @@ import {
   Bot,
   Calendar,
   Crown,
+  User,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -124,6 +125,11 @@ export function AppSidebar({
       name: "Membros & Convites",
       href: `/${slug}/membros`,
       icon: UserPlus,
+    },
+    {
+      name: "Meu Perfil",
+      href: `/${slug}/perfil`,
+      icon: User,
     },
     {
       name: "Configurações da Igreja",
@@ -380,18 +386,31 @@ export function AppSidebar({
               </div>
             </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={async () => {
-                await logoutUser();
-                window.location.href = "/";
-              }}
-              className="h-8 w-8 rounded-xl text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 shrink-0 cursor-pointer"
-              title="Sair da Conta"
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center gap-1 shrink-0">
+              <Link href={`/${slug}/perfil`}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-xl text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10 cursor-pointer"
+                  title="Meu Perfil (Dados, Senha e Foto)"
+                >
+                  <User className="w-4 h-4" />
+                </Button>
+              </Link>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={async () => {
+                  await logoutUser();
+                  window.location.href = "/";
+                }}
+                className="h-8 w-8 rounded-xl text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 cursor-pointer"
+                title="Sair da Conta"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="flex items-center gap-3 p-1">
