@@ -47,9 +47,22 @@ export async function generateMetadata({
 
   if (!tenant) return { title: "Igreja não encontrada" };
 
+  const iconUrl = `/api/icon/${slug}`;
+
   return {
     title: `${tenant.name} | App da Igreja`,
     description: `Portal oficial e engajamento da ${tenant.name}`,
+    manifest: `/api/manifest/${slug}`,
+    icons: {
+      icon: iconUrl,
+      shortcut: iconUrl,
+      apple: iconUrl,
+    },
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "black-translucent",
+      title: tenant.name,
+    },
   };
 }
 
@@ -165,6 +178,10 @@ export default async function TenantLayout({
         } as React.CSSProperties
       }
     >
+      <link rel="icon" href={`/api/icon/${tenant.slug}`} />
+      <link rel="apple-touch-icon" href={`/api/icon/${tenant.slug}`} />
+      <link rel="manifest" href={`/api/manifest/${tenant.slug}`} />
+
       {/* Injeção global no :root e escopo do Tenant */}
       <style
         dangerouslySetInnerHTML={{

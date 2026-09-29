@@ -161,10 +161,10 @@ export function AppSidebar({
       {/* Brand Header */}
       <div className="p-5 border-b border-border/60">
         <div className="flex items-center gap-3">
-          <Avatar className="h-11 w-11 ring-2 ring-primary/25 shrink-0 shadow-sm">
-            {logoUrl ? <AvatarImage src={logoUrl} alt={name} /> : null}
+          <Avatar className="h-11 w-11 ring-2 ring-primary/25 shrink-0 shadow-sm bg-black/40">
+            <AvatarImage src={logoUrl || `/api/icon/${slug}`} alt={name} className="object-cover" />
             <AvatarFallback className="bg-primary/10 text-primary font-bold">
-              <Building2 className="w-5 h-5 text-primary" />
+              {name.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">

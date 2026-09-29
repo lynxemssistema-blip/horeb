@@ -21,25 +21,31 @@ export const viewport: Viewport = {
   themeColor: "#070709",
 };
 
-export const metadata: Metadata = {
-  title: "Horeb SaaS • Desenvolvido por Lynx EMS Sistemas | Soluções para Igrejas",
-  description: "Plataforma de engajamento e gestão eclesial desenvolvida pela Lynx EMS Sistemas com motor White-Label dinâmico e arquitetura mobile-first.",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Horeb App",
-  },
-  icons: {
-    icon: "/logo-horeb.png",
-    apple: "/logo-horeb.png",
-  },
-};
-
 import { Toaster } from "@/components/ui/sonner";
 import { getSession } from "@/lib/session";
 import { RoleImpersonator } from "@/components/role-impersonator";
-import { cookies } from "next/headers";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const session = await getSession();
+  const iconUrl = session?.tenantSlug ? `/api/icon/${session.tenantSlug}` : "/logo-horeb.png";
+  const manifestUrl = session?.tenantSlug ? `/api/manifest/${session.tenantSlug}` : "/manifest.json";
+
+  return {
+    title: "Horeb SaaS • Soluções para Igrejas",
+    description: "Plataforma de engajamento e gestão eclesial desenvolvida pela Lynx EMS Sistemas com motor White-Label dinâmico e arquitetura mobile-first.",
+    manifest: manifestUrl,
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "black-translucent",
+      title: "Horeb App",
+    },
+    icons: {
+      icon: iconUrl,
+      shortcut: iconUrl,
+      apple: iconUrl,
+    },
+  };
+}
 
 export default async function RootLayout({
   children,

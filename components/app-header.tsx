@@ -82,12 +82,10 @@ export function AppHeader({
       <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-2 sm:gap-3">
         {/* Left: Church Info */}
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <Avatar className="h-9 w-9 ring-2 ring-primary/20 shrink-0">
-            {logoUrl ? (
-              <AvatarImage src={logoUrl} alt={name} />
-            ) : null}
+          <Avatar className="h-9 w-9 ring-2 ring-primary/20 shrink-0 bg-black/40">
+            <AvatarImage src={logoUrl || `/api/icon/${slug}`} alt={name} className="object-cover" />
             <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
-              <Church className="w-4 h-4 text-primary" />
+              {name.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
 
