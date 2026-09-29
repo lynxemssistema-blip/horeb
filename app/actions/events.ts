@@ -340,11 +340,20 @@ export async function deleteEvent(eventId: string) {
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      include: { tenant: { select: { slug: true } } },
+      include: { tenant: { select: { id: true, slug: true, parentId: true } } },
     });
 
     if (!event) {
       return { success: false, error: "Evento não encontrado." };
+    }
+
+    // Validação Multi-Tenant: garante que o usuário só exclui evento da sua congregação ou de suas filiais
+    if (
+      session?.role !== "SUPERADMIN" &&
+      event.tenantId !== session?.tenantId &&
+      event.tenant?.parentId !== session?.tenantId
+    ) {
+      return { success: false, error: "Você não tem permissão para excluir eventos desta congregação." };
     }
 
     await prisma.event.delete({ where: { id: eventId } });
@@ -405,11 +414,20 @@ export async function toggleEventActive(eventId: string, userRole?: string) {
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      include: { tenant: { select: { slug: true } } },
+      include: { tenant: { select: { id: true, slug: true, parentId: true } } },
     });
 
     if (!event) {
       return { success: false, error: "Evento não encontrado." };
+    }
+
+    // Validação Multi-Tenant: garante que o usuário só altera evento da sua congregação ou de suas filiais
+    if (
+      session?.role !== "SUPERADMIN" &&
+      event.tenantId !== session?.tenantId &&
+      event.tenant?.parentId !== session?.tenantId
+    ) {
+      return { success: false, error: "Você não tem permissão para alterar eventos desta congregação." };
     }
 
     const newActiveState = !event.isActive;

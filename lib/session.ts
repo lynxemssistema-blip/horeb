@@ -12,11 +12,53 @@ export interface SessionData {
   tenantSlug: string;
 }
 
+export type AppRole = "SUPERADMIN" | "ADMIN" | "PASTOR" | "FINANCIAL" | "LEADER" | "KIDS" | "MEMBER";
+
 const SESSION_COOKIE_NAME = "horeb_auth_session";
+
+// Codificação segura em Base64 para garantir total compatibilidade com RFC 6265 no Safari (iOS / macOS)
+function encodeSessionCookie(data: SessionData): string {
+  try {
+    return Buffer.from(JSON.stringify(data), "utf-8").toString("base64");
+  } catch {
+    return encodeURIComponent(JSON.stringify(data));
+  }
+}
+
+function decodeSessionCookie(raw: string): SessionData | null {
+  try {
+    let text = raw?.trim() || "";
+    if (!text) return null;
+
+    // Desfaz URL encoding se existir
+    if (text.includes("%")) {
+      try {
+        text = decodeURIComponent(text);
+      } catch {}
+    }
+
+    // Se começar com '{', é JSON legado em texto puro
+    if (text.startsWith("{")) {
+      return JSON.parse(text) as SessionData;
+    }
+
+    // Decodifica Base64 seguro
+    const decoded = Buffer.from(text, "base64").toString("utf-8");
+    if (decoded.startsWith("{")) {
+      return JSON.parse(decoded) as SessionData;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 export async function createSession(data: SessionData) {
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, JSON.stringify(data), {
+  const encoded = encodeSessionCookie(data);
+
+  cookieStore.set(SESSION_COOKIE_NAME, encoded, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -30,9 +72,10 @@ export async function getSession(): Promise<SessionData | null> {
     const cookieStore = await cookies();
     const cookie = cookieStore.get(SESSION_COOKIE_NAME);
     if (!cookie?.value) return null;
-    const session = JSON.parse(cookie.value) as SessionData;
-    
-    // Aplica o papel simulado se existir
+    const session = decodeSessionCookie(cookie.value);
+    if (!session) return null;
+
+    // Aplica o papel simulado se existir (para testes e superadmin)
     if (session.role === "SUPERADMIN") {
       const simulatedRole = cookieStore.get("horeb_simulated_role")?.value;
       if (simulatedRole) {
@@ -40,7 +83,7 @@ export async function getSession(): Promise<SessionData | null> {
         session.role = simulatedRole; // injeta o simulado para a aplicação
       }
     }
-    
+
     return session;
   } catch {
     return null;
@@ -70,7 +113,7 @@ export async function checkChurchAccess(slug: string): Promise<AccessCheckResult
     return { authorized: false, reason: "NOT_LOGGED_IN" };
   }
 
-  // Super Admin (Edson Manoel / Lynx EMS) tem acesso irrestrito
+  // Super Admin (Lynx EMS) tem acesso irrestrito a todas as congregações
   const isSuperAdmin = session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN";
   if (isSuperAdmin) {
     return { authorized: true, user: session, effectiveRole: session.role };
@@ -81,7 +124,7 @@ export async function checkChurchAccess(slug: string): Promise<AccessCheckResult
     return { authorized: true, user: session, effectiveRole: session.role };
   }
 
-  // Verificar se o usuário possui acesso delegado a esta congregação específica (Matriz ou Filial)
+  // Buscar congregação de destino para validar hierarquia
   const targetTenant = await prisma.tenant.findUnique({
     where: { slug },
     select: { id: true, name: true, parentId: true },
@@ -91,7 +134,16 @@ export async function checkChurchAccess(slug: string): Promise<AccessCheckResult
     return { authorized: false, reason: "NOT_LOGGED_IN" };
   }
 
-  // Verificar na tabela de acessos multi-igreja
+  // REGRA DE HIERARQUIA: Se o usuário é ADMIN ou PASTOR da Igreja Sede Matriz,
+  // ele possui autorização executiva de acesso a todas as congregações filiais vinculadas
+  if (
+    (session.role === "ADMIN" || session.role === "PASTOR") &&
+    targetTenant.parentId === session.tenantId
+  ) {
+    return { authorized: true, user: session, effectiveRole: session.role };
+  }
+
+  // Verificar na tabela de acessos multi-igreja explícita
   const access = await prisma.userChurchAccess.findUnique({
     where: {
       userId_tenantId: {
@@ -111,5 +163,58 @@ export async function checkChurchAccess(slug: string): Promise<AccessCheckResult
     user: session,
     userChurchSlug: session.tenantSlug,
     requestedChurchSlug: slug,
+  };
+}
+
+/**
+ * Guarda Centralizada de Segurança para Server Actions & APIs (RBAC & Multi-Tenant Boundary)
+ * Valida a sessão, a congregação e os papéis permitidos antes de tocar no banco de dados.
+ */
+export async function requirePermission(
+  slug: string,
+  allowedRoles: AppRole[]
+): Promise<
+  | { authorized: true; user: SessionData; tenantId: string; role: AppRole }
+  | { authorized: false; error: string; statusCode: 401 | 403 }
+> {
+  const access = await checkChurchAccess(slug);
+  if (!access.authorized) {
+    if (access.reason === "NOT_LOGGED_IN") {
+      return {
+        authorized: false,
+        error: "Sessão expirada ou não autenticado. Faça login para continuar.",
+        statusCode: 401,
+      };
+    }
+    return {
+      authorized: false,
+      error: "Você não possui vínculo autorizado com esta congregação.",
+      statusCode: 403,
+    };
+  }
+
+  const role = access.effectiveRole as AppRole;
+  if (role === "SUPERADMIN") {
+    return {
+      authorized: true,
+      user: access.user,
+      tenantId: access.user.tenantId,
+      role,
+    };
+  }
+
+  if (allowedRoles.includes(role)) {
+    return {
+      authorized: true,
+      user: access.user,
+      tenantId: access.user.tenantId,
+      role,
+    };
+  }
+
+  return {
+    authorized: false,
+    error: `Seu perfil (${role}) não possui autorização para executar esta ação.`,
+    statusCode: 403,
   };
 }

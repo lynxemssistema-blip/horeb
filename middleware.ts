@@ -15,7 +15,22 @@ export function middleware(request: NextRequest) {
       const sessionCookie = request.cookies.get("horeb_auth_session");
       if (sessionCookie?.value) {
         try {
-          const session = JSON.parse(decodeURIComponent(sessionCookie.value));
+          let text = sessionCookie.value.trim();
+          if (text.includes("%")) {
+            try { text = decodeURIComponent(text); } catch {}
+          }
+          let session: any = null;
+          if (text.startsWith("{")) {
+            session = JSON.parse(text);
+          } else {
+            try {
+              const decoded = atob(text);
+              if (decoded.startsWith("{")) {
+                session = JSON.parse(decoded);
+              }
+            } catch {}
+          }
+
           if (session && session.tenantSlug) {
             if (session.role === "SUPERADMIN") {
               return NextResponse.redirect(new URL("/admin", request.url));

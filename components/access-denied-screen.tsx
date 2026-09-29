@@ -9,8 +9,8 @@ import { logoutUser } from "@/app/actions/tenant";
 import { SessionData } from "@/lib/session";
 
 interface AccessDeniedScreenProps {
-  user: SessionData;
-  userChurchSlug: string;
+  user?: SessionData | null;
+  userChurchSlug?: string;
   requestedChurchSlug: string;
 }
 
@@ -50,7 +50,13 @@ export function AccessDeniedScreen({
             Congregação Não Autorizada
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-            Você está conectado como <strong className="text-white">{user.name}</strong> ({user.email}), com cadastro ativo na congregação <span className="text-amber-400 font-mono font-bold">/{userChurchSlug}</span>.
+            {user ? (
+              <>
+                Você está conectado como <strong className="text-white">{user.name}</strong> ({user.email}), com cadastro ativo na congregação <span className="text-amber-400 font-mono font-bold">/{userChurchSlug || "sua-igreja"}</span>.
+              </>
+            ) : (
+              <>Você não possui permissão para visualizar as informações desta congregação.</>
+            )}
           </p>
         </div>
 
@@ -62,10 +68,10 @@ export function AccessDeniedScreen({
         </div>
 
         <div className="space-y-2 pt-2">
-          <Link href={`/${userChurchSlug}`} className="w-full block">
+          <Link href={userChurchSlug ? `/${userChurchSlug}` : "/"} className="w-full block">
             <Button className="w-full h-11 bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-black font-black text-xs rounded-xl shadow-lg gap-2 cursor-pointer">
               <Church className="w-4 h-4" />
-              <span>Ir para Minha Igreja (/{userChurchSlug})</span>
+              <span>{userChurchSlug ? `Ir para Minha Igreja (/${userChurchSlug})` : "Ir para Início"}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Button>
           </Link>

@@ -221,14 +221,20 @@ export function CreateChurchDialog({
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValidEmail(loginEmail)) {
-      toast.error("Informe um e-mail válido.");
+    const cleanIdentifier = loginEmail?.trim();
+    if (!cleanIdentifier) {
+      toast.error("Informe seu e-mail ou nome cadastrado.");
+      return;
+    }
+
+    if (!loginPassword) {
+      toast.error("Informe sua senha de acesso.");
       return;
     }
 
     setIsLoading(true);
     try {
-      const res = await loginUser(loginEmail, loginPassword);
+      const res = await loginUser(cleanIdentifier, loginPassword.trim());
       if (res.success && res.redirectUrl) {
         toast.success(`Bem-vindo de volta, ${res.user?.name}!`, {
           description: "Login efetuado com sucesso.",
@@ -237,11 +243,11 @@ export function CreateChurchDialog({
         window.location.href = res.redirectUrl;
       } else if ((res as any).requiresActivation) {
         toast.warning(res.error || "Sua conta precisa de ativação.");
-        setPendingEmail(loginEmail);
+        setPendingEmail(cleanIdentifier);
         setOpen(false);
         setActivationOpen(true);
       } else {
-        toast.error(res.error || "E-mail ou senha incorretos.");
+        toast.error(res.error || "E-mail/usuário ou senha incorretos.");
       }
     } catch {
       toast.error("Erro ao autenticar.");
@@ -760,14 +766,16 @@ export function CreateChurchDialog({
                   <div className="space-y-2.5">
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-zinc-300">
-                        E-mail Cadastrado
+                        E-mail ou Nome de Usuário Cadastrado
                       </label>
                       <Input
                         required
-                        type="email"
+                        type="text"
+                        autoComplete="username"
+                        autoCapitalize="none"
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
-                        placeholder="pastor@igreja.org"
+                        placeholder="pastor@igreja.org ou Pastor Luan"
                         className="bg-zinc-950/80 border-white/[0.08] text-xs h-9 rounded-xl"
                       />
                     </div>

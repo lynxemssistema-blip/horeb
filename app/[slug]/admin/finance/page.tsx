@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { checkChurchAccess } from "@/lib/session";
+import { checkChurchAccess, requirePermission } from "@/lib/session";
+import { AccessDeniedScreen } from "@/components/access-denied-screen";
 import { getFinancialDashboard, seedFinancialDemoData } from "@/app/actions/finance-admin";
 import { FinanceDashboardView } from "@/components/finance-dashboard-view";
 
@@ -30,27 +31,23 @@ export default async function AdminFinancePage({
 
   if (!tenant) notFound();
 
-  // 2. Verificar Sessão e RBAC
-  const access = await checkChurchAccess(slug);
-  const rules = await getUserAccessRules();
-  
-  // Bloquear acesso se não tiver permissão para /admin/finance
-  if (rules && !rules.allowedMenus.includes("ALL")) {
-    const hasFinanceAccess = rules.allowedMenus.some(menu => "/admin/finance".endsWith(menu));
-    if (!hasFinanceAccess) {
-      redirect(`/${slug}`);
+  // 2. Verificar Sessão e RBAC Rigoroso
+  const auth = await requirePermission(slug, ["ADMIN", "FINANCIAL"]);
+  if (!auth.authorized) {
+    if (auth.statusCode === 401) {
+      redirect(`/?auth=required&church=${slug}`);
     }
+    const access = await checkChurchAccess(slug);
+    return (
+      <AccessDeniedScreen
+        user={access.authorized ? access.user : null}
+        userChurchSlug={access.authorized ? access.user.tenantSlug : ""}
+        requestedChurchSlug={slug}
+      />
+    );
   }
 
-  let effectiveRole = "MASTER"; // Default para visualização/teste administrativo
-
-  if (access.authorized) {
-    if (access.effectiveRole === "SUPERADMIN" || access.effectiveRole === "ADMIN") {
-      effectiveRole = "MASTER";
-    } else {
-      effectiveRole = access.effectiveRole;
-    }
-  }
+  let effectiveRole = auth.role === "SUPERADMIN" || auth.role === "ADMIN" ? "MASTER" : auth.role;
 
   // 3. Obter dados do Dashboard Financeiro com o Motor RBAC
   let dashData = await getFinancialDashboard(effectiveRole, tenant.id, filterChurchId);
