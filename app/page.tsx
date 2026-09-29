@@ -32,10 +32,14 @@ import {
   CreditCard,
   HelpCircle,
   ShieldAlert,
+  Crown,
+  LogOut,
+  ArrowLeftRight,
 } from "lucide-react";
 import { getPromotionConfig } from "@/app/actions/superadmin";
 import { HelpGuideDialog } from "@/components/help-guide-dialog";
 import { getSession } from "@/lib/session";
+import { logoutUser } from "@/app/actions/tenant";
 import { redirect } from "next/navigation";
 
 export default async function HomePage(props: {
@@ -47,18 +51,16 @@ export default async function HomePage(props: {
   const churchSlug = typeof searchParams.church === "string" ? searchParams.church : null;
   const isSwitching = searchParams.switch === "true" || searchParams.select === "true";
 
-  // Se o usuário logado acessar a raiz "/", redireciona imediatamente para a página principal da sua igreja
-  if (!isAuthRequired && !isAdminAuthRequired && !isSwitching) {
-    const session = await getSession();
-    if (session && session.tenantSlug) {
-      if (session.role === "SUPERADMIN") {
-        redirect("/admin");
-      } else {
-        redirect(`/${session.tenantSlug}`);
-      }
-    }
-  }
+  // Carregar sessão do usuário conectado para exibir ações personalizadas na home
+  const session = await getSession();
 
+  let userChurch = null;
+  if (session && session.tenantSlug) {
+    userChurch = await prisma.tenant.findUnique({
+      where: { slug: session.tenantSlug },
+      select: { id: true, name: true, slug: true, primaryColor: true, logoUrl: true },
+    });
+  }
 
   const [tenants, promoRes] = await Promise.all([
     prisma.tenant.findMany({
@@ -112,6 +114,33 @@ export default async function HomePage(props: {
             />
           </div>
 
+          {/* Banner de Usuário Conectado */}
+          {session && (
+            <div className="w-full max-w-xl p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-zinc-900/90 to-amber-500/10 border border-amber-500/40 text-amber-200 shadow-2xl backdrop-blur-md flex items-center justify-between gap-3 animate-in fade-in-0 slide-in-from-top-4 duration-300">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <div className="min-w-0 text-left">
+                  <p className="text-xs font-bold text-white truncate">
+                    Conectado como <strong className="text-amber-400">{session.name}</strong>
+                  </p>
+                  <p className="text-[11px] text-zinc-400 truncate">
+                    Sua Congregação: <strong className="text-zinc-200">{userChurch?.name || session.tenantSlug}</strong>
+                  </p>
+                </div>
+              </div>
+
+              <Link href={session.role === "SUPERADMIN" ? "/admin" : `/${session.tenantSlug}`}>
+                <Button
+                  size="sm"
+                  className="h-8 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black text-xs gap-1.5 shadow-md shadow-amber-500/30 shrink-0"
+                >
+                  <span>Ir para minha igreja</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </Link>
+            </div>
+          )}
+
           {/* Banner de Autenticação Necessária (Isolamento de Tenants) */}
           {isAuthRequired && (
             <div className="w-full max-w-xl p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs sm:text-sm flex items-start gap-3.5 shadow-2xl backdrop-blur-md animate-in fade-in-0 slide-in-from-top-4 duration-300">
@@ -158,64 +187,158 @@ export default async function HomePage(props: {
             A Horeb é a plataforma completa e intuitiva que aproxima a igreja da sua comunidade, facilita a gestão e potencializa o seu ministério com White-Label dinâmico.
           </p>
 
-          {/* CTA de Ações Master */}
-          <div className="flex flex-wrap items-center justify-center gap-3.5 pt-3">
-            <CreateChurchDialog
-              existingTenants={tenants.map((t) => ({
-                id: t.id,
-                name: t.name,
-                slug: t.slug,
-                primaryColor: t.primaryColor,
-              }))}
-              defaultTab="master"
-              triggerButton={
-                <Button className="h-12 px-6 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:brightness-110 text-black font-black text-sm rounded-xl shadow-xl shadow-amber-500/25 gap-2 transition-all hover:scale-105 active:scale-95 cursor-pointer">
-                  <Sparkles className="w-4 h-4" />
-                  <span>Cadastrar Minha Igreja (Master)</span>
-                </Button>
-              }
-            />
-
-            <CreateChurchDialog
-              existingTenants={tenants.map((t) => ({
-                id: t.id,
-                name: t.name,
-                slug: t.slug,
-                primaryColor: t.primaryColor,
-              }))}
-              defaultTab="login"
-              triggerButton={
-                <Button
-                  variant="outline"
-                  className="h-12 px-5 border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] hover:text-white text-zinc-200 font-bold text-sm rounded-xl gap-2 backdrop-blur-md transition-all hover:scale-105 cursor-pointer"
-                >
-                  <span>Já Sou Líder • Fazer Login</span>
-                </Button>
-              }
-            />
-
-            <HelpGuideDialog
-              triggerButton={
-                <Button
-                  variant="outline"
-                  className="h-12 px-5 border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-sm rounded-xl gap-2 backdrop-blur-md transition-all hover:scale-105 cursor-pointer"
-                >
-                  <HelpCircle className="w-4 h-4 text-amber-400" />
-                  <span>Como Funciona • Guia</span>
-                </Button>
-              }
-            />
-
-            <a href="#planos">
-              <Button
-                variant="ghost"
-                className="h-12 px-5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 font-bold text-sm rounded-xl gap-2 transition-all hover:scale-105 cursor-pointer"
+          {/* CTA de Ações - Usuário Logado ou Visitante */}
+          {session && session.tenantSlug ? (
+            <div className="flex flex-col items-center gap-4 pt-3 w-full max-w-xl">
+              {/* BOTÃO CHAMATIVO PRINCIPAL SOLICITADO */}
+              <Link
+                href={session.role === "SUPERADMIN" ? "/admin" : `/${session.tenantSlug}`}
+                className="w-full group block"
               >
-                <CreditCard className="w-4 h-4" />
-                <span>Ver Planos & Valores</span>
-              </Button>
-            </a>
-          </div>
+                <div className="w-full p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:brightness-110 text-black shadow-[0_0_40px_rgba(245,158,11,0.55)] transition-all hover:scale-[1.02] active:scale-98 border-2 border-amber-300 cursor-pointer flex items-center justify-between gap-3 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                  <div className="flex items-center gap-3.5 min-w-0 relative z-10">
+                    <div className="w-12 h-12 rounded-2xl bg-black/15 border border-black/10 flex items-center justify-center text-black shrink-0 shadow-inner">
+                      {session.role === "SUPERADMIN" ? (
+                        <Crown className="w-7 h-7 text-black" />
+                      ) : (
+                        <Church className="w-7 h-7 text-black" />
+                      )}
+                    </div>
+                    <div className="text-left min-w-0">
+                      <span className="block text-[11px] sm:text-xs uppercase tracking-wider text-black/80 font-black leading-none mb-1">
+                        {session.role === "SUPERADMIN" ? "Acesso Master Global" : "Você já está conectado"}
+                      </span>
+                      <span className="block text-xl sm:text-2xl font-black text-black leading-tight tracking-tight">
+                        Ir para Minha Igreja
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-black/15 px-3.5 py-2 rounded-xl border border-black/15 group-hover:translate-x-1.5 transition-transform shrink-0 relative z-10">
+                    <span className="text-xs font-black text-black hidden sm:inline truncate max-w-[140px]">
+                      {userChurch?.name || session.tenantSlug}
+                    </span>
+                    <ArrowRight className="w-5 h-5 text-black" />
+                  </div>
+                </div>
+              </Link>
+
+              {/* Atalhos Secundários para o Usuário Conectado */}
+              <div className="flex flex-wrap items-center justify-center gap-2.5">
+                {session.role === "SUPERADMIN" && (
+                  <Link href="/admin">
+                    <Button
+                      variant="outline"
+                      className="h-10 px-4 rounded-xl border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-xs gap-1.5 backdrop-blur-md transition-all hover:scale-105"
+                    >
+                      <Crown className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Painel Super Admin</span>
+                    </Button>
+                  </Link>
+                )}
+
+                <Link href="/select-church">
+                  <Button
+                    variant="outline"
+                    className="h-10 px-4 rounded-xl border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] hover:text-white text-zinc-200 font-bold text-xs gap-1.5 backdrop-blur-md transition-all hover:scale-105"
+                  >
+                    <ArrowLeftRight className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Trocar Congregação</span>
+                  </Button>
+                </Link>
+
+                <HelpGuideDialog
+                  triggerButton={
+                    <Button
+                      variant="outline"
+                      className="h-10 px-4 rounded-xl border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] text-zinc-200 font-bold text-xs gap-1.5 backdrop-blur-md transition-all hover:scale-105"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Guia de Uso</span>
+                    </Button>
+                  }
+                />
+
+                <form
+                  action={async () => {
+                    "use server";
+                    await logoutUser();
+                    redirect("/?switch=true");
+                  }}
+                >
+                  <Button
+                    type="submit"
+                    variant="ghost"
+                    className="h-10 px-3.5 rounded-xl text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 font-bold text-xs gap-1.5 transition-colors cursor-pointer"
+                    title="Desconectar da conta atual"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sair</span>
+                  </Button>
+                </form>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-center gap-3.5 pt-3">
+              <CreateChurchDialog
+                existingTenants={tenants.map((t) => ({
+                  id: t.id,
+                  name: t.name,
+                  slug: t.slug,
+                  primaryColor: t.primaryColor,
+                }))}
+                defaultTab="master"
+                triggerButton={
+                  <Button className="h-12 px-6 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:brightness-110 text-black font-black text-sm rounded-xl shadow-xl shadow-amber-500/25 gap-2 transition-all hover:scale-105 active:scale-95 cursor-pointer">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Cadastrar Minha Igreja (Master)</span>
+                  </Button>
+                }
+              />
+
+              <CreateChurchDialog
+                existingTenants={tenants.map((t) => ({
+                  id: t.id,
+                  name: t.name,
+                  slug: t.slug,
+                  primaryColor: t.primaryColor,
+                }))}
+                defaultTab="login"
+                triggerButton={
+                  <Button
+                    variant="outline"
+                    className="h-12 px-5 border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] hover:text-white text-zinc-200 font-bold text-sm rounded-xl gap-2 backdrop-blur-md transition-all hover:scale-105 cursor-pointer"
+                  >
+                    <span>Já Sou Líder • Fazer Login</span>
+                  </Button>
+                }
+              />
+
+              <HelpGuideDialog
+                triggerButton={
+                  <Button
+                    variant="outline"
+                    className="h-12 px-5 border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-sm rounded-xl gap-2 backdrop-blur-md transition-all hover:scale-105 cursor-pointer"
+                  >
+                    <HelpCircle className="w-4 h-4 text-amber-400" />
+                    <span>Como Funciona • Guia</span>
+                  </Button>
+                }
+              />
+
+              <a href="#planos">
+                <Button
+                  variant="ghost"
+                  className="h-12 px-5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 font-bold text-sm rounded-xl gap-2 transition-all hover:scale-105 cursor-pointer"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>Ver Planos & Valores</span>
+                </Button>
+              </a>
+            </div>
+          )}
         </div>
 
         {/* 6 Recursos do Conceito do Designer com Glassmorphism */}
