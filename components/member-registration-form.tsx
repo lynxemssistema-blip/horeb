@@ -225,9 +225,9 @@ export function MemberRegistrationForm({
         isOpen={activationOpen}
         email={pendingEmail}
         onClose={() => setActivationOpen(false)}
-        onSuccess={() => {
+        onSuccess={(redirectUrl) => {
           setActivationOpen(false);
-          router.push(`/${tenant.slug}`);
+          window.location.href = redirectUrl || `/${tenant.slug}`;
         }}
       />
     </>

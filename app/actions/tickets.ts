@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { sendTicketPurchaseEmail } from "@/lib/mail";
 
 export interface PurchaseTicketResult {
   success: boolean;
@@ -71,10 +72,44 @@ export async function purchaseTickets(
       createdTickets.push(ticket);
     }
 
-    // Simulação de Disparo de E-mail com log colorido no terminal
-    console.log(
-      `\x1b[32m✉️ MOCK EMAIL: Disparando ${createdTickets.length} Ingressos e QR Codes em anexo para o e-mail: ${cleanEmail}\x1b[0m`
-    );
+    // Disparo real de e-mail com os ingressos e QR Codes via Hostinger SMTP
+    const mailResult = await sendTicketPurchaseEmail({
+      to: cleanEmail,
+      eventName: event.title,
+      eventDate: event.startDate
+        ? new Date(event.startDate).toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : undefined,
+      eventLocation: event.slogan || undefined,
+      churchName: event.tenant?.name || "Horeb",
+      churchSlug: event.tenant?.slug || undefined,
+      primaryColor: event.tenant?.primaryColor || "#f59e0b",
+      logoUrl: event.tenant?.logoUrl || undefined,
+      tickets: createdTickets.map((t) => ({
+        id: t.id,
+        guestName: t.guestName,
+      })),
+    });
+
+    // Registrar no log de e-mails para auditoria
+    try {
+      await prisma.emailLog.create({
+        data: {
+          type: "OUTGOING",
+          from: "suporte@lynxems.com.br",
+          to: cleanEmail,
+          subject: `Ingressos Confirmados: ${event.title}`,
+          snippet: `${createdTickets.length} ingressos emitidos para ${cleanEmail}`,
+          status: mailResult.success ? "SENT" : "FAILED",
+          code: createdTickets[0]?.id?.substring(0, 8),
+        },
+      });
+    } catch {}
 
     try {
       revalidatePath("/", "layout");

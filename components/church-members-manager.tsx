@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -24,6 +24,7 @@ import {
   ChevronRight,
   KeyRound,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -125,9 +126,17 @@ export function ChurchMembersManager({
     (u) => u.role === "LEADER" || u.role === "ADMIN" || u.role === "PASTOR"
   ).length;
 
+  const [origin, setOrigin] = useState("https://horeb.lynxems.com.br");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.origin) {
+      setOrigin(window.location.origin);
+    }
+  }, []);
+
   const targetChurch =
     allNetworkChurches.find((c) => c.id === inviteTenantId) || currentChurch;
-  const generatedInviteUrl = `https://horeb.lynxems.com.br/${targetChurch.slug}/cadastro?role=${inviteRole}&email=${encodeURIComponent(
+  const generatedInviteUrl = `${origin}/${targetChurch.slug}/cadastro?role=${inviteRole}&email=${encodeURIComponent(
     inviteEmail
   )}&name=${encodeURIComponent(inviteName)}`;
 
@@ -188,10 +197,14 @@ export function ChurchMembersManager({
   };
 
   // Handler: Enviar Convite por E-mail
-  const handleSendInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteEmail) {
-      toast.error("Informe o e-mail do destinatário.");
+  const handleSendInvite = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === "function") {
+      e.preventDefault();
+    }
+    if (!inviteEmail || !inviteEmail.trim()) {
+      toast.error("Informe o e-mail do destinatário no campo acima.");
+      const input = document.getElementById("invite-email-input");
+      if (input) input.focus();
       return;
     }
 
@@ -716,6 +729,7 @@ export function ChurchMembersManager({
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-300">E-mail do Destinatário *</label>
               <Input
+                id="invite-email-input"
                 type="email"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
@@ -733,7 +747,7 @@ export function ChurchMembersManager({
               <p className="font-mono text-[11px] text-zinc-300 break-all select-all">
                 {generatedInviteUrl}
               </p>
-              <div className="flex items-center gap-2 pt-1">
+              <div className="flex items-center gap-2 pt-1 flex-wrap">
                 <Button
                   type="button"
                   onClick={handleCopyInviteLink}
@@ -752,6 +766,22 @@ export function ChurchMembersManager({
                 >
                   <Share2 className="w-3.5 h-3.5" />
                   <span>WhatsApp</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  onClick={handleSendInvite}
+                  disabled={sendingInvite}
+                  size="sm"
+                  className="h-8 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-lg gap-1.5 cursor-pointer font-bold transition-all shadow-sm"
+                  title="Disparar convite por e-mail"
+                >
+                  {sendingInvite ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Mail className="w-3.5 h-3.5" />
+                  )}
+                  <span>{sendingInvite ? "Enviando..." : "Enviar por E-mail"}</span>
                 </Button>
               </div>
             </div>

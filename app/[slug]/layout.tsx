@@ -1,5 +1,6 @@
 import React from "react";
 import { notFound, redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { generateTenantTheme } from "@/lib/theme";
 import { AppHeader } from "@/components/app-header";
@@ -74,26 +75,36 @@ export default async function TenantLayout({
 }: TenantLayoutProps) {
   const { slug } = await params;
 
-  // 0. Regra Crucial: Usuários não logados só acessam a página principal (/).
-  // Usuários logados só acessam as suas próprias congregações.
-  const access = await checkChurchAccess(slug);
-  if (!access.authorized) {
-    if (access.reason === "NOT_LOGGED_IN") {
-      redirect(`/?auth=required&church=${slug}`);
-    }
-    if (access.reason === "NOT_MEMBER") {
-      return (
-        <AccessDeniedScreen
-          user={access.user}
-          userChurchSlug={access.userChurchSlug}
-          requestedChurchSlug={access.requestedChurchSlug}
-        />
-      );
-    }
-  }
+  // Detectar se a requisição atual é para a página de convite/cadastro (/cadastro)
+  const headerList = await headers();
+  const currentPathname = headerList.get("x-pathname") || "";
+  const isCadastroRoute = currentPathname.endsWith("/cadastro") || currentPathname.includes(`/${slug}/cadastro`);
 
-  // Busca regras de acesso (RBAC) dinâmicas do banco de dados
-  const accessRules = await getUserAccessRules();
+  let access: any = null;
+  let accessRules: any = null;
+
+  if (!isCadastroRoute) {
+    // 0. Regra Crucial: Usuários não logados só acessam a página principal (/).
+    // Usuários logados só acessam as suas próprias congregações.
+    access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      if (access.reason === "NOT_LOGGED_IN") {
+        redirect(`/?auth=required&church=${slug}`);
+      }
+      if (access.reason === "NOT_MEMBER") {
+        return (
+          <AccessDeniedScreen
+            user={access.user}
+            userChurchSlug={access.userChurchSlug}
+            requestedChurchSlug={access.requestedChurchSlug}
+          />
+        );
+      }
+    }
+
+    // Busca regras de acesso (RBAC) dinâmicas do banco de dados
+    accessRules = await getUserAccessRules();
+  }
 
   // 1. Busca Server-Side com prioridade no Supabase (Nuvem VPS) e fallback no Prisma (Local)
   let tenantData: {
@@ -162,6 +173,50 @@ export default async function TenantLayout({
   // 2. Motor White-Label: cálculo dinâmico de cores HSL, RGB, HEX e contraste
   const theme = generateTenantTheme(tenant.primaryColor);
   const isMatriz = !tenant.parentId;
+
+  // Se for a rota de convite / cadastro, exibe uma tela limpa e focada para o novo membro
+  if (isCadastroRoute) {
+    return (
+      <div
+        data-tenant={tenant.slug}
+        className="min-h-[100dvh] bg-background text-foreground flex flex-col justify-center items-center selection:bg-primary/20 relative overflow-hidden"
+        style={
+          {
+            "--primary": theme.hex,
+            "--primary-foreground": theme.foreground,
+            "--ring": theme.hex,
+          } as React.CSSProperties
+        }
+      >
+        <link rel="icon" href={`/api/icon/${tenant.slug}`} />
+        <link rel="apple-touch-icon" href={`/api/icon/${tenant.slug}`} />
+        <link rel="manifest" href={`/api/manifest/${tenant.slug}`} />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              :root {
+                --primary: ${theme.hex} !important;
+                --primary-foreground: ${theme.foreground} !important;
+                --ring: ${theme.hex} !important;
+              }
+            `,
+          }}
+        />
+
+        {/* Ambient Glow com a cor da congregação */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+          <div
+            className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[350px] blur-3xl opacity-20 rounded-full"
+            style={{ backgroundColor: theme.hex }}
+          />
+        </div>
+
+        <main className="relative z-10 w-full flex items-center justify-center py-8 px-4">
+          {children}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div

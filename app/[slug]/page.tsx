@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PrayerRequestDialog } from "@/components/prayer-request-dialog";
 import { PastoralCounselingTrigger } from "@/components/pastoral-counseling-trigger";
 import { CreateChurchDialog } from "@/components/create-church-dialog";
-import { MemberSignupDialog } from "@/components/member-signup-dialog";
+import { InviteFriendDialog } from "@/components/invite-friend-dialog";
 import {
   Calendar,
   HeartHandshake,
@@ -31,7 +31,6 @@ import {
   ShieldCheck,
   Church,
   PlusCircle,
-  UserPlus,
   Tv,
   Bot,
   QrCode,
@@ -173,22 +172,6 @@ export default async function TenantDashboardPage({ params }: PageProps) {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <MemberSignupDialog
-              churchName={tenant.name}
-              churchSlug={slug}
-              primaryColor={tenant.primaryColor}
-              triggerButton={
-                <Button
-                  size="sm"
-                  className="text-xs font-bold gap-1.5 text-white shadow-md hover:brightness-110 cursor-pointer"
-                  style={{ backgroundColor: tenant.primaryColor }}
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  <span>Quero me Cadastrar</span>
-                </Button>
-              }
-            />
-
             <PrayerRequestDialog
               tenantSlug={slug}
               triggerButton={
@@ -199,10 +182,19 @@ export default async function TenantDashboardPage({ params }: PageProps) {
               }
             />
 
-            <Button variant="outline" size="sm" className="text-xs gap-1.5">
-              <Share2 className="w-3.5 h-3.5" />
-              Convidar Amigo
-            </Button>
+            <InviteFriendDialog
+              churchName={tenant.name}
+              churchSlug={slug}
+              tenantId={tenant.id}
+              primaryColor={tenant.primaryColor}
+              currentUserRole={session?.role || "MEMBER"}
+              triggerButton={
+                <Button variant="outline" size="sm" className="text-xs gap-1.5 cursor-pointer">
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Convidar Amigo</span>
+                </Button>
+              }
+            />
           </div>
         </CardFooter>
       </Card>

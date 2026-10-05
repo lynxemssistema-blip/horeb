@@ -167,6 +167,9 @@ export async function resendActivationCode(email: string) {
       name: user.name,
       code,
       churchName: user.tenant.name,
+      churchSlug: user.tenant.slug,
+      primaryColor: user.tenant.primaryColor,
+      logoUrl: user.tenant.logoUrl || undefined,
     });
 
     // Gravar log de saída

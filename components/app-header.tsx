@@ -3,9 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Church, Bell, ArrowLeftRight, User, UserPlus, HelpCircle, LogOut, Crown, ShieldCheck, HeartHandshake } from "lucide-react";
+import { Church, Bell, ArrowLeftRight, User, HelpCircle, LogOut, Crown, ShieldCheck, HeartHandshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MemberSignupDialog } from "@/components/member-signup-dialog";
 import { HelpGuideDialog } from "@/components/help-guide-dialog";
 import { PastoralCabinetModal } from "@/components/pastoral-cabinet-modal";
 import {
@@ -155,12 +154,6 @@ export function AppHeader({
             </Button>
           )}
 
-          {/* Botão de Auto-Cadastro de Membro nesta Igreja */}
-          <MemberSignupDialog
-            churchName={name}
-            churchSlug={slug}
-            primaryColor={primaryColor}
-          />
 
           {/* Painel Executivo Master para Super Admin */}
           {userRole === "SUPERADMIN" && (

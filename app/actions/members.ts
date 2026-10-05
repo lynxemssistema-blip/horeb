@@ -167,6 +167,21 @@ export async function createChurchUser(params: {
       return { success: false, error: "Congregação de destino não encontrada." };
     }
 
+    const session = await getSession();
+    const isLeadership =
+      session?.role === "ADMIN" ||
+      session?.role === "PASTOR" ||
+      session?.role === "SUPERADMIN";
+
+    // Proteção de Perfil:
+    let finalRole = params.role || "MEMBER";
+    if (!isLeadership) {
+      // Se não for liderança conectada, impede a criação com perfis privilegiados
+      if (finalRole === "ADMIN" || finalRole === "PASTOR" || finalRole === "SUPERADMIN") {
+        finalRole = "MEMBER";
+      }
+    }
+
     const existingUser = await prisma.user.findUnique({
       where: { email: cleanEmail },
       include: { churchAccesses: true },
@@ -181,11 +196,11 @@ export async function createChurchUser(params: {
             tenantId: tenant.id,
           },
         },
-        update: { role: params.role || "MEMBER" },
+        update: { role: finalRole },
         create: {
           userId: existingUser.id,
           tenantId: tenant.id,
-          role: params.role || "MEMBER",
+          role: finalRole,
         },
       });
 
@@ -211,7 +226,7 @@ export async function createChurchUser(params: {
         name: params.name.trim(),
         email: cleanEmail,
         password: hashedPassword,
-        role: params.role || "MEMBER",
+        role: finalRole,
         isEmailVerified: false,
         verificationCode: activationCode,
         codeExpiresAt,
@@ -219,7 +234,7 @@ export async function createChurchUser(params: {
         churchAccesses: {
           create: {
             tenantId: tenant.id,
-            role: params.role || "MEMBER",
+            role: finalRole,
           },
         },
       },
@@ -236,7 +251,8 @@ export async function createChurchUser(params: {
 
     // Enviar e-mail de ativação e boas-vindas via Hostinger SMTP
     if (params.sendInviteEmail !== false) {
-      const inviteUrl = `https://horeb.lynxems.com.br/${tenant.slug}/cadastro?email=${encodeURIComponent(
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://horeb.lynxems.com.br";
+      const inviteUrl = `${baseUrl}/${tenant.slug}/cadastro?email=${encodeURIComponent(
         cleanEmail
       )}&role=${params.role || "MEMBER"}`;
 
@@ -244,9 +260,11 @@ export async function createChurchUser(params: {
         to: cleanEmail,
         recipientName: params.name,
         churchName: tenant.name,
+        churchSlug: tenant.slug,
         roleName: ROLE_LABELS[params.role] || params.role,
         inviteUrl,
         primaryColor: tenant.primaryColor,
+        logoUrl: tenant.logoUrl || undefined,
       });
 
       // Também envia o código numérico por segurança
@@ -255,6 +273,9 @@ export async function createChurchUser(params: {
         name: params.name,
         code: activationCode,
         churchName: tenant.name,
+        churchSlug: tenant.slug,
+        primaryColor: tenant.primaryColor,
+        logoUrl: tenant.logoUrl || undefined,
       });
 
       await prisma.emailLog.create({
@@ -310,17 +331,33 @@ export async function sendDirectInviteEmail(params: {
       return { success: false, error: "Congregação não encontrada." };
     }
 
-    const inviteUrl = `https://horeb.lynxems.com.br/${tenant.slug}/cadastro?email=${encodeURIComponent(
+    const session = await getSession();
+    const isLeadership =
+      session?.role === "ADMIN" ||
+      session?.role === "PASTOR" ||
+      session?.role === "SUPERADMIN";
+
+    // REGRA DE SEGURANÇA: Se quem está gerando o convite for MEMBRO (ou não for liderança),
+    // o perfil atribuído ao convidado é ESTRITAMENTE restrito a MEMBER.
+    let assignedRole = "MEMBER";
+    if (isLeadership && params.role) {
+      assignedRole = params.role;
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://horeb.lynxems.com.br";
+    const inviteUrl = `${baseUrl}/${tenant.slug}/cadastro?email=${encodeURIComponent(
       cleanEmail
-    )}&role=${params.role}&name=${encodeURIComponent(params.recipientName || "")}`;
+    )}&role=${assignedRole}&name=${encodeURIComponent(params.recipientName || "")}`;
 
     const mailRes = await sendMemberInvitationEmail({
       to: cleanEmail,
       recipientName: params.recipientName,
       churchName: tenant.name,
-      roleName: ROLE_LABELS[params.role] || params.role,
+      churchSlug: tenant.slug,
+      roleName: ROLE_LABELS[assignedRole] || assignedRole,
       inviteUrl,
       primaryColor: tenant.primaryColor,
+      logoUrl: tenant.logoUrl || undefined,
     });
 
     if (mailRes.success) {
@@ -330,7 +367,7 @@ export async function sendDirectInviteEmail(params: {
           from: "suporte@lynxems.com.br",
           to: cleanEmail,
           subject: `Convite de Membresia: ${tenant.name}`,
-          snippet: `Convite enviado para ${params.recipientName || cleanEmail} com perfil ${params.role}`,
+          snippet: `Convite enviado para ${params.recipientName || cleanEmail} com perfil ${assignedRole}`,
           status: "SENT",
         },
       });
