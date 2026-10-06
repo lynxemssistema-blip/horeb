@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { CreateChurchDialog } from "@/components/create-church-dialog";
 import { HelpGuideDialog } from "@/components/help-guide-dialog";
 import { logoutUser } from "@/app/actions/tenant";
+import { MemberQuickBadgeModal } from "@/components/member-quick-badge-modal";
 
 interface Branch {
   id: string;
@@ -448,6 +449,34 @@ export function AppSidebar({
             </div>
 
             <div className="flex items-center gap-1 shrink-0">
+              {currentUser && (
+                <MemberQuickBadgeModal
+                  user={{
+                    id: currentUser.id,
+                    name: currentUser.name,
+                    email: currentUser.email,
+                    avatarUrl: currentUser.avatarUrl,
+                    role: currentUser.role,
+                  }}
+                  tenant={{
+                    name,
+                    slug,
+                    logoUrl,
+                    primaryColor,
+                  }}
+                  triggerButton={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 cursor-pointer"
+                      title="Meu Crachá Digital (Portaria & Recepção)"
+                    >
+                      <QrCode className="w-4 h-4" />
+                    </Button>
+                  }
+                />
+              )}
+
               <Link href={`/${slug}/perfil`}>
                 <Button
                   variant="ghost"

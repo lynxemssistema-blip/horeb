@@ -4,7 +4,18 @@ import React, { createContext, useContext, useEffect, useState, useTransition } 
 import { updateUserTheme } from "@/app/actions/profile";
 
 export type ThemeMode = "system" | "light" | "dark";
-export type ThemePalette = "default" | "oled" | "navy" | "sepia" | "cream";
+export type ThemePalette =
+  | "default"
+  | "prime"
+  | "vida"
+  | "next"
+  | "catedral"
+  | "avivamento"
+  | "graca"
+  | "oled"
+  | "navy"
+  | "sepia"
+  | "cream";
 
 export interface ThemePreset {
   id: string;
@@ -35,30 +46,43 @@ export const THEME_PRESETS: ThemePreset[] = [
     badge: "Auto",
   },
   {
-    id: "light-default",
-    name: "Claro Neve",
-    category: "light",
-    mode: "light",
-    palette: "default",
-    description: "Visual clean e moderno com fundo branco e contraste suave.",
-    bgPreview: "#f8fafc",
-    cardPreview: "#ffffff",
-    borderPreview: "#e2e8f0",
-    textPreview: "#0f172a",
-    badge: "Dia",
+    id: "dark-prime",
+    name: "👑 Horeb Prime",
+    category: "dark",
+    mode: "dark",
+    palette: "prime",
+    description: "Azul profundo com detalhes dourados. Autoridade, nobreza e excelência.",
+    bgPreview: "#0B1F3A",
+    cardPreview: "#142E50",
+    borderPreview: "#D4AF37",
+    textPreview: "#D4AF37",
+    badge: "Prime",
   },
   {
-    id: "light-cream",
-    name: "Claro Creme",
-    category: "light",
-    mode: "light",
-    palette: "cream",
-    description: "Tons de marfim e papel suave para uma leitura diurna aconchegante.",
-    bgPreview: "#faf8f5",
-    cardPreview: "#ffffff",
-    borderPreview: "#e7dfd5",
-    textPreview: "#292524",
-    badge: "Leitura",
+    id: "dark-vida",
+    name: "🌿 Horeb Vida",
+    category: "dark",
+    mode: "dark",
+    palette: "vida",
+    description: "Azul petróleo e verde esmeralda. Crescimento, comunidade e acolhimento.",
+    bgPreview: "#073B4C",
+    cardPreview: "#0D4B5F",
+    borderPreview: "#12A879",
+    textPreview: "#12A879",
+    badge: "Vida",
+  },
+  {
+    id: "dark-next",
+    name: "⚡ Horeb Next",
+    category: "dark",
+    mode: "dark",
+    palette: "next",
+    description: "Preto moderno com acentos roxos e azul elétrico. Jovem e tecnológico.",
+    bgPreview: "#0F1115",
+    cardPreview: "#181B22",
+    borderPreview: "#6D3FD1",
+    textPreview: "#2563EB",
+    badge: "Next",
   },
   {
     id: "dark-default",
@@ -100,6 +124,32 @@ export const THEME_PRESETS: ThemePreset[] = [
     badge: "Noite",
   },
   {
+    id: "dark-catedral",
+    name: "🛡️ Horeb Catedral",
+    category: "dark",
+    mode: "dark",
+    palette: "catedral",
+    description: "Borgonha solene com ouro imperial. Reverência bíblica e liturgia histórica.",
+    bgPreview: "#240B13",
+    cardPreview: "#34121E",
+    borderPreview: "#E5C07B",
+    textPreview: "#E5C07B",
+    badge: "Solene",
+  },
+  {
+    id: "dark-avivamento",
+    name: "🌊 Horeb Avivamento",
+    category: "dark",
+    mode: "dark",
+    palette: "avivamento",
+    description: "Azul marinho profundo com fogo solar pentecostal. Energia e louvor vibrante.",
+    bgPreview: "#071524",
+    cardPreview: "#0E2238",
+    borderPreview: "#F97316",
+    textPreview: "#F97316",
+    badge: "Avivamento",
+  },
+  {
     id: "dark-sepia",
     name: "Sépia Noturno",
     category: "dark",
@@ -111,6 +161,45 @@ export const THEME_PRESETS: ThemePreset[] = [
     borderPreview: "rgba(245,158,11,0.2)",
     textPreview: "#fbbf24",
     badge: "Conforto",
+  },
+  {
+    id: "light-default",
+    name: "Claro Neve",
+    category: "light",
+    mode: "light",
+    palette: "default",
+    description: "Visual clean e moderno com fundo branco e contraste suave.",
+    bgPreview: "#f8fafc",
+    cardPreview: "#ffffff",
+    borderPreview: "#e2e8f0",
+    textPreview: "#0f172a",
+    badge: "Dia",
+  },
+  {
+    id: "light-graca",
+    name: "🕊️ Graça & Marfim",
+    category: "light",
+    mode: "light",
+    palette: "graca",
+    description: "Tons claros de marfim, linho e ouro sutil. Puro, celestial e acolhedor.",
+    bgPreview: "#FAF7F2",
+    cardPreview: "#FFFFFF",
+    borderPreview: "#C59B27",
+    textPreview: "#C59B27",
+    badge: "Celestial",
+  },
+  {
+    id: "light-cream",
+    name: "Claro Creme",
+    category: "light",
+    mode: "light",
+    palette: "cream",
+    description: "Tons de marfim e papel suave para uma leitura diurna aconchegante.",
+    bgPreview: "#faf8f5",
+    cardPreview: "#ffffff",
+    borderPreview: "#e7dfd5",
+    textPreview: "#292524",
+    badge: "Leitura",
   },
 ];
 
@@ -182,12 +271,18 @@ export function ThemeProvider({
       const metaThemeColor = document.querySelector('meta[name="theme-color"]');
       if (metaThemeColor) {
         if (isDark) {
-          if (palette === "oled") metaThemeColor.setAttribute("content", "#000000");
+          if (palette === "prime") metaThemeColor.setAttribute("content", "#0B1F3A");
+          else if (palette === "vida") metaThemeColor.setAttribute("content", "#073B4C");
+          else if (palette === "next") metaThemeColor.setAttribute("content", "#0F1115");
+          else if (palette === "catedral") metaThemeColor.setAttribute("content", "#240B13");
+          else if (palette === "avivamento") metaThemeColor.setAttribute("content", "#071524");
+          else if (palette === "oled") metaThemeColor.setAttribute("content", "#000000");
           else if (palette === "navy") metaThemeColor.setAttribute("content", "#070b14");
           else if (palette === "sepia") metaThemeColor.setAttribute("content", "#12100e");
           else metaThemeColor.setAttribute("content", "#070709");
         } else {
-          if (palette === "cream") metaThemeColor.setAttribute("content", "#faf8f5");
+          if (palette === "graca") metaThemeColor.setAttribute("content", "#FAF7F2");
+          else if (palette === "cream") metaThemeColor.setAttribute("content", "#faf8f5");
           else metaThemeColor.setAttribute("content", "#f8fafc");
         }
       }
@@ -231,9 +326,16 @@ export function ThemeProvider({
   if (mode === "system") {
     activePresetId = "system";
   } else if (mode === "light") {
-    activePresetId = palette === "cream" ? "light-cream" : "light-default";
+    if (palette === "graca") activePresetId = "light-graca";
+    else if (palette === "cream") activePresetId = "light-cream";
+    else activePresetId = "light-default";
   } else if (mode === "dark") {
-    if (palette === "oled") activePresetId = "dark-oled";
+    if (palette === "prime") activePresetId = "dark-prime";
+    else if (palette === "vida") activePresetId = "dark-vida";
+    else if (palette === "next") activePresetId = "dark-next";
+    else if (palette === "catedral") activePresetId = "dark-catedral";
+    else if (palette === "avivamento") activePresetId = "dark-avivamento";
+    else if (palette === "oled") activePresetId = "dark-oled";
     else if (palette === "navy") activePresetId = "dark-navy";
     else if (palette === "sepia") activePresetId = "dark-sepia";
     else activePresetId = "dark-default";

@@ -3,11 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Church, Bell, ArrowLeftRight, User, HelpCircle, LogOut, Crown, ShieldCheck, HeartHandshake } from "lucide-react";
+import { Church, Bell, ArrowLeftRight, User, HelpCircle, LogOut, Crown, ShieldCheck, HeartHandshake, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HelpGuideDialog } from "@/components/help-guide-dialog";
 import { PastoralCabinetModal } from "@/components/pastoral-cabinet-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { MemberQuickBadgeModal } from "@/components/member-quick-badge-modal";
 import {
   Dialog,
   DialogContent,
@@ -139,6 +140,35 @@ export function AppHeader({
                 </span>
               </div>
             </button>
+          )}
+
+          {/* Botão de Acesso Imediato ao Crachá Digital (Portaria) */}
+          {currentUser && (
+            <MemberQuickBadgeModal
+              user={{
+                id: currentUser.id,
+                name: currentUser.name,
+                email: currentUser.email,
+                avatarUrl: currentUser.avatarUrl,
+                role: currentUser.role,
+              }}
+              tenant={{
+                name,
+                slug,
+                logoUrl,
+                primaryColor,
+              }}
+              triggerButton={
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-colors shadow-xs cursor-pointer text-xs font-bold"
+                  title="Abrir meu Crachá Digital (Portaria & Recepção)"
+                >
+                  <QrCode className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="hidden xs:inline">Crachá</span>
+                </button>
+              }
+            />
           )}
 
           {/* Acesso Rápido a Pedidos de Oração e Gabinete Pastoral para Pastores e Administradores */}
@@ -288,6 +318,35 @@ export function AppHeader({
             </div>
 
             <div className="pt-2 flex flex-col gap-2">
+              {currentUser && (
+                <div onClick={() => setIsProfileOpen(false)}>
+                  <MemberQuickBadgeModal
+                    user={{
+                      id: currentUser.id,
+                      name: currentUser.name,
+                      email: currentUser.email,
+                      avatarUrl: currentUser.avatarUrl,
+                      role: currentUser.role,
+                    }}
+                    tenant={{
+                      name,
+                      slug,
+                      logoUrl,
+                      primaryColor,
+                    }}
+                    triggerButton={
+                      <Button
+                        type="button"
+                        className="w-full h-11 rounded-xl font-bold border border-amber-500/40 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-500/10 cursor-pointer"
+                      >
+                        <QrCode className="w-4 h-4 text-amber-400" />
+                        <span>Meu Crachá Digital (Portaria & Recepção)</span>
+                      </Button>
+                    }
+                  />
+                </div>
+              )}
+
               <Link
                 href={`/${slug}/perfil`}
                 onClick={() => setIsProfileOpen(false)}

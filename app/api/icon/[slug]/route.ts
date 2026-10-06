@@ -26,8 +26,26 @@ export async function GET(
           },
         });
       }
-    } else {
-      return NextResponse.redirect(tenant.logoUrl);
+    } else if (tenant.logoUrl.startsWith("http://") || tenant.logoUrl.startsWith("https://")) {
+      try {
+        const imgRes = await fetch(tenant.logoUrl, {
+          signal: AbortSignal.timeout(3000),
+        });
+        if (imgRes.ok) {
+          const contentType = imgRes.headers.get("content-type") || "image/png";
+          if (contentType.startsWith("image/")) {
+            const arrayBuffer = await imgRes.arrayBuffer();
+            return new NextResponse(Buffer.from(arrayBuffer), {
+              headers: {
+                "Content-Type": contentType,
+                "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+              },
+            });
+          }
+        }
+      } catch {
+        // Fallback automático para o SVG vetorial se a URL externa falhar ou der 404
+      }
     }
   }
 

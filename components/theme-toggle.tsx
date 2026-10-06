@@ -11,6 +11,11 @@ import {
   MoonStar,
   Coffee,
   Waves,
+  Crown,
+  Leaf,
+  Zap,
+  Shield,
+  Flame,
 } from "lucide-react";
 import { useTheme, THEME_PRESETS } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -41,6 +46,24 @@ export function ThemeToggle({
 
   // Ícone dinâmico do tema ativo
   const getThemeIcon = () => {
+    if (palette === "prime") {
+      return <Crown className="w-4 h-4 text-amber-400" />;
+    }
+    if (palette === "vida") {
+      return <Leaf className="w-4 h-4 text-emerald-400" />;
+    }
+    if (palette === "next") {
+      return <Zap className="w-4 h-4 text-indigo-400" />;
+    }
+    if (palette === "catedral") {
+      return <Shield className="w-4 h-4 text-amber-500" />;
+    }
+    if (palette === "avivamento") {
+      return <Flame className="w-4 h-4 text-orange-500" />;
+    }
+    if (palette === "graca") {
+      return <Sparkles className="w-4 h-4 text-amber-400" />;
+    }
     if (mode === "system") {
       return <Laptop className="w-4 h-4 text-primary" />;
     }
@@ -66,7 +89,7 @@ export function ThemeToggle({
         size="sm"
         onClick={() => setIsOpen(!isOpen)}
         className={`h-8 px-2 sm:px-2.5 rounded-full text-xs font-semibold gap-1.5 border border-border/70 bg-card/60 hover:bg-muted text-foreground transition-all cursor-pointer ${className}`}
-        title="Alternar tema de cores do app"
+        title="Alternar seu tema individual de cores"
         aria-label="Alternar tema"
       >
         {getThemeIcon()}
@@ -79,11 +102,11 @@ export function ThemeToggle({
 
       {/* Dropdown Menu Flutuante */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-card border border-border shadow-2xl p-2.5 z-50 animate-in fade-in-0 zoom-in-95 backdrop-blur-xl">
+        <div className="absolute right-0 mt-2 w-72 max-h-[80vh] overflow-y-auto rounded-2xl bg-card border border-border shadow-2xl p-2.5 z-50 animate-in fade-in-0 zoom-in-95 backdrop-blur-xl">
           <div className="px-2 py-1.5 border-b border-border/60 mb-1 flex items-center justify-between">
             <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
               <Palette className="w-3.5 h-3.5 text-primary" />
-              <span>Tema do Aplicativo</span>
+              <span>Tema do Usuário (Individual)</span>
             </span>
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               {resolvedTheme === "dark" ? "Modo Escuro" : "Modo Claro"}

@@ -111,7 +111,7 @@ export async function createChurchAsset(
 ) {
   try {
     const session = await getSession();
-    if (!session || !["ADMIN", "PASTOR", "LEADER"].includes(session.role)) {
+    if (!session || !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(session.role)) {
       return { success: false, error: "Apenas liderança pode cadastrar bens patrimoniais." };
     }
 
@@ -186,7 +186,7 @@ export async function updateChurchAsset(
 ) {
   try {
     const session = await getSession();
-    if (!session || !["ADMIN", "PASTOR", "LEADER"].includes(session.role)) {
+    if (!session || !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(session.role)) {
       return { success: false, error: "Permissão insuficiente." };
     }
 
@@ -222,7 +222,7 @@ export async function updateChurchAsset(
 export async function deleteChurchAsset(slug: string, assetId: string) {
   try {
     const session = await getSession();
-    if (!session || !["ADMIN", "PASTOR"].includes(session.role)) {
+    if (!session || !["ADMIN", "PASTOR", "SUPERADMIN"].includes(session.role)) {
       return { success: false, error: "Apenas administradores e pastores podem excluir bens." };
     }
 

@@ -142,21 +142,47 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
     }
   };
 
-  // Inicializar / Finalizar Scanner de Câmera do Smartphone
+  // Inicializar / Finalizar Scanner de Câmera do Smartphone com proteção contra unmount e Fast Refresh
   useEffect(() => {
+    let isCancelled = false;
     let html5QrCode: any = null;
+
+    const safeStop = async (instance: any) => {
+      if (!instance) return;
+      try {
+        const isRunning =
+          instance.isScanning === true ||
+          (typeof instance.getState === "function" &&
+            (instance.getState() === 2 || instance.getState() === 3));
+
+        if (isRunning) {
+          await instance.stop().catch(() => {});
+        }
+      } catch {
+        // Ignora erro se o scanner já não estiver rodando
+      }
+
+      try {
+        await instance.clear().catch(() => {});
+      } catch {}
+    };
 
     if (isCameraActive) {
       import("html5-qrcode")
         .then(({ Html5Qrcode }) => {
+          if (isCancelled) return;
+
           // Listar câmeras disponíveis para smartphone
           Html5Qrcode.getCameras()
             .then((cameras) => {
-              if (cameras && cameras.length > 0) {
+              if (cameras && cameras.length > 0 && !isCancelled) {
                 setAvailableCameras(cameras);
               }
             })
             .catch(() => {});
+
+          const container = document.getElementById("reader-container");
+          if (!container || isCancelled) return;
 
           html5QrCode = new Html5Qrcode("reader-container");
           scannerRef.current = html5QrCode;
@@ -180,11 +206,17 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
               { facingMode: "environment" },
               config,
               (decodedText: string) => {
-                handleProcessQrCode(decodedText);
+                if (!isCancelled) {
+                  handleProcessQrCode(decodedText);
+                }
               },
               () => {}
             )
             .then(() => {
+              if (isCancelled) {
+                safeStop(html5QrCode);
+                return;
+              }
               // Checar se o celular suporta lanterna (Torch)
               try {
                 const capabilities = html5QrCode.getRunningTrackCapabilities?.();
@@ -194,6 +226,7 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
               } catch {}
             })
             .catch((err: any) => {
+              if (isCancelled) return;
               console.warn("Tentando câmera padrão após recusa de environment:", err);
               // Fallback para qualquer câmera disponível
               html5QrCode
@@ -201,11 +234,19 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
                   { facingMode: "user" },
                   config,
                   (decodedText: string) => {
-                    handleProcessQrCode(decodedText);
+                    if (!isCancelled) {
+                      handleProcessQrCode(decodedText);
+                    }
                   },
                   () => {}
                 )
+                .then(() => {
+                  if (isCancelled) {
+                    safeStop(html5QrCode);
+                  }
+                })
                 .catch((e: any) => {
+                  if (isCancelled) return;
                   console.error("Erro final ao acessar câmera:", e);
                   toast.error("Permissão de câmera negada ou dispositivo sem suporte.");
                   setIsCameraActive(false);
@@ -213,16 +254,17 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
             });
         })
         .catch(() => {
-          toast.error("Não foi possível carregar o leitor de QR Code.");
+          if (!isCancelled) {
+            toast.error("Não foi possível carregar o leitor de QR Code.");
+          }
         });
     }
 
     return () => {
+      isCancelled = true;
       if (scannerRef.current) {
-        scannerRef.current
-          .stop()
-          .then(() => scannerRef.current?.clear())
-          .catch(() => {});
+        safeStop(scannerRef.current);
+        scannerRef.current = null;
       }
     };
   }, [isCameraActive]);

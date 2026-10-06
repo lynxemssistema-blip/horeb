@@ -35,6 +35,7 @@ import {
   Waves,
   CreditCard,
   FileSpreadsheet,
+  QrCode,
 } from "lucide-react";
 import { useTheme, THEME_PRESETS } from "@/components/theme-provider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -46,6 +47,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { MemberDigitalCard } from "@/components/member-digital-card";
+import { MemberQuickBadgeModal } from "@/components/member-quick-badge-modal";
 import { AnnualTaxStatementModal } from "@/components/annual-tax-statement-modal";
 import {
   updateUserProfile,
@@ -331,6 +333,34 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
 
           {/* Botões de Ação */}
           <div className="shrink-0 pt-2 sm:pt-0 flex flex-wrap items-center justify-center sm:justify-end gap-2">
+            <MemberQuickBadgeModal
+              user={{
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                avatarUrl: user.avatarUrl,
+                role: user.role,
+                pastoralTitle: user.title,
+              }}
+              tenant={{
+                name: user.tenant?.name || "Horeb Igreja",
+                slug: user.tenant?.slug || slug,
+                logoUrl: user.tenant?.logoUrl,
+                primaryColor: user.tenant?.primaryColor || "#f59e0b",
+              }}
+              triggerButton={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 px-3.5 rounded-xl border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-xs font-bold text-amber-300 gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <QrCode className="w-4 h-4 text-amber-400" />
+                  <span>Crachá Portaria</span>
+                </Button>
+              }
+            />
+
             <Button
               type="button"
               variant="outline"
