@@ -33,6 +33,8 @@ import {
   MoonStar,
   Coffee,
   Waves,
+  CreditCard,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useTheme, THEME_PRESETS } from "@/components/theme-provider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -42,6 +44,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { MemberDigitalCard } from "@/components/member-digital-card";
+import { AnnualTaxStatementModal } from "@/components/annual-tax-statement-modal";
 import {
   updateUserProfile,
   updateUserPassword,
@@ -124,6 +129,10 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
   const [avatarUrl, setAvatarUrl] = useState(initialUser?.avatarUrl || "");
   const [customUrlInput, setCustomUrlInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Estados de Carteirinha e IRPF
+  const [isCardOpen, setIsCardOpen] = useState(false);
+  const [isTaxModalOpen, setIsTaxModalOpen] = useState(false);
 
   // Manipular upload local e compressão em Canvas (compatível com Safari e Mobile)
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -321,7 +330,29 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
           </div>
 
           {/* Botões de Ação */}
-          <div className="shrink-0 pt-2 sm:pt-0 flex flex-wrap items-center gap-2">
+          <div className="shrink-0 pt-2 sm:pt-0 flex flex-wrap items-center justify-center sm:justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCardOpen(true)}
+              className="h-9 px-3.5 rounded-xl border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-xs font-bold text-amber-300 gap-1.5 cursor-pointer shadow-sm"
+            >
+              <CreditCard className="w-4 h-4 text-amber-400" />
+              <span>Carteirinha Digital</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsTaxModalOpen(true)}
+              className="h-9 px-3.5 rounded-xl border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-bold text-emerald-300 gap-1.5 cursor-pointer shadow-sm"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+              <span>Informe IRPF</span>
+            </Button>
+
             <Link href={`/${slug}`}>
               <Button
                 variant="outline"
@@ -1050,6 +1081,53 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
         </TabsContent>
 
       </Tabs>
+
+      {/* Modal da Carteirinha Digital */}
+      <Dialog open={isCardOpen} onOpenChange={setIsCardOpen}>
+        <DialogContent className="max-w-md p-6 bg-zinc-950/95 border-white/10 rounded-3xl backdrop-blur-xl">
+          <DialogHeader className="pb-2 text-center sm:text-left">
+            <DialogTitle className="text-base font-black text-white flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-amber-400" />
+              <span>Carteirinha Digital Oficial</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-zinc-400">
+              Sua credencial eclesiástica oficial com QR Code de verificação em tempo real.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2">
+            <MemberDigitalCard
+              user={{
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                avatarUrl: user.avatarUrl,
+                role: user.role,
+                cpf: user.cpf,
+                pastoralTitle: user.title,
+                createdAt: user.createdAt || new Date(),
+                tenant: {
+                  name: user.tenant?.name || "Horeb Igreja",
+                  slug: user.tenant?.slug || slug,
+                  logoUrl: user.tenant?.logoUrl,
+                  primaryColor: user.tenant?.primaryColor || "#f59e0b",
+                  pastorName: "Liderança Eclesial",
+                },
+              }}
+              credentialCode={`MEM-${user.id.slice(-6).toUpperCase()}`}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal do Informe de Rendimentos / Dízimos para IRPF */}
+      <AnnualTaxStatementModal
+        isOpen={isTaxModalOpen}
+        onClose={() => setIsTaxModalOpen(false)}
+        slug={slug}
+        memberId={user.id}
+        memberName={user.name}
+      />
     </div>
   );
 }

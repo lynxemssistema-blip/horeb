@@ -47,9 +47,14 @@ model Tenant {
   moodCheckIns MoodCheckIn[]
   prayerRequests PrayerRequest[]
   events         Event[]
-  agentProfiles  AgentProfile[]
-  conversations  Conversation[]
+  agentProfiles        AgentProfile[]
+  conversations        Conversation[]
   pastoralAppointments PastoralAppointment[]
+  officialDocuments    OfficialDocument[]
+  sundaySchoolClasses  SundaySchoolClass[]
+  discipleshipTracks   DiscipleshipTrack[]
+  assemblies           Assembly[]
+  assets               ChurchAsset[]
 
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -90,6 +95,11 @@ model User {
 
   pastoralAppointmentsAsPastor PastoralAppointment[] @relation("PastorAppointments")
   pastoralAppointmentsAsMember PastoralAppointment[] @relation("MemberAppointments")
+
+  // Secretaria, Discipulado e Assembleias
+  createdOfficialDocuments     OfficialDocument[]    @relation("CreatedOfficialDocuments")
+  discipleshipProgress         MemberDiscipleshipProgress[]
+  assemblyVotes                AssemblyVote[]
 
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -473,4 +483,193 @@ model PastoralMessage {
 
   @@index([appointmentId])
 }
+
+// ==========================================
+// 1. SECRETARIA DIGITAL & DOCUMENTOS OFICIAIS
+// ==========================================
+model OfficialDocument {
+  id             String   @id @default(cuid())
+  documentNumber String   @unique // ex: DOC-2026-0001
+  type           String   // TRANSFER_LETTER, RECOMMENDATION_LETTER, BAPTISM_CERTIFICATE, CHILD_PRESENTATION, MARRIAGE_CERTIFICATE, ORDINATION_CERTIFICATE
+  title          String
+  recipientName  String
+  recipientCpf   String?
+  recipientPhone String?
+  details        String?  // JSON estruturado com datas, cônjuge, pais, pastor oficiante, etc.
+  issuedAt       DateTime @default(now())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdById    String?
+  createdBy      User?    @relation("CreatedOfficialDocuments", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId, type])
+}
+
+// ==========================================
+// 2. ESCOLA BÍBLICA DOMINICAL (EBD) & DISCIPULADO
+// ==========================================
+model SundaySchoolClass {
+  id          String   @id @default(cuid())
+  name        String   // ex: "Jovens e Universitários", "Casais", "Novos Convertidos"
+  description String?
+  room        String?  // ex: "Sala 03 - Térreo"
+  ageRange    String?  // ex: "18 a 29 anos"
+  teacherName String?  // Nome do professor/líder
+  teacherId   String?
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  attendances SundaySchoolAttendance[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model SundaySchoolAttendance {
+  id             String            @id @default(cuid())
+  classId        String
+  class          SundaySchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  date           DateTime          @default(now())
+  lessonTitle    String?           // Título da lição / revista
+  totalMembers   Int               @default(0)
+  totalVisitors  Int               @default(0)
+  biblesCount    Int               @default(0)
+  magazinesCount Int               @default(0)
+  offeringAmount Float             @default(0)
+  notes          String?
+  recordedBy     String?
+
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([classId, date])
+}
+
+model DiscipleshipTrack {
+  id          String            @id @default(cuid())
+  title       String            // ex: "Trilha do Novo Convertido - Primeiros Passos"
+  description String?
+  tenantId    String
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  steps       DiscipleshipStep[]
+  members     MemberDiscipleshipProgress[]
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([tenantId])
+}
+
+model DiscipleshipStep {
+  id          String            @id @default(cuid())
+  trackId     String
+  track       DiscipleshipTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  title       String            // 1. Acolhimento, 2. Batismo, 3. Doutrinas, 4. Célula e Ministério
+  order       Int               @default(0)
+  description String?
+  checklist   String?           // JSON array de itens
+}
+
+model MemberDiscipleshipProgress {
+  id           String            @id @default(cuid())
+  trackId      String
+  track        DiscipleshipTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStep  Int               @default(1)
+  status       String            @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED
+  completedAt  DateTime?
+  mentorName   String?
+  notes        String?
+
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@unique([trackId, userId])
+  @@index([userId])
+}
+
+// ==========================================
+// 3. ASSEMBLEIAS ESTATUTÁRIAS & VOTAÇÃO COM QUÓRUM
+// ==========================================
+model Assembly {
+  id                    String               @id @default(cuid())
+  title                 String               // ex: "Assembleia Geral Ordinária de Eleição e Posse 2026"
+  date                  DateTime
+  type                  String               @default("ORDINARY") // ORDINARY, EXTRAORDINARY
+  status                String               @default("SCHEDULED") // SCHEDULED, IN_PROGRESS, CLOSED
+  requiredQuorumPercent Int                  @default(50) // ex: 50% + 1
+  description           String?
+  totalEligibleMembers  Int                  @default(0) // total de membros aptos
+  minutesSummary        String?              // Ata gerada automaticamente
+  tenantId              String
+  tenant                Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  agendaItems           AssemblyAgendaItem[]
+
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  @@index([tenantId, status])
+}
+
+model AssemblyAgendaItem {
+  id          String         @id @default(cuid())
+  assemblyId  String
+  assembly    Assembly       @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  order       Int            @default(1)
+  title       String         // ex: "Aprovação do Relatório Financeiro e Contas"
+  description String?
+  voteType    String         @default("OPEN") // OPEN, SECRET
+  status      String         @default("PENDING") // PENDING, VOTING, CLOSED
+  votes       AssemblyVote[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([assemblyId])
+}
+
+model AssemblyVote {
+  id           String             @id @default(cuid())
+  agendaItemId String
+  agendaItem   AssemblyAgendaItem @relation(fields: [agendaItemId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  voteChoice   String             // YES, NO, ABSTAIN
+  votedAt      DateTime           @default(now())
+
+  @@unique([agendaItemId, userId])
+  @@index([agendaItemId])
+}
+
+// ==========================================
+// 4. PATRIMÔNIO & INVENTÁRIO FÍSICO
+// ==========================================
+model ChurchAsset {
+  id             String   @id @default(cuid())
+  code           String   @unique // ex: PAT-00124 (número de tombamento)
+  name           String   // ex: "Mesa de Som Behringer X32"
+  category       String   // AUDIO_VISUAL, INSTRUMENT, FURNITURE, CLIMATE, VEHICLE, REAL_ESTATE, IT
+  invoiceNumber  String?  // Número da NF
+  purchaseDate   DateTime?
+  purchaseValue  Float    @default(0)
+  currentValue   Float?
+  location       String   // ex: "Nave Principal", "Sala Infantil"
+  condition      String   @default("GOOD") // NEW, GOOD, NEEDS_REPAIR, RETIRED
+  serialNumber   String?
+  photoUrl       String?
+  notes          String?
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId, category])
+}
+
 

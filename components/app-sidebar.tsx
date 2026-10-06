@@ -24,6 +24,10 @@ import {
   Calendar,
   Crown,
   User,
+  FileText,
+  GraduationCap,
+  Scale,
+  Package,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -180,18 +184,47 @@ export function AppSidebar({
     currentUser?.role === "PASTOR";
 
   if (isLeadership) {
-    const prayerHref = `/${slug}/admin/oracoes`;
-    if (
-      !filteredNavigation.some((item) => item.href === prayerHref) &&
-      (!accessRules || accessRules.allowedMenus.includes("ALL") || accessRules.allowedMenus.some((allowed) => prayerHref.endsWith(allowed)))
-    ) {
-      filteredNavigation.splice(2, 0, {
+    const leadershipItems = [
+      {
         name: "Pedidos de Oração",
-        href: prayerHref,
+        href: `/${slug}/admin/oracoes`,
         icon: HeartHandshake,
         highlightBadge: "Pastoral",
-      } as any);
-    }
+      },
+      {
+        name: "Secretaria & Documentos",
+        href: `/${slug}/admin/secretaria`,
+        icon: FileText,
+        highlightBadge: "Oficial",
+      },
+      {
+        name: "EBD & Discipulado",
+        href: `/${slug}/admin/ebd`,
+        icon: GraduationCap,
+        highlightBadge: "EBD",
+      },
+      {
+        name: "Assembleias & Votação",
+        href: `/${slug}/admin/assembleias`,
+        icon: Scale,
+        highlightBadge: "Voto",
+      },
+      {
+        name: "Patrimônio & Inventário",
+        href: `/${slug}/admin/patrimonio`,
+        icon: Package,
+        highlightBadge: "Bens",
+      },
+    ];
+
+    leadershipItems.forEach((leadItem, index) => {
+      if (
+        !filteredNavigation.some((item) => item.href === leadItem.href) &&
+        (!accessRules || accessRules.allowedMenus.includes("ALL") || accessRules.allowedMenus.some((allowed) => leadItem.href.endsWith(allowed)))
+      ) {
+        filteredNavigation.splice(2 + index, 0, leadItem as any);
+      }
+    });
   }
 
   return (
