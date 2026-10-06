@@ -23,6 +23,11 @@ import {
   HeartHandshake,
   MessageSquare,
   ArrowRight,
+  Flashlight,
+  FlashlightOff,
+  SwitchCamera,
+  Scan,
+  RefreshCw,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,6 +72,11 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
   // Estados do Scanner e Entrada Manual
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [manualCodeInput, setManualCodeInput] = useState("");
+  const [availableCameras, setAvailableCameras] = useState<any[]>([]);
+  const [currentCameraIndex, setCurrentCameraIndex] = useState(0);
+  const [isTorchOn, setIsTorchOn] = useState(false);
+  const [hasTorchSupport, setHasTorchSupport] = useState(false);
+
   const [lastCheckinResult, setLastCheckinResult] = useState<{
     member: any;
     alreadyCheckedIn: boolean;
@@ -87,6 +97,7 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
   const [newDescription, setNewDescription] = useState("");
 
   const scannerRef = useRef<any>(null);
+  const isLockedRef = useRef(false);
   const manualInputRef = useRef<HTMLInputElement>(null);
 
   // Tocar Som de Boas-Vindas (Web Audio API nativo sem precisar de MP3 externo)
@@ -105,7 +116,7 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
           const gain = ctx.createGain();
           osc.type = "sine";
           osc.frequency.value = freq;
-          gain.gain.setValueAtTime(0.12, now + i * 0.08);
+          gain.gain.setValueAtTime(0.15, now + i * 0.08);
           gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.35);
           osc.connect(gain);
           gain.connect(ctx.destination);
@@ -131,34 +142,74 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
     }
   };
 
-  // Inicializar / Finalizar Scanner de Câmera
+  // Inicializar / Finalizar Scanner de Câmera do Smartphone
   useEffect(() => {
     let html5QrCode: any = null;
 
     if (isCameraActive) {
       import("html5-qrcode")
         .then(({ Html5Qrcode }) => {
+          // Listar câmeras disponíveis para smartphone
+          Html5Qrcode.getCameras()
+            .then((cameras) => {
+              if (cameras && cameras.length > 0) {
+                setAvailableCameras(cameras);
+              }
+            })
+            .catch(() => {});
+
           html5QrCode = new Html5Qrcode("reader-container");
           scannerRef.current = html5QrCode;
 
+          // Configuração otimizada para câmera traseira de celulares
+          const config = {
+            fps: 15,
+            qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+              const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+              return {
+                width: Math.floor(minEdge * 0.75),
+                height: Math.floor(minEdge * 0.75),
+              };
+            },
+            aspectRatio: 1.0,
+          };
+
+          // Tentar abrir câmera traseira do celular
           html5QrCode
             .start(
               { facingMode: "environment" },
-              {
-                fps: 10,
-                qrbox: { width: 240, height: 240 },
-              },
+              config,
               (decodedText: string) => {
                 handleProcessQrCode(decodedText);
               },
-              () => {
-                // Ignore erros de frame vazio
-              }
+              () => {}
             )
+            .then(() => {
+              // Checar se o celular suporta lanterna (Torch)
+              try {
+                const capabilities = html5QrCode.getRunningTrackCapabilities?.();
+                if (capabilities && (capabilities as any).torch) {
+                  setHasTorchSupport(true);
+                }
+              } catch {}
+            })
             .catch((err: any) => {
-              console.error("Erro ao iniciar câmera:", err);
-              toast.error("Permissão de câmera negada ou dispositivo sem suporte.");
-              setIsCameraActive(false);
+              console.warn("Tentando câmera padrão após recusa de environment:", err);
+              // Fallback para qualquer câmera disponível
+              html5QrCode
+                .start(
+                  { facingMode: "user" },
+                  config,
+                  (decodedText: string) => {
+                    handleProcessQrCode(decodedText);
+                  },
+                  () => {}
+                )
+                .catch((e: any) => {
+                  console.error("Erro final ao acessar câmera:", e);
+                  toast.error("Permissão de câmera negada ou dispositivo sem suporte.");
+                  setIsCameraActive(false);
+                });
             });
         })
         .catch(() => {
@@ -176,8 +227,60 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
     };
   }, [isCameraActive]);
 
-  // Processar Leitura do QR Code ou Código Manual
+  // Alternar Lanterna do Celular (Torch)
+  const toggleTorch = async () => {
+    if (!scannerRef.current) return;
+    try {
+      const nextState = !isTorchOn;
+      await scannerRef.current.applyVideoConstraints({
+        advanced: [{ torch: nextState }],
+      });
+      setIsTorchOn(nextState);
+    } catch {
+      toast.error("Lanterna não suportada neste celular.");
+    }
+  };
+
+  // Alternar Entre Câmeras do Celular (ex: traseira 1x, ultra-wide)
+  const switchCamera = async () => {
+    if (!scannerRef.current || availableCameras.length < 2) {
+      toast.info("Apenas uma câmera detectada neste aparelho.");
+      return;
+    }
+
+    const nextIndex = (currentCameraIndex + 1) % availableCameras.length;
+    const nextCamera = availableCameras[nextIndex];
+    setCurrentCameraIndex(nextIndex);
+
+    try {
+      await scannerRef.current.stop();
+      await scannerRef.current.start(
+        nextCamera.id,
+        {
+          fps: 15,
+          qrbox: { width: 240, height: 240 },
+        },
+        (decodedText: string) => {
+          handleProcessQrCode(decodedText);
+        },
+        () => {}
+      );
+      toast.success(`Câmera alterada para: ${nextCamera.label || "Câmera Secundária"}`);
+    } catch {
+      toast.error("Falha ao alternar câmera.");
+    }
+  };
+
+  // Processar Leitura do QR Code com Trava Anti-Spam
   const handleProcessQrCode = (code: string) => {
+    if (isLockedRef.current) return;
+    isLockedRef.current = true;
+
+    // Vibração tátil no celular do porteiro
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate([100]);
+    }
+
     const activeService = services.find((s) => s.id === selectedServiceId);
 
     startTransition(async () => {
@@ -217,12 +320,17 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
           message: res.message,
         });
 
-        // Limpar após 3.5 segundos para o próximo membro
+        // Liberar o leitor após 3.5 segundos para o próximo membro
         setTimeout(() => {
           setLastCheckinResult(null);
+          isLockedRef.current = false;
         }, 3500);
       } else {
         toast.error(res.error || "Código de membro não reconhecido.");
+        // Liberar leitor mais rápido em caso de erro
+        setTimeout(() => {
+          isLockedRef.current = false;
+        }, 1500);
       }
     });
   };
@@ -266,9 +374,9 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4">
       {/* Header da Portaria Digital */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-950 border border-white/[0.08] p-6 sm:p-8 shadow-2xl overflow-hidden">
+      <div className="relative rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-950 border border-white/[0.08] p-5 sm:p-8 shadow-2xl overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none" />
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
@@ -278,10 +386,10 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
               <span>Recepção & Portaria Digital</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Porteiro Digital • Controle de Entrada no Culto
+              Porteiro Digital • Recepção de Culto
             </h1>
             <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl">
-              Aponte a câmera do celular para o crachá do membro, confirme a presença e dê as boas-vindas instantâneas.
+              Leitura de crachá digital via câmera do smartphone para acolhimento caloroso e controle de frequência em tempo real.
             </p>
           </div>
 
@@ -307,20 +415,20 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
         </div>
 
         {/* Faixa de Indicadores de Hoje */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t border-white/[0.08]">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-5 pt-5 border-t border-white/[0.08]">
           <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/[0.06]">
             <span className="text-[10px] font-bold text-zinc-400 uppercase">Presentes Hoje</span>
-            <p className="text-3xl font-black text-emerald-400 mt-0.5">{totalCount}</p>
+            <p className="text-2xl sm:text-3xl font-black text-emerald-400 mt-0.5">{totalCount}</p>
           </div>
 
           <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/[0.06]">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase">Membros Cadastrados</span>
-            <p className="text-3xl font-black text-white mt-0.5">{initialData.totalEligibleMembers}</p>
+            <span className="text-[10px] font-bold text-zinc-400 uppercase">Total Cadastrado</span>
+            <p className="text-2xl sm:text-3xl font-black text-white mt-0.5">{initialData.totalEligibleMembers}</p>
           </div>
 
           <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/[0.06]">
             <span className="text-[10px] font-bold text-zinc-400 uppercase">Taxa de Presença</span>
-            <p className="text-3xl font-black text-amber-400 mt-0.5">
+            <p className="text-2xl sm:text-3xl font-black text-amber-400 mt-0.5">
               {initialData.totalEligibleMembers > 0
                 ? Math.round((totalCount / initialData.totalEligibleMembers) * 100)
                 : 0}
@@ -330,7 +438,7 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
 
           <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/[0.06]">
             <span className="text-[10px] font-bold text-zinc-400 uppercase">Porteiro / Operador</span>
-            <p className="text-sm font-bold text-zinc-200 mt-2 truncate">
+            <p className="text-xs sm:text-sm font-bold text-zinc-200 mt-2 truncate">
               {initialData.currentUser.name}
             </p>
           </div>
@@ -339,21 +447,21 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
 
       {/* Painel do Scanner e Recepção */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Coluna Esquerda: Câmera / Scanner (7 Colunas) */}
+        {/* Coluna Esquerda: Câmera / Scanner Mobile (7 Colunas) */}
         <div className="lg:col-span-7 space-y-4">
           <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] shadow-2xl overflow-hidden">
             <CardHeader className="pb-3 border-b border-white/[0.06] space-y-2">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <CardTitle className="text-base font-black text-white flex items-center gap-2">
                   <Camera className="w-5 h-5 text-emerald-400" />
-                  <span>Leitor de Crachá da Portaria</span>
+                  <span>Leitor da Câmera do Smartphone</span>
                 </CardTitle>
 
                 {/* Seletor do Culto em Andamento */}
                 <select
                   value={selectedServiceId}
                   onChange={(e) => setSelectedServiceId(e.target.value)}
-                  className="h-9 px-3 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white font-bold max-w-xs truncate"
+                  className="h-10 px-3 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white font-bold max-w-full sm:max-w-xs truncate"
                 >
                   {services.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -364,40 +472,40 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
               </div>
             </CardHeader>
 
-            <CardContent className="p-6 space-y-4">
+            <CardContent className="p-4 sm:p-6 space-y-4">
               {/* Card de Boas-Vindas Imediato (Green Flash) */}
               {lastCheckinResult ? (
                 <div
                   className={`p-6 rounded-3xl border text-center transition-all animate-in fade-in zoom-in-95 space-y-3 ${
                     lastCheckinResult.alreadyCheckedIn
                       ? "bg-amber-500/15 border-amber-400 text-amber-300"
-                      : "bg-emerald-500/15 border-emerald-400 text-emerald-300 shadow-2xl shadow-emerald-500/20"
+                      : "bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-2xl shadow-emerald-500/30"
                   }`}
                 >
-                  <Avatar className="h-20 w-20 mx-auto ring-4 ring-white/20 shadow-xl bg-black">
+                  <Avatar className="h-24 w-24 mx-auto ring-4 ring-white/20 shadow-xl bg-black">
                     {lastCheckinResult.member.avatarUrl && (
                       <AvatarImage
                         src={lastCheckinResult.member.avatarUrl}
                         alt={lastCheckinResult.member.name}
                       />
                     )}
-                    <AvatarFallback className="text-2xl font-black bg-emerald-500 text-black">
+                    <AvatarFallback className="text-3xl font-black bg-emerald-500 text-black">
                       {lastCheckinResult.member.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
 
                   <div>
-                    <h3 className="text-xl font-black text-white">
+                    <h3 className="text-2xl font-black text-white leading-tight">
                       {lastCheckinResult.member.name}
                     </h3>
-                    <p className="text-xs font-bold text-zinc-300">
+                    <p className="text-xs font-bold text-zinc-300 mt-0.5">
                       {lastCheckinResult.member.pastoralTitle || lastCheckinResult.member.role}
                     </p>
                   </div>
 
                   <div className="pt-2">
                     <span
-                      className={`inline-block px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
+                      className={`inline-block px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider ${
                         lastCheckinResult.alreadyCheckedIn
                           ? "bg-amber-500 text-black"
                           : "bg-emerald-500 text-black shadow-lg"
@@ -409,39 +517,74 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-zinc-400">
+                  <p className="text-xs text-zinc-400">
                     {lastCheckinResult.totalVisits
                       ? `Esta é a ${lastCheckinResult.totalVisits}ª presença registrada no ano.`
-                      : "Presença registrada com sucesso."}
+                      : "Presença confirmada no culto."}
                   </p>
                 </div>
               ) : (
-                /* Janela da Câmera */
+                /* Janela da Câmera do Celular */
                 <div className="space-y-4">
                   {isCameraActive ? (
-                    <div className="relative rounded-2xl overflow-hidden bg-black aspect-video flex items-center justify-center border-2 border-emerald-500/40 shadow-inner">
+                    <div className="relative rounded-3xl overflow-hidden bg-black aspect-square max-w-sm mx-auto flex items-center justify-center border-2 border-emerald-500/50 shadow-2xl">
                       <div id="reader-container" className="w-full h-full" />
-                      <div className="absolute bottom-3 left-0 right-0 text-center pointer-events-none">
-                        <span className="px-3 py-1 rounded-full bg-black/70 text-[11px] font-mono text-emerald-400 border border-emerald-500/30">
-                          Aponte o crachá do membro para o quadro
+
+                      {/* Linha laser de escaneamento animada (HUD) */}
+                      <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 h-0.5 bg-emerald-400 shadow-[0_0_15px_#34d399] animate-pulse pointer-events-none" />
+
+                      {/* Controles de Câmera Sobrepostos (Lanterna & Troca de Lente) */}
+                      <div className="absolute top-3 right-3 flex items-center gap-2 z-20">
+                        {hasTorchSupport && (
+                          <button
+                            type="button"
+                            onClick={toggleTorch}
+                            className={`p-2.5 rounded-full border shadow-lg cursor-pointer ${
+                              isTorchOn
+                                ? "bg-amber-400 text-black border-amber-300"
+                                : "bg-black/60 text-white border-white/20 hover:bg-black/80"
+                            }`}
+                            title="Alternar Lanterna"
+                          >
+                            {isTorchOn ? <Flashlight className="w-4 h-4" /> : <FlashlightOff className="w-4 h-4" />}
+                          </button>
+                        )}
+
+                        {availableCameras.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={switchCamera}
+                            className="p-2.5 rounded-full bg-black/60 text-white border border-white/20 hover:bg-black/80 shadow-lg cursor-pointer"
+                            title="Alternar Câmera"
+                          >
+                            <SwitchCamera className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="absolute bottom-3 left-0 right-0 text-center pointer-events-none z-20">
+                        <span className="px-3.5 py-1.5 rounded-full bg-black/80 text-[11px] font-mono text-emerald-400 border border-emerald-500/40 shadow-md">
+                          Aponte para o QR Code do Crachá
                         </span>
                       </div>
                     </div>
                   ) : (
-                    <div className="p-10 rounded-2xl bg-zinc-900/50 border border-dashed border-white/15 text-center space-y-3">
-                      <QrCode className="w-12 h-12 mx-auto text-zinc-500" />
-                      <h4 className="text-sm font-bold text-white">
-                        Câmera da Portaria em Espera
+                    <div className="p-8 sm:p-10 rounded-3xl bg-zinc-900/50 border border-dashed border-white/15 text-center space-y-3">
+                      <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center mx-auto">
+                        <Camera className="w-8 h-8" />
+                      </div>
+                      <h4 className="text-base font-bold text-white">
+                        Câmera da Portaria Pronta
                       </h4>
                       <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-                        Ative a câmera para ler automaticamente os crachás digitais com QR Code dos membros na entrada.
+                        Toque no botão abaixo para ativar a câmera traseira do celular e escanear os crachás dos membros na portaria.
                       </p>
                       <Button
                         onClick={() => setIsCameraActive(true)}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-10 px-5 rounded-xl gap-2 cursor-pointer shadow-lg shadow-emerald-600/20"
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs h-11 px-6 rounded-2xl gap-2 cursor-pointer shadow-xl shadow-emerald-600/20"
                       >
                         <Camera className="w-4 h-4" />
-                        <span>Ligar Câmera da Portaria</span>
+                        <span>Ativar Câmera do Celular</span>
                       </Button>
                     </div>
                   )}
@@ -450,9 +593,9 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
                     <Button
                       onClick={() => setIsCameraActive(false)}
                       variant="outline"
-                      className="w-full h-9 rounded-xl text-xs font-bold border-white/10 hover:bg-white/10 text-zinc-300"
+                      className="w-full h-10 rounded-xl text-xs font-bold border-white/10 hover:bg-white/10 text-zinc-300 cursor-pointer"
                     >
-                      Pausar Câmera
+                      Pausar Leitor de Câmera
                     </Button>
                   )}
                 </div>
@@ -476,7 +619,7 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
                         setManualCodeInput("");
                       }
                     }}
-                    className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white"
+                    className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white h-10"
                   />
                   <Button
                     disabled={isPending || !manualCodeInput.trim()}
@@ -484,7 +627,7 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
                       handleProcessQrCode(manualCodeInput.trim());
                       setManualCodeInput("");
                     }}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 rounded-xl cursor-pointer shrink-0"
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 rounded-xl cursor-pointer shrink-0 h-10"
                   >
                     <span>Confirmar</span>
                   </Button>
@@ -497,7 +640,7 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
         {/* Coluna Direita: Abas de Lista de Presentes e Radar Pastoral (5 Colunas) */}
         <div className="lg:col-span-5 space-y-4">
           <Tabs defaultValue="today" className="space-y-4">
-            <TabsList className="grid grid-cols-2 h-10 rounded-2xl bg-zinc-900/90 border border-white/[0.08] p-1 gap-1">
+            <TabsList className="grid grid-cols-2 h-11 rounded-2xl bg-zinc-900/90 border border-white/[0.08] p-1 gap-1">
               <TabsTrigger
                 value="today"
                 className="rounded-xl text-xs font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all gap-1.5 cursor-pointer"
@@ -540,7 +683,7 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
                         className="p-3 rounded-2xl bg-zinc-900/60 border border-white/[0.06] flex items-center justify-between gap-3 hover:border-emerald-500/30 transition-all"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <Avatar className="h-9 w-9 ring-2 ring-emerald-500/20 bg-black shrink-0">
+                          <Avatar className="h-10 w-10 ring-2 ring-emerald-500/20 bg-black shrink-0">
                             {item.user.avatarUrl && (
                               <AvatarImage src={item.user.avatarUrl} alt={item.user.name} />
                             )}
@@ -610,7 +753,7 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
                           </div>
 
                           <span
-                            className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 ${
+                            className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full shrink-0 ${
                               isHighAlert
                                 ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
                                 : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
