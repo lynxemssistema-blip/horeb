@@ -55,16 +55,20 @@ function decodeSessionCookie(raw: string): SessionData | null {
 }
 
 export async function createSession(data: SessionData) {
-  const cookieStore = await cookies();
-  const encoded = encodeSessionCookie(data);
+  try {
+    const cookieStore = await cookies();
+    const encoded = encodeSessionCookie(data);
 
-  cookieStore.set(SESSION_COOKIE_NAME, encoded, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7, // 7 dias de persistência
-  });
+    cookieStore.set(SESSION_COOKIE_NAME, encoded, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7, // 7 dias de persistência
+    });
+  } catch {
+    // Contexto de cookies() indisponível (ex: scripts ou testes isolados)
+  }
 }
 
 export async function getSession(): Promise<SessionData | null> {

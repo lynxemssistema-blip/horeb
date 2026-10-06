@@ -134,9 +134,11 @@ export async function toggleTaskStatus(taskId: string, currentStatus: string) {
       },
     });
 
-    if (updatedTask.ministry?.tenant) {
-      revalidatePath(`/${updatedTask.ministry.tenant.slug}/ministerios/${updatedTask.ministryId}`);
-    }
+    try {
+      if (updatedTask.ministry?.tenant) {
+        revalidatePath(`/${updatedTask.ministry.tenant.slug}/ministerios/${updatedTask.ministryId}`);
+      }
+    } catch {}
 
     return { success: true, task: updatedTask };
   } catch (error: any) {
@@ -169,11 +171,13 @@ export async function saveMeetingMinute(meetingId: string, content: string) {
       },
     });
 
-    if (minute.meeting?.ministry?.tenant) {
-      revalidatePath(
-        `/${minute.meeting.ministry.tenant.slug}/ministerios/${minute.meeting.ministryId}`
-      );
-    }
+    try {
+      if (minute.meeting?.ministry?.tenant) {
+        revalidatePath(
+          `/${minute.meeting.ministry.tenant.slug}/ministerios/${minute.meeting.ministryId}`
+        );
+      }
+    } catch {}
 
     return { success: true, minute };
   } catch (error: any) {
@@ -212,7 +216,9 @@ export async function createTask(params: {
       },
     });
 
-    revalidatePath(`/${params.slug}/ministerios/${params.ministryId}`);
+    try {
+      revalidatePath(`/${params.slug}/ministerios/${params.ministryId}`);
+    } catch {}
     return {
       success: true,
       task: {
@@ -258,7 +264,9 @@ export async function updateTask(params: {
       },
     });
 
-    revalidatePath(`/${params.slug}/ministerios/${task.ministryId}`);
+    try {
+      revalidatePath(`/${params.slug}/ministerios/${task.ministryId}`);
+    } catch {}
     return {
       success: true,
       task: {
@@ -283,7 +291,9 @@ export async function deleteTask(taskId: string, slug: string) {
     const task = await prisma.ministryTask.delete({
       where: { id: taskId },
     });
-    revalidatePath(`/${slug}/ministerios/${task.ministryId}`);
+    try {
+      revalidatePath(`/${slug}/ministerios/${task.ministryId}`);
+    } catch {}
     return { success: true };
   } catch (error: any) {
     console.error("Erro ao excluir tarefa:", error);
@@ -311,7 +321,9 @@ export async function createMeeting(params: {
       },
     });
 
-    revalidatePath(`/${params.slug}/ministerios/${params.ministryId}`);
+    try {
+      revalidatePath(`/${params.slug}/ministerios/${params.ministryId}`);
+    } catch {}
     return {
       success: true,
       meeting: {
@@ -336,7 +348,9 @@ export async function deleteMeeting(meetingId: string, slug: string) {
     const meeting = await prisma.ministryMeeting.delete({
       where: { id: meetingId },
     });
-    revalidatePath(`/${slug}/ministerios/${meeting.ministryId}`);
+    try {
+      revalidatePath(`/${slug}/ministerios/${meeting.ministryId}`);
+    } catch {}
     return { success: true };
   } catch (error: any) {
     console.error("Erro ao excluir reunião:", error);

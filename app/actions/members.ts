@@ -565,8 +565,10 @@ export async function registerMemberSelf(params: {
         tenantSlug: tenant.slug,
       });
 
-      revalidatePath(`/${tenant.slug}`);
-      revalidatePath(`/${tenant.slug}/membros`);
+      try {
+        revalidatePath(`/${tenant.slug}`);
+        revalidatePath(`/${tenant.slug}/membros`);
+      } catch {}
 
       return {
         success: true,
@@ -609,8 +611,10 @@ export async function registerMemberSelf(params: {
       tenantSlug: tenant.slug,
     });
 
-    revalidatePath(`/${tenant.slug}`);
-    revalidatePath(`/${tenant.slug}/membros`);
+    try {
+      revalidatePath(`/${tenant.slug}`);
+      revalidatePath(`/${tenant.slug}/membros`);
+    } catch {}
 
     return {
       success: true,

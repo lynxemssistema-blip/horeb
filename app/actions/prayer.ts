@@ -63,7 +63,9 @@ export async function submitPrayerRequest(params: SubmitPrayerParams) {
       console.warn("Supabase prayer sync warning:", sbErr);
     }
 
-    revalidatePath(`/${tenantSlug}`);
+    try {
+      revalidatePath(`/${tenantSlug}`);
+    } catch {}
 
     return {
       success: true,

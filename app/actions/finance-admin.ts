@@ -284,8 +284,10 @@ export async function createManualTransaction(data: any) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // Revalidação de cache das rotas
-    revalidatePath(`/${tenant.slug}/admin/finance`);
-    revalidatePath(`/${tenant.slug}`);
+    try {
+      revalidatePath(`/${tenant.slug}/admin/finance`);
+      revalidatePath(`/${tenant.slug}`);
+    } catch {}
 
     return {
       success: true,
