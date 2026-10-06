@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { OrchestratorChat } from "@/components/orchestrator-chat";
 import type { SessionData } from "@/lib/session";
+import { recordMoodCheckIn } from "@/app/actions/devotional";
 
 type Step = "checkin" | "loading" | "result";
 
@@ -155,6 +156,9 @@ export function SoulCheckInClient({ slug, initialUser }: SoulCheckInClientProps)
   const handleSelectMood = (mood: MoodOption) => {
     setSelectedMood(mood);
     setStep("result");
+    recordMoodCheckIn(mood.key, slug).catch((err) =>
+      console.warn("Falha ao registrar checkin devocional:", err)
+    );
   };
 
   const handleResetCheckin = () => {

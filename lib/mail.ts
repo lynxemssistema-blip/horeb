@@ -4,7 +4,8 @@ const smtpHost = process.env.SMTP_HOST || "smtp.hostinger.com";
 const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
 const smtpUser = process.env.SMTP_USER || "suporte@lynxems.com.br";
 const smtpPass = process.env.SMTP_PASS || "10207597Rdv*";
-const smtpFrom = process.env.SMTP_FROM || `"Horeb - Lynx EMS" <${smtpUser}>`;
+const rawSmtpFrom = process.env.SMTP_FROM || `Horeb Tecnologia <${smtpUser}>`;
+const smtpFrom = rawSmtpFrom.replace(/\\"/g, "").replace(/^"/, "").replace(/"$/, "").trim();
 
 export const mailTransporter = nodemailer.createTransport({
   host: smtpHost,

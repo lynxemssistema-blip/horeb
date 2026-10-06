@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -81,6 +81,12 @@ export function CreateChurchDialog({
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(defaultTab);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setActiveTab(defaultTab);
+    }
+  }, [open, defaultTab]);
 
   // Tab 1: Master
   const [masterName, setMasterName] = useState("");

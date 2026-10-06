@@ -55,43 +55,49 @@ const DEVOTIONAL_PRESETS: Record<string, { verse: string; reference: string; mes
       "Suas lágrimas nunca passam despercebidas diante do Criador. Há dias em que o peito aperta e a dor parece silenciosa, mas você jamais esteve sozinho. Permita-se ser acolhido pelo abraço caloroso do Espírito Santo. O choro pode durar uma noite, mas a alegria com certeza vem ao amanhecer.",
   },
 };
+// Registro do Check-in de Alma / Humor no Banco de Dados
+export async function recordMoodCheckIn(mood: string, tenantIdOrSlug: string) {
+  try {
+    const normalizedMood = (mood || "FELIZ").trim().toUpperCase();
+    const tenant = await prisma.tenant.findFirst({
+      where: {
+        OR: [{ id: tenantIdOrSlug }, { slug: tenantIdOrSlug }],
+      },
+      select: { id: true },
+    });
+
+    if (tenant) {
+      return await prisma.moodCheckIn.create({
+        data: {
+          mood: normalizedMood,
+          tenantId: tenant.id,
+        },
+      });
+    }
+  } catch (err) {
+    console.warn("Aviso ao salvar histórico de check-in emocional:", err);
+  }
+  return null;
+}
 
 /**
  * 1. Simulação de Inteligência Artificial para Devocional Diário
- * Latência de 2.5s para simular o tempo de reflexão / geração da IA.
+ * Latência de 1.5s para simular o tempo de reflexão / geração da IA.
  */
 export async function getDailyDevotional(mood: string, tenantId?: string) {
   try {
     const normalizedMood = (mood || "FELIZ").trim().toUpperCase();
 
-    // Simulação da latência da IA (2.5 segundos)
-    await new Promise((resolve) => setTimeout(resolve, 2500));
+    // Persistência imediata do histórico emocional do membro
+    if (tenantId) {
+      await recordMoodCheckIn(normalizedMood, tenantId);
+    }
+
+    // Simulação da latência da IA
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
     const devotionalData =
       DEVOTIONAL_PRESETS[normalizedMood] || DEVOTIONAL_PRESETS.FELIZ;
-
-    // Persistência silenciosa do histórico emocional do membro (se churchSlugOrId for fornecido)
-    if (tenantId) {
-      try {
-        const tenant = await prisma.tenant.findFirst({
-          where: {
-            OR: [{ id: tenantId }, { slug: tenantId }],
-          },
-          select: { id: true },
-        });
-
-        if (tenant) {
-          await prisma.moodCheckIn.create({
-            data: {
-              mood: normalizedMood,
-              tenantId: tenant.id,
-            },
-          });
-        }
-      } catch (err) {
-        console.warn("Aviso ao salvar histórico de check-in emocional:", err);
-      }
-    }
 
     return {
       success: true,

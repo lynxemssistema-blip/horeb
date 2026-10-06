@@ -1,5 +1,6 @@
 "use server";
 
+import { prisma } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
@@ -21,21 +22,45 @@ export async function submitPrayerRequest(params: SubmitPrayerParams) {
   }
 
   try {
-    // 1. Tentar salvar no Supabase (Nuvem PostgreSQL)
-    const { data: tenant } = await supabase
-      .from("tenants")
-      .select("id")
-      .eq("slug", tenantSlug)
-      .single();
+    const cleanContent = isAnonymous
+      ? `[Anônimo] ${content.trim()}`
+      : `${authorName ? `[${authorName}] ` : ""}${content.trim()}`;
 
-    if (tenant?.id) {
-      await supabase.from("prayer_requests").insert({
-        tenant_id: tenant.id,
-        author_name: isAnonymous ? "Anônimo" : authorName || "Membro da Igreja",
-        content: content.trim(),
-        is_anonymous: !!isAnonymous,
-        status: "PENDING",
+    // 1. Salvar no Prisma (Local)
+    const localTenant = await prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true },
+    });
+
+    if (localTenant?.id) {
+      await prisma.prayerRequest.create({
+        data: {
+          tenantId: localTenant.id,
+          content: cleanContent,
+          status: "ACTIVE",
+        },
       });
+    }
+
+    // 2. Sincronizar com Supabase se disponível
+    try {
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("id")
+        .eq("slug", tenantSlug)
+        .single();
+
+      if (tenant?.id) {
+        await supabase.from("prayer_requests").insert({
+          tenant_id: tenant.id,
+          author_name: isAnonymous ? "Anônimo" : authorName || "Membro da Igreja",
+          content: content.trim(),
+          is_anonymous: !!isAnonymous,
+          status: "PENDING",
+        });
+      }
+    } catch (sbErr) {
+      console.warn("Supabase prayer sync warning:", sbErr);
     }
 
     revalidatePath(`/${tenantSlug}`);
@@ -47,8 +72,9 @@ export async function submitPrayerRequest(params: SubmitPrayerParams) {
   } catch (error) {
     console.error("Erro ao registrar pedido de oração:", error);
     return {
-      success: true,
-      message: "Pedido registrado com sucesso. Toda a igreja estará orando por esse motivo!",
+      success: false,
+      error: "Não foi possível registrar o pedido de oração. Tente novamente.",
     };
   }
 }
+
