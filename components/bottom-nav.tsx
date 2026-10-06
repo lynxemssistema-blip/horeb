@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, HeartHandshake, Wallet, Settings } from "lucide-react";
+import { Home, Users, HeartHandshake, Sparkles, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BottomNavProps {
@@ -31,14 +31,14 @@ export function BottomNav({ slug }: BottomNavProps) {
       highlight: true,
     },
     {
-      label: "Financeiro",
-      href: `/${slug}/admin/finance`,
-      icon: Wallet,
+      label: "Devocional",
+      href: `/${slug}/devocional`,
+      icon: Sparkles,
     },
     {
-      label: "Ajustes",
-      href: `/${slug}/configuracoes`,
-      icon: Settings,
+      label: "Meu Perfil",
+      href: `/${slug}/perfil`,
+      icon: User,
     },
   ];
 

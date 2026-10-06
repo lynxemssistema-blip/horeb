@@ -20,6 +20,7 @@ import {
   Trash2,
   Sparkles,
   ArrowRight,
+  LogOut,
   Crown,
   Heart,
   Calendar,
@@ -38,6 +39,7 @@ import {
   updateUserPassword,
   updateUserAvatar,
 } from "@/app/actions/profile";
+import { logoutUser } from "@/app/actions/tenant";
 import { cn } from "@/lib/utils";
 
 interface UserProfilePanelProps {
@@ -309,18 +311,31 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
             )}
           </div>
 
-          {/* Botão de Atalho Rápido para a Igreja */}
-          <div className="shrink-0 pt-2 sm:pt-0">
+          {/* Botões de Ação */}
+          <div className="shrink-0 pt-2 sm:pt-0 flex flex-wrap items-center gap-2">
             <Link href={`/${slug}`}>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 px-4 rounded-xl border-white/10 bg-white/[0.04] hover:bg-white/10 text-xs font-bold text-zinc-200 gap-1.5"
+                className="h-9 px-4 rounded-xl border-white/10 bg-white/[0.04] hover:bg-white/10 text-xs font-bold text-zinc-200 gap-1.5 cursor-pointer"
               >
                 <span>Voltar ao App</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Button>
             </Link>
+
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={async () => {
+                await logoutUser();
+                window.location.href = "/";
+              }}
+              className="h-9 px-4 rounded-xl text-xs font-bold gap-1.5 cursor-pointer bg-rose-600/80 hover:bg-rose-600 text-white"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sair da Conta (Logout)</span>
+            </Button>
           </div>
         </div>
       </div>
@@ -541,6 +556,32 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
                   >
                     <KeyRound className="w-4 h-4" />
                     <span>{isPending ? "Atualizando Senha..." : "Atualizar Senha"}</span>
+                  </Button>
+                </div>
+
+                {/* Zona de Segurança: Logoff Imediato */}
+                <div className="mt-6 pt-6 border-t border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Encerrar Sessão (Logoff)</span>
+                    </h4>
+                    <p className="text-[11px] text-zinc-400">
+                      Encerra seu acesso ativo com segurança neste dispositivo a qualquer momento.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={async () => {
+                      await logoutUser();
+                      window.location.href = "/";
+                    }}
+                    className="h-9 px-4 rounded-xl text-xs font-bold gap-1.5 cursor-pointer bg-rose-600/80 hover:bg-rose-600 text-white shrink-0"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sair Agora</span>
                   </Button>
                 </div>
               </form>
