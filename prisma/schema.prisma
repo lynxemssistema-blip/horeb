@@ -339,16 +339,23 @@ model MoodCheckIn {
 }
 
 model PrayerRequest {
-  id         String   @id @default(cuid())
-  content    String
-  isRedAlert Boolean  @default(false)
-  status     String   @default("ACTIVE")
-  date       DateTime @default(now())
-  tenantId   String
-  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id              String    @id @default(cuid())
+  content         String
+  authorName      String?
+  authorEmail     String?
+  authorPhone     String?
+  isAnonymous     Boolean   @default(false)
+  isRedAlert      Boolean   @default(false)
+  status          String    @default("PENDING") // PENDING, PRAYING, ANSWERED
+  responseMessage String?   // Mensagem pastoral / oração enviada pelo pastor/admin
+  respondedBy     String?   // Nome do Pastor ou Líder que atendeu
+  respondedAt     DateTime? // Data do envio da resposta pastoral
+  date            DateTime  @default(now())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 // ==========================================

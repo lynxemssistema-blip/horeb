@@ -2,10 +2,44 @@ import nodemailer from "nodemailer";
 
 const smtpHost = process.env.SMTP_HOST || "smtp.hostinger.com";
 const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
-const smtpUser = process.env.SMTP_USER || "suporte@lynxems.com.br";
+const smtpUser = (process.env.SMTP_USER || "suporte@lynxems.com.br").trim().toLowerCase();
 const smtpPass = process.env.SMTP_PASS || "10207597Rdv*";
-const rawSmtpFrom = process.env.SMTP_FROM || `Horeb Tecnologia <${smtpUser}>`;
-const smtpFrom = rawSmtpFrom.replace(/\\"/g, "").replace(/^"/, "").replace(/"$/, "").trim();
+
+// Extração robusta do nome de exibição, blindando contra qualquer valor malformatado em SMTP_FROM no Easypanel/VPS
+function getSenderDisplayName(fallbackName = "Horeb Tecnologia"): string {
+  const rawFrom = process.env.SMTP_FROM || "";
+  if (!rawFrom) return fallbackName;
+
+  let cleaned = rawFrom.replace(/["\\]/g, "").trim();
+
+  if (cleaned.includes("<")) {
+    const parts = cleaned.split("<");
+    if (parts[0].trim()) {
+      return parts[0].trim();
+    }
+  }
+
+  cleaned = cleaned.replace(/[\w.-]+@[\w.-]+\.\w+/gi, "").trim();
+  if (cleaned) {
+    return cleaned;
+  }
+
+  return fallbackName;
+}
+
+export function getMailSender(customName?: string) {
+  const name = customName || getSenderDisplayName();
+  return {
+    from: {
+      name,
+      address: smtpUser,
+    },
+    envelope: (recipient: string) => ({
+      from: smtpUser, // Hostinger exige que o envelope MAIL FROM seja EXATAMENTE o usuário autenticado
+      to: recipient,
+    }),
+  };
+}
 
 export const mailTransporter = nodemailer.createTransport({
   host: smtpHost,
@@ -78,10 +112,13 @@ export async function sendActivationCodeEmail({
       `suporte@lynxems.com.br`,
     ].join("\n");
 
+    const sender = getMailSender(churchName ? `${churchName} • Horeb` : "Horeb Tecnologia");
+
     const info = await mailTransporter.sendMail({
-      from: smtpFrom,
+      from: sender.from,
+      envelope: sender.envelope(cleanTo),
       to: cleanTo,
-      replyTo: "suporte@lynxems.com.br",
+      replyTo: smtpUser,
       subject: `${code} é seu código de segurança Horeb`,
       text: plainText,
       headers: {
@@ -228,10 +265,13 @@ export async function sendMemberInvitationEmail({
       `suporte@lynxems.com.br`,
     ].join("\n");
 
+    const sender = getMailSender(churchName ? `${churchName} • Horeb` : "Horeb Tecnologia");
+
     const info = await mailTransporter.sendMail({
-      from: smtpFrom,
+      from: sender.from,
+      envelope: sender.envelope(cleanTo),
       to: cleanTo,
-      replyTo: "suporte@lynxems.com.br",
+      replyTo: smtpUser,
       subject: `Convite para participar da ${churchName} no aplicativo Horeb`,
       text: plainText,
       headers: {
@@ -408,10 +448,13 @@ export async function sendTicketPurchaseEmail({
       )
       .join("");
 
+    const sender = getMailSender(churchName ? `${churchName} • Horeb` : "Horeb Tecnologia");
+
     const info = await mailTransporter.sendMail({
-      from: smtpFrom,
+      from: sender.from,
+      envelope: sender.envelope(cleanTo),
       to: cleanTo,
-      replyTo: "suporte@lynxems.com.br",
+      replyTo: smtpUser,
       subject: `Ingressos Confirmados: ${eventName} • ${churchName}`,
       text: plainText,
       headers: {
@@ -514,6 +557,140 @@ export async function sendTicketPurchaseEmail({
   }
 }
 
+export interface SendPrayerResponseParams {
+  to: string;
+  recipientName?: string;
+  churchName: string;
+  pastorName: string;
+  prayerContent: string;
+  responseMessage: string;
+  primaryColor?: string;
+  logoUrl?: string | null;
+  churchSlug?: string;
+}
+
+export async function sendPrayerResponseEmail({
+  to,
+  recipientName,
+  churchName,
+  pastorName,
+  prayerContent,
+  responseMessage,
+  primaryColor = "#f59e0b",
+  logoUrl,
+  churchSlug,
+}: SendPrayerResponseParams) {
+  try {
+    const cleanTo = to.trim().toLowerCase();
+    const logoSrc = getEmailLogoSrc(churchSlug, logoUrl);
+    const firstName = recipientName ? recipientName.split(" ")[0] : "Irmão(ã)";
+
+    const sender = getMailSender(churchName ? `${churchName} • Intercessão` : "Gabinete Pastoral • Horeb");
+
+    const info = await mailTransporter.sendMail({
+      from: sender.from,
+      envelope: sender.envelope(cleanTo),
+      to: cleanTo,
+      replyTo: smtpUser,
+      subject: `Resposta Pastoral ao seu Pedido de Oração • ${churchName}`,
+      html: `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Resposta Pastoral • Horeb</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f4f5f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #18181b;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f5f7; padding: 30px 15px;">
+            <tr>
+              <td align="center">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 520px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e4e4e7; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+                  
+                  <tr>
+                    <td height="5" style="background: ${primaryColor};"></td>
+                  </tr>
+
+                  <tr>
+                    <td style="padding: 28px 32px 14px 32px; text-align: center;">
+                      <div style="text-align: center; margin-bottom: 14px;">
+                        <img 
+                          src="${logoSrc}" 
+                          alt="${churchName}" 
+                          width="64" 
+                          height="64" 
+                          style="width: 64px; height: 64px; border-radius: 16px; object-fit: cover; border: 2px solid #e4e4e7; background-color: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.08); display: inline-block; vertical-align: middle;" 
+                        />
+                      </div>
+
+                      <div style="display: inline-block; padding: 4px 14px; border-radius: 9999px; background-color: #fef3c7; color: #b45309; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; border: 1px solid #fde68a;">
+                        MINISTÉRIO PASTORAL & ORAÇÃO
+                      </div>
+                      <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #09090b; letter-spacing: -0.3px;">
+                        A Paz do Senhor, ${firstName}!
+                      </h1>
+                      <p style="margin: 8px 0 0 0; font-size: 14px; color: #52525b; line-height: 1.5;">
+                        O <strong>${pastorName}</strong> recebeu seu pedido de oração na <strong>${churchName}</strong>, esteve clamando a Deus por sua vida e preparou uma palavra pastoral com muito carinho para você.
+                      </p>
+                    </td>
+                  </tr>
+
+                  <!-- Seu Pedido Original -->
+                  <tr>
+                    <td style="padding: 10px 32px 16px 32px;">
+                      <div style="background-color: #f8fafc; border-left: 3px solid #cbd5e1; border-radius: 8px; padding: 14px 16px;">
+                        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 4px;">
+                          Seu Clamor Diante do Altar:
+                        </div>
+                        <p style="margin: 0; font-size: 13px; color: #334155; font-style: italic; line-height: 1.5;">
+                          &ldquo;${prayerContent}&rdquo;
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Palavra Pastoral / Resposta -->
+                  <tr>
+                    <td style="padding: 0 32px 24px 32px;">
+                      <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 18px 20px;">
+                        <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #b45309; margin-bottom: 8px;">
+                          Palavra & Oração do Pastor:
+                        </div>
+                        <p style="margin: 0; font-size: 14px; color: #78350f; line-height: 1.6; white-space: pre-wrap;">
+                          ${responseMessage}
+                        </p>
+                        <div style="margin-top: 14px; font-size: 12px; font-weight: 700; color: #92400e; text-align: right;">
+                          — ${pastorName}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #f8fafc; border-top: 1px solid #e4e4e7; padding: 18px 32px; text-align: center; font-size: 11px; color: #71717a; line-height: 1.6;">
+                      ${churchName} • Rede de Oração e Intercessão Contínua.<br>
+                      Tecnologia Eclesial Gerenciada por <strong>Lynx EMS Sistemas</strong>.
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+    });
+
+    console.log("E-mail de resposta pastoral enviado com sucesso:", info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error("Falha ao enviar e-mail de resposta pastoral:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function testSmtpConnection() {
   try {
     await mailTransporter.verify();
@@ -522,4 +699,5 @@ export async function testSmtpConnection() {
     return { success: false, error: err.message };
   }
 }
+
 

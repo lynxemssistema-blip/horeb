@@ -88,6 +88,7 @@ export default async function TenantDashboardPage({ params }: PageProps) {
   // Helper function to check menu access
   const canSeeMenu = (menu: string) => allowedMenus.includes(menu) || allowedMenus.includes("ALL");
   const canDoAction = (action: string) => allowedActions.includes(action) || allowedActions.includes("ALL");
+  const isLeadership = session?.role === "SUPERADMIN" || session?.role === "ADMIN" || session?.role === "PASTOR";
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-6">
@@ -181,6 +182,20 @@ export default async function TenantDashboardPage({ params }: PageProps) {
                 </Button>
               }
             />
+
+            {isLeadership && (
+              <Link href={`/${slug}/admin/oracoes`}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs gap-1.5 border-amber-500/30 text-amber-500 hover:bg-amber-500/10 cursor-pointer"
+                  title="Painel de Controle e Resposta aos Pedidos de Oração"
+                >
+                  <HeartHandshake className="w-3.5 h-3.5" />
+                  <span>Painel de Orações</span>
+                </Button>
+              </Link>
+            )}
 
             <InviteFriendDialog
               churchName={tenant.name}
@@ -326,16 +341,29 @@ export default async function TenantDashboardPage({ params }: PageProps) {
                     </Button>
                   }
                 />
-                <Link href={`/${slug}/devocional`} className="flex-1">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="w-full text-xs font-bold gap-1.5 shadow-md cursor-pointer"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Check-in</span>
-                  </Button>
-                </Link>
+                {isLeadership ? (
+                  <Link href={`/${slug}/admin/oracoes`} className="flex-1">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="w-full text-xs font-bold gap-1.5 border border-amber-500/30 text-amber-500 hover:bg-amber-500/10 cursor-pointer"
+                    >
+                      <HeartHandshake className="w-3.5 h-3.5" />
+                      <span>Gerenciar</span>
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link href={`/${slug}/devocional`} className="flex-1">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full text-xs font-bold gap-1.5 shadow-md cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Check-in</span>
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>

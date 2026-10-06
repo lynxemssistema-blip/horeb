@@ -140,18 +140,29 @@ export function AppHeader({
             </button>
           )}
 
-          {/* Acesso Rápido ao Gabinete Pastoral para Pastores e Administradores */}
+          {/* Acesso Rápido a Pedidos de Oração e Gabinete Pastoral para Pastores e Administradores */}
           {(userRole === "PASTOR" || userRole === "ADMIN" || userRole === "SUPERADMIN") && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsCabinetOpen(true)}
-              className="h-8 px-2 sm:px-2.5 rounded-full text-xs font-bold gap-1 border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 cursor-pointer"
-              title="Abrir Gabinete Pastoral (Status Ao Vivo, Fila e Agenda)"
-            >
-              <HeartHandshake className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Gabinete Pastoral</span>
-            </Button>
+            <>
+              <Link
+                href={`/${slug}/admin/oracoes`}
+                aria-label="Pedidos de Oração"
+                className="h-8 px-2 sm:px-2.5 rounded-full text-xs font-bold gap-1 border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer inline-flex items-center"
+                title="Painel de Gestão e Resposta aos Pedidos de Oração"
+              >
+                <HeartHandshake className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Pedidos de Oração</span>
+              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsCabinetOpen(true)}
+                className="h-8 px-2 sm:px-2.5 rounded-full text-xs font-bold gap-1 border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 cursor-pointer"
+                title="Abrir Gabinete Pastoral (Status Ao Vivo, Fila e Agenda)"
+              >
+                <HeartHandshake className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Gabinete Pastoral</span>
+              </Button>
+            </>
           )}
 
 

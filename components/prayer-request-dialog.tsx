@@ -26,6 +26,8 @@ export function PrayerRequestDialog({
 }: PrayerRequestDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [content, setContent] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,6 +44,8 @@ export function PrayerRequestDialog({
       const res = await submitPrayerRequest({
         tenantSlug,
         authorName: isAnonymous ? undefined : name,
+        authorEmail: isAnonymous ? undefined : email,
+        authorPhone: isAnonymous ? undefined : phone,
         content,
         isAnonymous,
       });
@@ -52,6 +56,8 @@ export function PrayerRequestDialog({
         });
         setContent("");
         setName("");
+        setEmail("");
+        setPhone("");
         setIsAnonymous(false);
         setOpen(false);
       } else {
@@ -112,8 +118,37 @@ export function PrayerRequestDialog({
               onChange={(e) => setIsAnonymous(e.target.checked)}
               className="rounded border-border accent-primary w-4 h-4"
             />
-            <span>Enviar como anônimo (não exibir meu nome)</span>
+            <span>Enviar como anônimo (não exibir meu nome nem contato)</span>
           </label>
+
+          {!isAnonymous && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">
+                  Seu E-mail (Receber resposta pastoral)
+                </label>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu.email@exemplo.com"
+                  className="text-base sm:text-sm h-10 bg-background border-border rounded-xl"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">
+                  WhatsApp (Opcional)
+                </label>
+                <Input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="(11) 98765-4321"
+                  className="text-base sm:text-sm h-10 bg-background border-border rounded-xl"
+                />
+              </div>
+            </div>
+          )}
 
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground">

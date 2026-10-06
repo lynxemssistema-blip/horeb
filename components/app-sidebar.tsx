@@ -173,6 +173,27 @@ export function AppSidebar({
     } as any);
   }
 
+  // Painel de Pedidos de Oração para ADMIN, PASTOR e SUPERADMIN em qualquer congregação
+  const isLeadership =
+    currentUser?.role === "SUPERADMIN" ||
+    currentUser?.role === "ADMIN" ||
+    currentUser?.role === "PASTOR";
+
+  if (isLeadership) {
+    const prayerHref = `/${slug}/admin/oracoes`;
+    if (
+      !filteredNavigation.some((item) => item.href === prayerHref) &&
+      (!accessRules || accessRules.allowedMenus.includes("ALL") || accessRules.allowedMenus.some((allowed) => prayerHref.endsWith(allowed)))
+    ) {
+      filteredNavigation.splice(2, 0, {
+        name: "Pedidos de Oração",
+        href: prayerHref,
+        icon: HeartHandshake,
+        highlightBadge: "Pastoral",
+      } as any);
+    }
+  }
+
   return (
     <aside className="hidden md:flex flex-col w-64 lg:w-72 border-r border-border bg-card/60 backdrop-blur-md min-h-screen sticky top-0 shrink-0">
       {/* Brand Header */}

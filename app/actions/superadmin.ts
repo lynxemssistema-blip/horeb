@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { mailTransporter, testSmtpConnection } from "@/lib/mail";
+import { mailTransporter, testSmtpConnection, getMailSender } from "@/lib/mail";
 import { fetchInboxEmails, testImapConnection } from "@/lib/imap";
 import { revalidatePath } from "next/cache";
 
@@ -262,9 +262,12 @@ export async function sendDirectEmail({
   htmlContent: string;
 }) {
   try {
+    const cleanTo = to.trim().toLowerCase();
+    const sender = getMailSender("Horeb Suporte & Gestão");
     const res = await mailTransporter.sendMail({
-      from: `"Horeb Suporte & Gestão" <suporte@lynxems.com.br>`,
-      to,
+      from: sender.from,
+      envelope: sender.envelope(cleanTo),
+      to: cleanTo,
       subject,
       html: htmlContent,
     });
