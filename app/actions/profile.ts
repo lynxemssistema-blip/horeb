@@ -65,6 +65,8 @@ export async function getUserProfile() {
         title: user.pastoralTitle,
         bio: user.pastoralBio,
         isEmailVerified: user.isEmailVerified,
+        themePreference: user.themePreference || "system",
+        themePalette: user.themePalette || "default",
         createdAt: user.createdAt,
         tenant: user.tenant,
         churchAccesses: user.churchAccesses,
@@ -258,5 +260,28 @@ export async function updateUserPassword(data: {
   } catch (error: any) {
     console.error("Erro ao alterar senha:", error);
     return { success: false, error: error.message || "Erro ao processar alteração de senha." };
+  }
+}
+
+// 5. Salvar preferência de tema e paleta do usuário
+export async function updateUserTheme(themePreference: string, themePalette: string) {
+  try {
+    const session = await getSession();
+    if (!session?.userId) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
+
+    await prisma.user.update({
+      where: { id: session.userId },
+      data: {
+        themePreference,
+        themePalette,
+      },
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Erro ao salvar tema do usuário:", error);
+    return { success: false, error: error.message };
   }
 }

@@ -26,7 +26,15 @@ import {
   Calendar,
   Layers,
   FileText,
+  Palette,
+  Sun,
+  Moon,
+  Laptop,
+  MoonStar,
+  Coffee,
+  Waves,
 } from "lucide-react";
+import { useTheme, THEME_PRESETS } from "@/components/theme-provider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -95,6 +103,7 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
   const [user, setUser] = useState(initialUser);
   const [activeTab, setActiveTab] = useState("data");
   const [isPending, startTransition] = useTransition();
+  const { mode, palette, activePresetId, applyPreset, setTheme, resolvedTheme } = useTheme();
 
   // Estados dos Dados Pessoais
   const [name, setName] = useState(initialUser?.name || "");
@@ -342,7 +351,7 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
 
       {/* Tabs de Configuração do Painel do Usuário */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-2 sm:grid-cols-4 h-12 rounded-2xl bg-zinc-900/90 border border-white/[0.08] p-1">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-5 h-auto sm:h-12 rounded-2xl bg-zinc-900/90 border border-white/[0.08] p-1 gap-1">
           <TabsTrigger
             value="data"
             className="rounded-xl text-xs font-bold data-[state=active]:bg-amber-500 data-[state=active]:text-black transition-all gap-1.5 cursor-pointer"
@@ -365,6 +374,14 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
           >
             <Camera className="w-3.5 h-3.5" />
             <span>Foto de Perfil</span>
+          </TabsTrigger>
+
+          <TabsTrigger
+            value="theme"
+            className="rounded-xl text-xs font-bold data-[state=active]:bg-amber-500 data-[state=active]:text-black transition-all gap-1.5 cursor-pointer"
+          >
+            <Palette className="w-3.5 h-3.5" />
+            <span>Aparência</span>
           </TabsTrigger>
 
           <TabsTrigger
@@ -820,6 +837,218 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ========================================================================= */}
+        {/* ABA 5: APARÊNCIA & TEMA DO APLICATIVO                                     */}
+        {/* ========================================================================= */}
+        <TabsContent value="theme" className="space-y-6">
+          <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] shadow-2xl">
+            <CardHeader className="pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-lg font-black text-white flex items-center gap-2">
+                    <Palette className="w-5 h-5 text-amber-400" />
+                    <span>Aparência & Tema de Cores</span>
+                  </CardTitle>
+                  <CardDescription className="text-xs text-zinc-400">
+                    Personalize o modo e a cor de fundo do aplicativo de acordo com a sua preferência. A configuração é salva na sua conta e aplicada em qualquer dispositivo.
+                  </CardDescription>
+                </div>
+
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs font-bold text-zinc-300 w-fit">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>
+                    Ativo:{" "}
+                    <strong className="text-white">
+                      {THEME_PRESETS.find((p) => p.id === activePresetId)?.name || "Padrão"}
+                    </strong>
+                  </span>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              {/* 1. SELEÇÃO DE MODO RÁPIDO */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">
+                  Modo de Iluminação Principal
+                </label>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTheme("system", "default");
+                      toast.success("Modo Sistema ativado! Seguirá o padrão do seu aparelho.");
+                    }}
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                      mode === "system"
+                        ? "bg-amber-500/10 border-amber-500/50 shadow-lg shadow-amber-500/10"
+                        : "bg-zinc-900/40 border-white/[0.08] hover:border-white/20"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center">
+                        <Laptop className="w-5 h-5" />
+                      </div>
+                      {mode === "system" && (
+                        <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-black uppercase">
+                          Ativo
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Automático (Sistema)</h4>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        Altera entre Claro e Escuro conforme a configuração do seu sistema.
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTheme("light", palette === "cream" ? "cream" : "default");
+                      toast.success("Modo Claro ativado!");
+                    }}
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                      mode === "light"
+                        ? "bg-amber-500/10 border-amber-500/50 shadow-lg shadow-amber-500/10"
+                        : "bg-zinc-900/40 border-white/[0.08] hover:border-white/20"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                        <Sun className="w-5 h-5" />
+                      </div>
+                      {mode === "light" && (
+                        <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-black uppercase">
+                          Ativo
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Modo Claro</h4>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        Fundo claro iluminado com textos escuros para leitura durante o dia.
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTheme("dark", palette === "cream" ? "default" : palette);
+                      toast.success("Modo Escuro ativado!");
+                    }}
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                      mode === "dark"
+                        ? "bg-amber-500/10 border-amber-500/50 shadow-lg shadow-amber-500/10"
+                        : "bg-zinc-900/40 border-white/[0.08] hover:border-white/20"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                        <Moon className="w-5 h-5" />
+                      </div>
+                      {mode === "dark" && (
+                        <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-black uppercase">
+                          Ativo
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Modo Escuro</h4>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        Tons escuros elegantes que descansam a visão e economizam bateria.
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. PALETAS PRÉ-DEFINIDAS DE COR DE FUNDO */}
+              <div className="space-y-3 pt-3 border-t border-white/[0.06]">
+                <div>
+                  <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">
+                    Paletas Pré-definidas de Superfície & Fundo
+                  </label>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Selecione uma tonalidade de fundo com harmonia calibrada para o aplicativo:
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                  {THEME_PRESETS.map((preset) => {
+                    const isCurrent = activePresetId === preset.id;
+
+                    return (
+                      <div
+                        key={preset.id}
+                        onClick={() => {
+                          applyPreset(preset.id);
+                          toast.success(`Tema "${preset.name}" ativado com sucesso!`);
+                        }}
+                        className={`p-4 rounded-2xl border transition-all cursor-pointer relative group flex flex-col justify-between gap-3 ${
+                          isCurrent
+                            ? "border-amber-500 bg-amber-500/[0.06] shadow-xl shadow-amber-500/10 ring-1 ring-amber-500/30"
+                            : "bg-zinc-900/30 border-white/[0.08] hover:border-white/25 hover:bg-zinc-900/60"
+                        }`}
+                      >
+                        {/* Header do Card com Prévia de Cores */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {/* Prévia da paleta */}
+                            <div
+                              className="w-7 h-7 rounded-xl border border-white/20 shadow-md flex items-center justify-center shrink-0"
+                              style={{ background: preset.bgPreview }}
+                            >
+                              <div
+                                className="w-2.5 h-2.5 rounded-full"
+                                style={{ backgroundColor: preset.textPreview }}
+                              />
+                            </div>
+                            <span className="font-bold text-sm text-white">{preset.name}</span>
+                          </div>
+
+                          {preset.badge && (
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-white/[0.06] text-zinc-300 border border-white/10">
+                              {preset.badge}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Descrição */}
+                        <p className="text-xs text-zinc-400 leading-relaxed min-h-[32px]">
+                          {preset.description}
+                        </p>
+
+                        {/* Botão de Status / Ação */}
+                        <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500">
+                            {preset.category === "system" ? "Adaptativo" : preset.category === "light" ? "Modo Claro" : "Modo Escuro"}
+                          </span>
+
+                          {isCurrent ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-black text-amber-400">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Em Uso</span>
+                            </span>
+                          ) : (
+                            <span className="text-xs font-semibold text-zinc-400 group-hover:text-white transition-colors">
+                              Usar Este &rarr;
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
       </Tabs>
     </div>
   );

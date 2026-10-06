@@ -7,6 +7,7 @@ import { Church, Bell, ArrowLeftRight, User, HelpCircle, LogOut, Crown, ShieldCh
 import { Button } from "@/components/ui/button";
 import { HelpGuideDialog } from "@/components/help-guide-dialog";
 import { PastoralCabinetModal } from "@/components/pastoral-cabinet-modal";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Dialog,
   DialogContent,
@@ -202,6 +203,9 @@ export function AppHeader({
               </span>
             </Link>
           )}
+
+          {/* Seletor de Tema do Usuário */}
+          <ThemeToggle />
 
           {/* Guia & Manual */}
           <HelpGuideDialog

@@ -65,6 +65,8 @@ model User {
   isEmailVerified  Boolean     @default(false)
   verificationCode String?
   codeExpiresAt    DateTime?
+  themePreference  String      @default("system") // system, light, dark
+  themePalette     String      @default("default") // default, oled, navy, sepia, cream
 
   tenantId         String
   tenant           Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)

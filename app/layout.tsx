@@ -24,6 +24,7 @@ export const viewport: Viewport = {
 import { Toaster } from "@/components/ui/sonner";
 import { getSession } from "@/lib/session";
 import { RoleImpersonator } from "@/components/role-impersonator";
+import { ThemeProvider, ThemeScript } from "@/components/theme-provider";
 
 export async function generateMetadata(): Promise<Metadata> {
   const session = await getSession();
@@ -57,15 +58,20 @@ export default async function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-[100dvh] flex flex-col bg-[#070709] text-zinc-100 overflow-x-hidden">
-        {children}
-        <Toaster position="top-center" richColors closeButton />
-        {(session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN") && (
-          <RoleImpersonatorWrapper session={session} />
-        )}
+      <head>
+        <ThemeScript />
+      </head>
+      <body className="min-h-[100dvh] flex flex-col bg-background text-foreground transition-colors duration-200 overflow-x-hidden">
+        <ThemeProvider>
+          {children}
+          <Toaster position="top-center" richColors closeButton />
+          {(session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN") && (
+            <RoleImpersonatorWrapper session={session} />
+          )}
+        </ThemeProvider>
       </body>
     </html>
   );
