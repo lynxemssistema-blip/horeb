@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { getUserAccessRules } from "@/app/actions/permissions";
+import { MemberQuickBadgeModal } from "@/components/member-quick-badge-modal";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -151,7 +152,35 @@ export default async function TenantDashboardPage({ params }: PageProps) {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {session && (
+                <MemberQuickBadgeModal
+                  user={{
+                    id: session.userId,
+                    name: session.name,
+                    email: session.email,
+                    avatarUrl: session.avatarUrl,
+                    role: session.role,
+                  }}
+                  tenant={{
+                    name: tenant.name,
+                    slug: tenant.slug,
+                    logoUrl: tenant.logoUrl,
+                    primaryColor: tenant.primaryColor,
+                  }}
+                  triggerButton={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full sm:w-auto font-bold border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 shadow-sm cursor-pointer gap-1.5"
+                    >
+                      <QrCode className="w-4 h-4 text-amber-400" />
+                      <span>Meu Crachá (Portaria)</span>
+                    </Button>
+                  }
+                />
+              )}
+
               <Link href={`/${slug}/videos`}>
                 <Button
                   variant="default"

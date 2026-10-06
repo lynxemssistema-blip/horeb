@@ -55,6 +55,8 @@ model Tenant {
   discipleshipTracks   DiscipleshipTrack[]
   assemblies           Assembly[]
   assets               ChurchAsset[]
+  worshipServices      WorshipService[]
+  serviceAttendances   ServiceAttendance[]
 
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -100,6 +102,7 @@ model User {
   createdOfficialDocuments     OfficialDocument[]    @relation("CreatedOfficialDocuments")
   discipleshipProgress         MemberDiscipleshipProgress[]
   assemblyVotes                AssemblyVote[]
+  serviceAttendances           ServiceAttendance[]
 
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -671,5 +674,45 @@ model ChurchAsset {
 
   @@index([tenantId, category])
 }
+
+// ==========================================
+// 5. CULTOS & PORTEIRO DIGITAL (CHECK-IN)
+// ==========================================
+model WorshipService {
+  id          String   @id @default(cuid())
+  title       String   // ex: "Culto de Celebração de Domingo", "Culto de Doutrina e Ensino"
+  dayOfWeek   String?  // DOMINGO, SEGUNDA, TERCA, QUARTA, QUINTA, SEXTA, SABADO
+  time        String?  // ex: "18:00", "19:30"
+  description String?
+  isActive    Boolean  @default(true)
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  attendances ServiceAttendance[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model ServiceAttendance {
+  id          String          @id @default(cuid())
+  serviceId   String?
+  service     WorshipService? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  serviceName String          // Nome do culto ou evento no momento do registro
+  serviceDate String          // YYYY-MM-DD
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId    String
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  checkedInBy String?         // Nome do porteiro/recepcionista
+  checkedInAt DateTime        @default(now())
+  notes       String?
+
+  @@unique([tenantId, serviceId, userId, serviceDate])
+  @@index([tenantId, serviceDate])
+  @@index([userId])
+}
+
 
 

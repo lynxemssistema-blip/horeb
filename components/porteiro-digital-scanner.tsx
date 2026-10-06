@@ -1,0 +1,710 @@
+"use client";
+
+import React, { useState, useEffect, useRef, useTransition } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import {
+  Camera,
+  QrCode,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  Users,
+  Search,
+  Plus,
+  Calendar,
+  Clock,
+  Sparkles,
+  Volume2,
+  VolumeX,
+  History,
+  AlertTriangle,
+  HeartHandshake,
+  MessageSquare,
+  ArrowRight,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  validateAndCheckinMember,
+  createWorshipService,
+  getMemberAbsenceRadar,
+} from "@/app/actions/worship-checkin";
+
+interface PorteiroDigitalScannerProps {
+  slug: string;
+  initialData: {
+    tenant: any;
+    services: any[];
+    todayAttendances: any[];
+    totalToday: number;
+    totalEligibleMembers: number;
+    todayYMD: string;
+    currentUser: {
+      id: string;
+      name: string;
+      role: string;
+    };
+  };
+}
+
+export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalScannerProps) {
+  const [services, setServices] = useState(initialData.services);
+  const [selectedServiceId, setSelectedServiceId] = useState<string>(
+    initialData.services[0]?.id || ""
+  );
+  const [attendances, setAttendances] = useState<any[]>(initialData.todayAttendances);
+  const [totalCount, setTotalCount] = useState(initialData.totalToday);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [isPending, startTransition] = useTransition();
+
+  // Estados do Scanner e Entrada Manual
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [manualCodeInput, setManualCodeInput] = useState("");
+  const [lastCheckinResult, setLastCheckinResult] = useState<{
+    member: any;
+    alreadyCheckedIn: boolean;
+    checkinTime: Date | string;
+    totalVisits?: number;
+    message: string;
+  } | null>(null);
+
+  // Radar de Ausência
+  const [absenceList, setAbsenceList] = useState<any[]>([]);
+  const [loadingRadar, setLoadingRadar] = useState(false);
+
+  // Dialog Novo Culto
+  const [isNewServiceOpen, setIsNewServiceOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDayOfWeek, setNewDayOfWeek] = useState("DOMINGO");
+  const [newTime, setNewTime] = useState("19:00");
+  const [newDescription, setNewDescription] = useState("");
+
+  const scannerRef = useRef<any>(null);
+  const manualInputRef = useRef<HTMLInputElement>(null);
+
+  // Tocar Som de Boas-Vindas (Web Audio API nativo sem precisar de MP3 externo)
+  const playSound = (type: "SUCCESS" | "WARNING") => {
+    if (!soundEnabled || typeof window === "undefined") return;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+
+      if (type === "SUCCESS") {
+        // Acorde alegre de boas-vindas: C5 (523Hz), E5 (659Hz), G5 (784Hz)
+        const now = ctx.currentTime;
+        [523.25, 659.25, 783.99].forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.12, now + i * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + i * 0.08);
+          osc.stop(now + i * 0.08 + 0.35);
+        });
+      } else {
+        // Tom duplo de alerta suave
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.value = 440;
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+    } catch {
+      // AudioContext não permitido antes de interação do usuário
+    }
+  };
+
+  // Inicializar / Finalizar Scanner de Câmera
+  useEffect(() => {
+    let html5QrCode: any = null;
+
+    if (isCameraActive) {
+      import("html5-qrcode")
+        .then(({ Html5Qrcode }) => {
+          html5QrCode = new Html5Qrcode("reader-container");
+          scannerRef.current = html5QrCode;
+
+          html5QrCode
+            .start(
+              { facingMode: "environment" },
+              {
+                fps: 10,
+                qrbox: { width: 240, height: 240 },
+              },
+              (decodedText: string) => {
+                handleProcessQrCode(decodedText);
+              },
+              () => {
+                // Ignore erros de frame vazio
+              }
+            )
+            .catch((err: any) => {
+              console.error("Erro ao iniciar câmera:", err);
+              toast.error("Permissão de câmera negada ou dispositivo sem suporte.");
+              setIsCameraActive(false);
+            });
+        })
+        .catch(() => {
+          toast.error("Não foi possível carregar o leitor de QR Code.");
+        });
+    }
+
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current
+          .stop()
+          .then(() => scannerRef.current?.clear())
+          .catch(() => {});
+      }
+    };
+  }, [isCameraActive]);
+
+  // Processar Leitura do QR Code ou Código Manual
+  const handleProcessQrCode = (code: string) => {
+    const activeService = services.find((s) => s.id === selectedServiceId);
+
+    startTransition(async () => {
+      const res = await validateAndCheckinMember(
+        slug,
+        code,
+        selectedServiceId,
+        activeService?.title || "Culto de Celebração"
+      );
+
+      if (res.success && res.member) {
+        if (res.alreadyCheckedIn) {
+          playSound("WARNING");
+          toast.info(res.message);
+        } else {
+          playSound("SUCCESS");
+          toast.success(res.message);
+          setTotalCount((prev) => prev + 1);
+          if (res.attendance) {
+            setAttendances((prev) => [
+              {
+                id: res.attendance.id,
+                serviceName: res.attendance.serviceName,
+                checkedInAt: res.checkinTime,
+                user: res.member,
+              },
+              ...prev,
+            ]);
+          }
+        }
+
+        setLastCheckinResult({
+          member: res.member,
+          alreadyCheckedIn: Boolean(res.alreadyCheckedIn),
+          checkinTime: res.checkinTime,
+          totalVisits: res.totalVisits,
+          message: res.message,
+        });
+
+        // Limpar após 3.5 segundos para o próximo membro
+        setTimeout(() => {
+          setLastCheckinResult(null);
+        }, 3500);
+      } else {
+        toast.error(res.error || "Código de membro não reconhecido.");
+      }
+    });
+  };
+
+  // Carregar Radar de Ausência
+  const loadAbsenceRadar = async () => {
+    setLoadingRadar(true);
+    try {
+      const res = await getMemberAbsenceRadar(slug);
+      if (res.success && res.absenceList) {
+        setAbsenceList(res.absenceList);
+      }
+    } finally {
+      setLoadingRadar(false);
+    }
+  };
+
+  // Handler: Criar Novo Culto
+  const handleCreateService = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim()) return;
+
+    startTransition(async () => {
+      const res = await createWorshipService(slug, {
+        title: newTitle,
+        dayOfWeek: newDayOfWeek,
+        time: newTime,
+        description: newDescription,
+      });
+
+      if (res.success && res.service) {
+        toast.success(res.message);
+        setServices((prev) => [...prev, res.service]);
+        setSelectedServiceId(res.service.id);
+        setIsNewServiceOpen(false);
+        setNewTitle("");
+      } else {
+        toast.error(res.error || "Falha ao criar culto.");
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header da Portaria Digital */}
+      <div className="relative rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-950 border border-white/[0.08] p-6 sm:p-8 shadow-2xl overflow-hidden">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
+          <div className="text-center sm:text-left space-y-1.5">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-black tracking-wide">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Recepção & Portaria Digital</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              Porteiro Digital • Controle de Entrada no Culto
+            </h1>
+            <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl">
+              Aponte a câmera do celular para o crachá do membro, confirme a presença e dê as boas-vindas instantâneas.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-white/10 text-zinc-300 border border-white/10 cursor-pointer"
+              title={soundEnabled ? "Desativar sinal sonoro" : "Ativar sinal sonoro"}
+            >
+              {soundEnabled ? <Volume2 className="w-4 h-4 text-emerald-400" /> : <VolumeX className="w-4 h-4 text-zinc-500" />}
+            </button>
+
+            <Button
+              onClick={() => setIsNewServiceOpen(true)}
+              variant="outline"
+              className="border-white/10 bg-white/[0.04] hover:bg-white/10 text-white font-bold text-xs h-10 px-4 rounded-xl gap-2 cursor-pointer"
+            >
+              <Plus className="w-4 h-4 text-emerald-400" />
+              <span>Novo Culto</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Faixa de Indicadores de Hoje */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t border-white/[0.08]">
+          <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/[0.06]">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase">Presentes Hoje</span>
+            <p className="text-3xl font-black text-emerald-400 mt-0.5">{totalCount}</p>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/[0.06]">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase">Membros Cadastrados</span>
+            <p className="text-3xl font-black text-white mt-0.5">{initialData.totalEligibleMembers}</p>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/[0.06]">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase">Taxa de Presença</span>
+            <p className="text-3xl font-black text-amber-400 mt-0.5">
+              {initialData.totalEligibleMembers > 0
+                ? Math.round((totalCount / initialData.totalEligibleMembers) * 100)
+                : 0}
+              %
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/[0.06]">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase">Porteiro / Operador</span>
+            <p className="text-sm font-bold text-zinc-200 mt-2 truncate">
+              {initialData.currentUser.name}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Painel do Scanner e Recepção */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Coluna Esquerda: Câmera / Scanner (7 Colunas) */}
+        <div className="lg:col-span-7 space-y-4">
+          <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] shadow-2xl overflow-hidden">
+            <CardHeader className="pb-3 border-b border-white/[0.06] space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <CardTitle className="text-base font-black text-white flex items-center gap-2">
+                  <Camera className="w-5 h-5 text-emerald-400" />
+                  <span>Leitor de Crachá da Portaria</span>
+                </CardTitle>
+
+                {/* Seletor do Culto em Andamento */}
+                <select
+                  value={selectedServiceId}
+                  onChange={(e) => setSelectedServiceId(e.target.value)}
+                  className="h-9 px-3 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white font-bold max-w-xs truncate"
+                >
+                  {services.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.title} ({s.time || "Culto"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-6 space-y-4">
+              {/* Card de Boas-Vindas Imediato (Green Flash) */}
+              {lastCheckinResult ? (
+                <div
+                  className={`p-6 rounded-3xl border text-center transition-all animate-in fade-in zoom-in-95 space-y-3 ${
+                    lastCheckinResult.alreadyCheckedIn
+                      ? "bg-amber-500/15 border-amber-400 text-amber-300"
+                      : "bg-emerald-500/15 border-emerald-400 text-emerald-300 shadow-2xl shadow-emerald-500/20"
+                  }`}
+                >
+                  <Avatar className="h-20 w-20 mx-auto ring-4 ring-white/20 shadow-xl bg-black">
+                    {lastCheckinResult.member.avatarUrl && (
+                      <AvatarImage
+                        src={lastCheckinResult.member.avatarUrl}
+                        alt={lastCheckinResult.member.name}
+                      />
+                    )}
+                    <AvatarFallback className="text-2xl font-black bg-emerald-500 text-black">
+                      {lastCheckinResult.member.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div>
+                    <h3 className="text-xl font-black text-white">
+                      {lastCheckinResult.member.name}
+                    </h3>
+                    <p className="text-xs font-bold text-zinc-300">
+                      {lastCheckinResult.member.pastoralTitle || lastCheckinResult.member.role}
+                    </p>
+                  </div>
+
+                  <div className="pt-2">
+                    <span
+                      className={`inline-block px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
+                        lastCheckinResult.alreadyCheckedIn
+                          ? "bg-amber-500 text-black"
+                          : "bg-emerald-500 text-black shadow-lg"
+                      }`}
+                    >
+                      {lastCheckinResult.alreadyCheckedIn
+                        ? "Presença Já Confirmada"
+                        : "✓ Seja Muito Bem-Vindo(a)!"}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-400">
+                    {lastCheckinResult.totalVisits
+                      ? `Esta é a ${lastCheckinResult.totalVisits}ª presença registrada no ano.`
+                      : "Presença registrada com sucesso."}
+                  </p>
+                </div>
+              ) : (
+                /* Janela da Câmera */
+                <div className="space-y-4">
+                  {isCameraActive ? (
+                    <div className="relative rounded-2xl overflow-hidden bg-black aspect-video flex items-center justify-center border-2 border-emerald-500/40 shadow-inner">
+                      <div id="reader-container" className="w-full h-full" />
+                      <div className="absolute bottom-3 left-0 right-0 text-center pointer-events-none">
+                        <span className="px-3 py-1 rounded-full bg-black/70 text-[11px] font-mono text-emerald-400 border border-emerald-500/30">
+                          Aponte o crachá do membro para o quadro
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-10 rounded-2xl bg-zinc-900/50 border border-dashed border-white/15 text-center space-y-3">
+                      <QrCode className="w-12 h-12 mx-auto text-zinc-500" />
+                      <h4 className="text-sm font-bold text-white">
+                        Câmera da Portaria em Espera
+                      </h4>
+                      <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                        Ative a câmera para ler automaticamente os crachás digitais com QR Code dos membros na entrada.
+                      </p>
+                      <Button
+                        onClick={() => setIsCameraActive(true)}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-10 px-5 rounded-xl gap-2 cursor-pointer shadow-lg shadow-emerald-600/20"
+                      >
+                        <Camera className="w-4 h-4" />
+                        <span>Ligar Câmera da Portaria</span>
+                      </Button>
+                    </div>
+                  )}
+
+                  {isCameraActive && (
+                    <Button
+                      onClick={() => setIsCameraActive(false)}
+                      variant="outline"
+                      className="w-full h-9 rounded-xl text-xs font-bold border-white/10 hover:bg-white/10 text-zinc-300"
+                    >
+                      Pausar Câmera
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Entrada Manual ou Leitor de Código USB */}
+              <div className="pt-3 border-t border-white/[0.06] space-y-2">
+                <Label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">
+                  Ou digite o nome, e-mail ou código do crachá
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    ref={manualInputRef}
+                    type="text"
+                    placeholder="Ex: MEM-A1B2C3 ou nome do irmão..."
+                    value={manualCodeInput}
+                    onChange={(e) => setManualCodeInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && manualCodeInput.trim()) {
+                        handleProcessQrCode(manualCodeInput.trim());
+                        setManualCodeInput("");
+                      }
+                    }}
+                    className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white"
+                  />
+                  <Button
+                    disabled={isPending || !manualCodeInput.trim()}
+                    onClick={() => {
+                      handleProcessQrCode(manualCodeInput.trim());
+                      setManualCodeInput("");
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 rounded-xl cursor-pointer shrink-0"
+                  >
+                    <span>Confirmar</span>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Coluna Direita: Abas de Lista de Presentes e Radar Pastoral (5 Colunas) */}
+        <div className="lg:col-span-5 space-y-4">
+          <Tabs defaultValue="today" className="space-y-4">
+            <TabsList className="grid grid-cols-2 h-10 rounded-2xl bg-zinc-900/90 border border-white/[0.08] p-1 gap-1">
+              <TabsTrigger
+                value="today"
+                className="rounded-xl text-xs font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all gap-1.5 cursor-pointer"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Presentes ({attendances.length})</span>
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="radar"
+                onClick={loadAbsenceRadar}
+                className="rounded-xl text-xs font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all gap-1.5 cursor-pointer"
+              >
+                <HeartHandshake className="w-3.5 h-3.5" />
+                <span>Radar de Ausência</span>
+              </TabsTrigger>
+            </TabsList>
+
+            {/* ABA 1: PRESENTES HOJE */}
+            <TabsContent value="today">
+              <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] shadow-2xl overflow-hidden max-h-[560px] flex flex-col">
+                <CardHeader className="pb-3 border-b border-white/[0.06]">
+                  <CardTitle className="text-sm font-bold text-white flex items-center justify-between">
+                    <span>Membros Recepcionados Hoje</span>
+                    <span className="font-mono text-emerald-400 text-xs">
+                      {format(new Date(), "dd/MM/yyyy", { locale: ptBR })}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent className="p-3 overflow-y-auto space-y-2 flex-1">
+                  {attendances.length === 0 ? (
+                    <div className="py-12 text-center text-zinc-500 text-xs">
+                      Nenhum membro registrado ainda neste culto. Ligue a câmera e inicie a recepção.
+                    </div>
+                  ) : (
+                    attendances.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-3 rounded-2xl bg-zinc-900/60 border border-white/[0.06] flex items-center justify-between gap-3 hover:border-emerald-500/30 transition-all"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Avatar className="h-9 w-9 ring-2 ring-emerald-500/20 bg-black shrink-0">
+                            {item.user.avatarUrl && (
+                              <AvatarImage src={item.user.avatarUrl} alt={item.user.name} />
+                            )}
+                            <AvatarFallback className="text-xs font-bold bg-emerald-600 text-white">
+                              {item.user.name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+
+                          <div className="min-w-0">
+                            <h5 className="font-bold text-white text-xs truncate">
+                              {item.user.name}
+                            </h5>
+                            <p className="text-[10px] text-zinc-400 truncate">
+                              {item.user.pastoralTitle || item.user.role}
+                            </p>
+                          </div>
+                        </div>
+
+                        <span className="text-[11px] font-mono font-bold text-emerald-400 shrink-0">
+                          {format(new Date(item.checkedInAt), "HH:mm")}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ABA 2: RADAR DE AUSÊNCIA PASTORAL */}
+            <TabsContent value="radar">
+              <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] shadow-2xl overflow-hidden max-h-[560px] flex flex-col">
+                <CardHeader className="pb-3 border-b border-white/[0.06]">
+                  <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
+                    <HeartHandshake className="w-4 h-4 text-rose-400" />
+                    <span>Cuidado Pastoral • Membros Ausentes</span>
+                  </CardTitle>
+                  <CardDescription className="text-[11px] text-zinc-400">
+                    Ovelhas que não registraram presença nos últimos cultos.
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="p-3 overflow-y-auto space-y-2 flex-1">
+                  {loadingRadar ? (
+                    <div className="py-12 text-center text-xs text-zinc-400">
+                      Calculando frequência dos membros...
+                    </div>
+                  ) : absenceList.length === 0 ? (
+                    <div className="py-12 text-center text-xs text-zinc-500">
+                      Clique na aba para atualizar o radar de ausência.
+                    </div>
+                  ) : (
+                    absenceList.slice(0, 30).map((m) => {
+                      const isHighAlert = m.daysAbsent >= 21;
+
+                      return (
+                        <div
+                          key={m.id}
+                          className="p-3 rounded-2xl bg-zinc-900/60 border border-white/[0.06] flex items-center justify-between gap-3"
+                        >
+                          <div className="min-w-0">
+                            <h5 className="font-bold text-white text-xs truncate">{m.name}</h5>
+                            <p className="text-[10px] text-zinc-400">
+                              {m.lastSeenDate
+                                ? `Visto por último: ${format(new Date(m.lastSeenDate), "dd/MM/yyyy", { locale: ptBR })}`
+                                : "Nenhum check-in recente"}
+                            </p>
+                          </div>
+
+                          <span
+                            className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 ${
+                              isHighAlert
+                                ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                                : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                            }`}
+                          >
+                            {m.daysAbsent >= 999 ? "Sem registro" : `${m.daysAbsent} dias ausente`}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+
+      {/* MODAL: NOVO CULTO */}
+      <Dialog open={isNewServiceOpen} onOpenChange={setIsNewServiceOpen}>
+        <DialogContent className="max-w-md p-6 bg-zinc-950/95 border-white/10 rounded-3xl">
+          <DialogHeader className="pb-3 border-b border-white/[0.08]">
+            <DialogTitle className="text-base font-black text-white flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-emerald-400" />
+              <span>Cadastrar Horário de Culto</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-zinc-400">
+              Configure os cultos semanais para controle de entrada pela portaria.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateService} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-zinc-300">Título do Culto</Label>
+              <Input
+                type="text"
+                placeholder="Ex: Culto da Vitória, Culto de Jovens"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                required
+                className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-zinc-300">Dia da Semana</Label>
+                <select
+                  value={newDayOfWeek}
+                  onChange={(e) => setNewDayOfWeek(e.target.value)}
+                  className="w-full h-10 px-3 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white"
+                >
+                  <option value="DOMINGO">Domingo</option>
+                  <option value="SEGUNDA">Segunda-feira</option>
+                  <option value="TERCA">Terça-feira</option>
+                  <option value="QUARTA">Quarta-feira</option>
+                  <option value="QUINTA">Quinta-feira</option>
+                  <option value="SEXTA">Sexta-feira</option>
+                  <option value="SABADO">Sábado</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-zinc-300">Horário</Label>
+                <Input
+                  type="time"
+                  value={newTime}
+                  onChange={(e) => setNewTime(e.target.value)}
+                  required
+                  className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white"
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 flex justify-end gap-2 border-t border-white/[0.08]">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsNewServiceOpen(false)}
+                className="text-xs font-bold text-zinc-400"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 rounded-xl cursor-pointer"
+              >
+                {isPending ? "Salvando..." : "Salvar Culto"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

@@ -28,6 +28,7 @@ import {
   GraduationCap,
   Scale,
   Package,
+  QrCode,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -214,6 +215,12 @@ export function AppSidebar({
         href: `/${slug}/admin/patrimonio`,
         icon: Package,
         highlightBadge: "Bens",
+      },
+      {
+        name: "Porteiro Digital (Recepção)",
+        href: `/${slug}/admin/porteiro`,
+        icon: QrCode,
+        highlightBadge: "Portaria",
       },
     ];
 
