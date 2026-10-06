@@ -230,18 +230,18 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
               </div>
 
               {/* Upload de Logo em Base64 */}
-              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 space-y-3">
-                <label className="text-xs font-bold text-zinc-300 flex items-center justify-between">
+              <div className="p-4 rounded-2xl bg-muted/30 border border-border space-y-3">
+                <label className="text-xs font-bold text-foreground flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
+                    <ImageIcon className="w-3.5 h-3.5 text-amber-500" />
                     Logo da Igreja (Gravado Direto no Banco de Dados)
                   </span>
-                  <span className="text-[10px] text-zinc-400 font-mono">PNG / JPG / WEBP (max 2MB)</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">PNG / JPG / WEBP (max 2MB)</span>
                 </label>
 
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                   {/* Preview do Logo */}
-                  <div className="w-20 h-20 rounded-2xl bg-black border border-white/15 flex items-center justify-center overflow-hidden shrink-0 shadow-inner relative group">
+                  <div className="w-20 h-20 rounded-2xl bg-muted/50 border border-border flex items-center justify-center overflow-hidden shrink-0 shadow-inner relative group">
                     {logoUrl ? (
                       <img
                         src={logoUrl}
@@ -249,7 +249,7 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
                         className="w-full h-full object-contain p-1"
                       />
                     ) : (
-                      <Church className="w-8 h-8 text-zinc-600" />
+                      <Church className="w-8 h-8 text-muted-foreground" />
                     )}
                   </div>
 
@@ -266,9 +266,9 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
                     <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
                       <label
                         htmlFor="logo-upload-input"
-                        className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all border border-white/10 cursor-pointer flex items-center gap-1.5"
+                        className="px-3.5 py-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground text-xs font-bold transition-all border border-border cursor-pointer flex items-center gap-1.5"
                       >
-                        <Upload className="w-3.5 h-3.5 text-amber-400" />
+                        <Upload className="w-3.5 h-3.5 text-amber-500" />
                         <span>{logoUrl ? "Trocar Imagem do Logo" : "Fazer Upload do Logo"}</span>
                       </label>
 
@@ -276,14 +276,14 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
                         <button
                           type="button"
                           onClick={handleRemoveLogo}
-                          className="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold transition-all border border-red-500/20 flex items-center gap-1.5 cursor-pointer"
+                          className="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-semibold transition-all border border-red-500/20 flex items-center gap-1.5 cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span>Remover Logo</span>
                         </button>
                       )}
                     </div>
-                    <p className="text-[11px] text-zinc-400">
+                    <p className="text-[11px] text-muted-foreground">
                       O arquivo é convertido e salvo no banco da sua igreja com segurança e alta velocidade. Não depende de links externos.
                     </p>
                   </div>
@@ -292,24 +292,24 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-300">Nome Oficial da Igreja *</label>
+                  <label className="text-xs font-bold text-foreground">Nome Oficial da Igreja *</label>
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Ex: Igreja Matriz Sede"
                     required
-                    className="bg-black/50 border-white/10 text-white rounded-xl h-11"
+                    className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-medium"
                   />
                 </div>
 
                 <div className="space-y-1.5 min-w-0">
-                  <label className="text-xs font-bold text-zinc-300">URL / Slug Permanente</label>
+                  <label className="text-xs font-bold text-foreground">URL / Slug Permanente</label>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 min-w-0">
-                    <span className="text-[11px] font-mono text-zinc-500 shrink-0">horeb.lynxems.com.br/</span>
+                    <span className="text-[11px] font-mono text-muted-foreground shrink-0">horeb.lynxems.com.br/</span>
                     <Input
                       value={tenant.slug}
                       disabled
-                      className="bg-black/30 border-white/5 text-zinc-400 rounded-xl h-11 font-mono text-xs select-all cursor-not-allowed min-w-0 flex-1"
+                      className="bg-muted/40 border border-border text-foreground/80 rounded-xl h-11 font-mono text-xs select-all cursor-not-allowed min-w-0 flex-1"
                     />
                   </div>
                 </div>
@@ -318,8 +318,8 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
               {/* Seletor de Cores White-Label */}
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-                    <Palette className="w-4 h-4 text-amber-400" />
+                  <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Palette className="w-4 h-4 text-amber-500" />
                     <span>Cor Primária White-Label</span>
                   </label>
                   <span className="text-xs font-mono font-bold" style={{ color: primaryColor }}>
@@ -337,8 +337,8 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
                         onClick={() => setPrimaryColor(c.hex)}
                         className={`w-8 h-8 rounded-full ${c.bg} flex items-center justify-center transition-all hover:scale-110 cursor-pointer ${
                           isSelected
-                            ? "ring-2 ring-white scale-110 shadow-lg shadow-white/20"
-                            : "opacity-80 hover:opacity-100 ring-1 ring-white/10"
+                            ? "ring-2 ring-primary scale-110 shadow-lg"
+                            : "opacity-80 hover:opacity-100 ring-1 ring-border"
                         }`}
                         title={c.label}
                       >
@@ -348,7 +348,7 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
                   })}
 
                   <label
-                    className="relative flex items-center justify-center w-8 h-8 rounded-full border border-white/20 bg-zinc-800 hover:bg-zinc-700 cursor-pointer overflow-hidden transition-all hover:scale-110"
+                    className="relative flex items-center justify-center w-8 h-8 rounded-full border border-border bg-muted hover:bg-muted/80 cursor-pointer overflow-hidden transition-all hover:scale-110"
                     title="Escolher Cor Personalizada"
                   >
                     <input
@@ -357,129 +357,129 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
                       onChange={(e) => setPrimaryColor(e.target.value)}
                       className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                     />
-                    <Palette className="w-4 h-4 text-zinc-300" />
+                    <Palette className="w-4 h-4 text-foreground" />
                   </label>
                 </div>
               </div>
             </div>
 
             {/* SEÇÃO 2: DADOS PASTORAIS & LOCALIZAÇÃO */}
-            <div className="space-y-4 pt-4 border-t border-white/10">
+            <div className="space-y-4 pt-4 border-t border-border">
               <div className="flex items-center gap-2 pb-2">
-                <User className="w-4 h-4 text-amber-400" />
-                <h2 className="text-sm font-black uppercase tracking-wider text-white">
+                <User className="w-4 h-4 text-amber-500" />
+                <h2 className="text-sm font-black uppercase tracking-wider text-foreground">
                   2. Liderança Pastoral & Contato
                 </h2>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-300">Pastor Titular / Presidente</label>
+                  <label className="text-xs font-bold text-foreground">Pastor Titular / Presidente</label>
                   <Input
                     value={pastorName}
                     onChange={(e) => setPastorName(e.target.value)}
                     placeholder="Ex: Pr. Carlos Eduardo"
-                    className="bg-black/50 border-white/10 text-white rounded-xl h-11 text-xs"
+                    className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-medium"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-300">Telefone / WhatsApp da Secretaria</label>
+                  <label className="text-xs font-bold text-foreground">Telefone / WhatsApp da Secretaria</label>
                   <Input
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="Ex: (11) 98765-4321"
-                    className="bg-black/50 border-white/10 text-white rounded-xl h-11 text-xs"
+                    className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-medium"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-300">Endereço da Igreja</label>
+                <label className="text-xs font-bold text-foreground">Endereço da Igreja</label>
                 <Input
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="Ex: Av. das Nações, 1500 - Centro"
-                  className="bg-black/50 border-white/10 text-white rounded-xl h-11 text-xs"
+                  className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-300">Cidade</label>
+                  <label className="text-xs font-bold text-foreground">Cidade</label>
                   <Input
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="Ex: São Paulo"
-                    className="bg-black/50 border-white/10 text-white rounded-xl h-11 text-xs"
+                    className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-medium"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-300">Estado (UF)</label>
+                  <label className="text-xs font-bold text-foreground">Estado (UF)</label>
                   <Input
                     value={state}
                     onChange={(e) => setState(e.target.value.toUpperCase())}
                     maxLength={2}
                     placeholder="Ex: SP"
-                    className="bg-black/50 border-white/10 text-white rounded-xl h-11 text-xs uppercase"
+                    className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs uppercase font-medium"
                   />
                 </div>
               </div>
             </div>
 
             {/* SEÇÃO 3: CONFIGURAÇÃO DE DÍZIMOS E OFERTAS PIX */}
-            <div className="space-y-4 pt-4 border-t border-white/10">
+            <div className="space-y-4 pt-4 border-t border-border">
               <div className="flex items-center gap-2 pb-2">
-                <QrCode className="w-4 h-4 text-emerald-400" />
-                <h2 className="text-sm font-black uppercase tracking-wider text-white">
+                <QrCode className="w-4 h-4 text-emerald-500" />
+                <h2 className="text-sm font-black uppercase tracking-wider text-foreground">
                   3. Dízimos & Ofertas PIX Personalizados
                 </h2>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-300">Tipo da Chave PIX</label>
+                  <label className="text-xs font-bold text-foreground">Tipo da Chave PIX</label>
                   <select
                     value={pixKeyType}
                     onChange={(e) => setPixKeyType(e.target.value)}
-                    className="w-full h-11 rounded-xl bg-black/50 border border-white/10 text-xs px-3 text-zinc-200 outline-none"
+                    className="w-full h-11 rounded-xl bg-muted/70 border border-border text-xs px-3 text-foreground font-medium outline-none focus:border-primary focus:bg-background transition-colors"
                   >
-                    <option value="CNPJ">CNPJ</option>
-                    <option value="CPF">CPF</option>
-                    <option value="EMAIL">E-mail</option>
-                    <option value="TELEFONE">Telefone</option>
-                    <option value="ALEATORIA">Chave Aleatória</option>
+                    <option value="CNPJ" className="bg-card text-foreground">CNPJ</option>
+                    <option value="CPF" className="bg-card text-foreground">CPF</option>
+                    <option value="EMAIL" className="bg-card text-foreground">E-mail</option>
+                    <option value="TELEFONE" className="bg-card text-foreground">Telefone</option>
+                    <option value="ALEATORIA" className="bg-card text-foreground">Chave Aleatória</option>
                   </select>
                 </div>
 
                 <div className="sm:col-span-2 space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-300">Chave PIX Oficial da Igreja</label>
+                  <label className="text-xs font-bold text-foreground">Chave PIX Oficial da Igreja</label>
                   <Input
                     value={pixKey}
                     onChange={(e) => setPixKey(e.target.value)}
                     placeholder="Ex: 12.345.678/0001-90 ou financeiro@igreja.com.br"
-                    className="bg-black/50 border-white/10 text-white rounded-xl h-11 text-xs font-mono"
+                    className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-mono font-medium"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-                    <Coins className="w-3.5 h-3.5 text-amber-400" />
+                  <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Coins className="w-3.5 h-3.5 text-amber-500" />
                     <span>Valores Rápidos Sugeridos (Separados por vírgula)</span>
                   </label>
-                  <span className="text-[10px] text-zinc-400 font-mono">Ex: 30,50,100,200,500</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">Ex: 30,50,100,200,500</span>
                 </div>
                 <Input
                   value={pixPresetValues}
                   onChange={(e) => setPixPresetValues(e.target.value)}
                   placeholder="30,50,100,200,500"
-                  className="bg-black/50 border-white/10 text-white rounded-xl h-11 text-xs font-mono"
+                  className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-mono font-medium"
                 />
                 <div className="flex items-center gap-2 pt-1 flex-wrap">
-                  <span className="text-[11px] text-zinc-400">Prévia dos botões de oferta:</span>
+                  <span className="text-[11px] text-muted-foreground">Prévia dos botões de oferta:</span>
                   {pixPresetValues
                     .split(",")
                     .map((v) => v.trim())
@@ -487,7 +487,7 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
                     .map((val) => (
                       <span
                         key={val}
-                        className="px-2.5 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold"
+                        className="px-2.5 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-xs font-bold"
                       >
                         R$ {val}
                       </span>

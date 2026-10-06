@@ -586,19 +586,19 @@ export function ChurchMembersManager({
                 onChange={(e) => setNewEmail(e.target.value)}
                 placeholder="joao@gmail.com"
                 required
-                className="bg-black/50 border-white/10 text-white rounded-xl h-11"
+                className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-medium"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300">Congregação de Destino</label>
+              <label className="text-xs font-bold text-foreground">Congregação de Destino</label>
               <select
                 value={newTenantId}
                 onChange={(e) => setNewTenantId(e.target.value)}
-                className="w-full bg-black/50 border border-white/10 text-white rounded-xl h-11 px-3 text-xs font-medium focus:outline-none"
+                className="w-full bg-muted/70 border border-border text-foreground rounded-xl h-11 px-3 text-xs font-medium focus:outline-none focus:border-primary"
               >
                 {allNetworkChurches.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-zinc-900 text-white">
+                  <option key={c.id} value={c.id} className="bg-card text-foreground">
                     {c.name} {c.isMatriz ? "(Sede Matriz)" : "(Filial)"}
                   </option>
                 ))}
@@ -606,41 +606,41 @@ export function ChurchMembersManager({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300">Nível de Acesso (Perfil) *</label>
+              <label className="text-xs font-bold text-foreground">Nível de Acesso (Perfil) *</label>
               <select
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
-                className="w-full bg-black/50 border border-white/10 text-white rounded-xl h-11 px-3 text-xs font-medium focus:outline-none"
+                className="w-full bg-muted/70 border border-border text-foreground rounded-xl h-11 px-3 text-xs font-medium focus:outline-none focus:border-primary"
               >
-                <option value="ADMIN" className="bg-zinc-900 text-white">
+                <option value="ADMIN" className="bg-card text-foreground">
                   Administrador / Pastor Local (Gestão completa)
                 </option>
-                <option value="PASTOR" className="bg-zinc-900 text-white">
+                <option value="PASTOR" className="bg-card text-foreground">
                   Pastor Auxiliar
                 </option>
-                <option value="LEADER" className="bg-zinc-900 text-white">
+                <option value="LEADER" className="bg-card text-foreground">
                   Líder de Célula / Grupo
                 </option>
-                <option value="FINANCIAL" className="bg-zinc-900 text-white">
+                <option value="FINANCIAL" className="bg-card text-foreground">
                   Tesouraria & Finanças (Acesso aos relatórios PIX)
                 </option>
-                <option value="KIDS" className="bg-zinc-900 text-white">
+                <option value="KIDS" className="bg-card text-foreground">
                   Líder Ministério Infantil (Check-in Kids)
                 </option>
-                <option value="MEMBER" className="bg-zinc-900 text-white">
+                <option value="MEMBER" className="bg-card text-foreground">
                   Membro da Igreja (Acesso padrão)
                 </option>
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300">Senha Inicial (Opcional)</label>
+              <label className="text-xs font-bold text-foreground">Senha Inicial (Opcional)</label>
               <Input
                 type="text"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Deixe em branco para gerar aleatória"
-                className="bg-black/50 border-white/10 text-white rounded-xl h-11 font-mono text-xs"
+                className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 font-mono text-xs"
               />
             </div>
 
@@ -650,9 +650,9 @@ export function ChurchMembersManager({
                 id="sendInviteMailCheck"
                 checked={sendInviteMail}
                 onChange={(e) => setSendInviteMail(e.target.checked)}
-                className="rounded border-white/20 bg-black/50 text-amber-500 focus:ring-amber-500"
+                className="rounded border-border bg-muted/70 text-amber-500 focus:ring-amber-500"
               />
-              <label htmlFor="sendInviteMailCheck" className="text-xs text-zinc-300 cursor-pointer">
+              <label htmlFor="sendInviteMailCheck" className="text-xs text-foreground font-medium cursor-pointer">
                 Enviar e-mail de convite e ativação com código de 6 dígitos
               </label>
             </div>
@@ -708,26 +708,26 @@ export function ChurchMembersManager({
                   className="w-full bg-muted/50 border border-border text-foreground rounded-xl h-11 px-3 text-xs font-medium focus:outline-none"
                 >
                   <option value="MEMBER" className="bg-card text-foreground">Membro da Igreja</option>
-                  <option value="LEADER" className="bg-zinc-900 text-white">Líder de Célula</option>
-                  <option value="KIDS" className="bg-zinc-900 text-white">Ministério Kids</option>
-                  <option value="FINANCIAL" className="bg-zinc-900 text-white">Tesouraria / Finanças</option>
-                  <option value="ADMIN" className="bg-zinc-900 text-white">Administrador Local</option>
+                  <option value="LEADER" className="bg-card text-foreground">Líder de Célula</option>
+                  <option value="KIDS" className="bg-card text-foreground">Ministério Kids</option>
+                  <option value="FINANCIAL" className="bg-card text-foreground">Tesouraria / Finanças</option>
+                  <option value="ADMIN" className="bg-card text-foreground">Administrador Local</option>
                 </select>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300">Nome do Convidado (Opcional)</label>
+              <label className="text-xs font-bold text-foreground">Nome do Convidado (Opcional)</label>
               <Input
                 value={inviteName}
                 onChange={(e) => setInviteName(e.target.value)}
                 placeholder="Ex: Maria Oliveira"
-                className="bg-black/50 border-white/10 text-white rounded-xl h-11"
+                className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-medium"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300">E-mail do Destinatário *</label>
+              <label className="text-xs font-bold text-foreground">E-mail do Destinatário *</label>
               <Input
                 id="invite-email-input"
                 type="email"
@@ -735,16 +735,16 @@ export function ChurchMembersManager({
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="maria@exemplo.com"
                 required
-                className="bg-black/50 border-white/10 text-white rounded-xl h-11"
+                className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-medium"
               />
             </div>
 
             {/* Prévia do Link Gerado */}
-            <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 block">
+            <div className="p-3 rounded-xl bg-muted/60 border border-border space-y-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500 block">
                 Link de Cadastro Direto:
               </span>
-              <p className="font-mono text-[11px] text-zinc-300 break-all select-all">
+              <p className="font-mono text-[11px] text-foreground font-medium break-all select-all">
                 {generatedInviteUrl}
               </p>
               <div className="flex items-center gap-2 pt-1 flex-wrap">

@@ -173,23 +173,23 @@ export function RolePermissionsManager({ initialPermissions }: RolePermissionsMa
 
             <form onSubmit={handleCreateRole} className="space-y-4 mt-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-300">Nome do Perfil *</label>
+                <label className="text-xs font-bold text-foreground">Nome do Perfil *</label>
                 <Input
                   required
                   value={newRoleName}
                   onChange={(e) => setNewRoleName(e.target.value)}
                   placeholder="Ex: Líder de Jovens"
-                  className="bg-black/50 border-white/10 text-white rounded-xl h-10 text-xs"
+                  className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-10 text-xs font-medium"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-300">Descrição (Opcional)</label>
+                <label className="text-xs font-bold text-foreground">Descrição (Opcional)</label>
                 <Input
                   value={newRoleDesc}
                   onChange={(e) => setNewRoleDesc(e.target.value)}
                   placeholder="Ex: Acesso apenas para gerenciar a rede de jovens"
-                  className="bg-black/50 border-white/10 text-white rounded-xl h-10 text-xs"
+                  className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-10 text-xs font-medium"
                 />
               </div>
 

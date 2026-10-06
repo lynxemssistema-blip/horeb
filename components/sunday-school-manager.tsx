@@ -639,76 +639,76 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
       {/* ========================================================================= */}
       <Dialog open={isNewClassOpen} onOpenChange={setIsNewClassOpen}>
         <DialogContent className="max-w-lg p-6 bg-card border-border rounded-3xl">
-          <DialogHeader className="pb-3 border-b border-white/[0.08]">
-            <DialogTitle className="text-base font-black text-white flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-amber-400" />
+          <DialogHeader className="pb-3 border-b border-border">
+            <DialogTitle className="text-base font-black text-foreground flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-amber-500" />
               <span>Cadastrar Nova Turma da EBD</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-400">
+            <DialogDescription className="text-xs text-muted-foreground">
               Configure a classe dominical, sala e professor responsável.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateClass} className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-zinc-300">Nome da Turma</Label>
+              <Label className="text-xs font-bold text-foreground">Nome da Turma</Label>
               <Input
                 type="text"
                 placeholder="Ex: Jovens Conectados, Casais Restaurados, Crianças"
                 value={newClassName}
                 onChange={(e) => setNewClassName(e.target.value)}
                 required
-                className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white"
+                className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs rounded-xl h-11 font-medium"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-zinc-300">Faixa Etária</Label>
+                <Label className="text-xs font-bold text-foreground">Faixa Etária</Label>
                 <Input
                   type="text"
                   placeholder="Ex: 18 a 30 anos"
                   value={newClassAgeRange}
                   onChange={(e) => setNewClassAgeRange(e.target.value)}
-                  className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white"
+                  className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs rounded-xl h-11 font-medium"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-zinc-300">Sala / Espaço</Label>
+                <Label className="text-xs font-bold text-foreground">Sala / Espaço</Label>
                 <Input
                   type="text"
                   placeholder="Ex: Sala 02 - Anexo"
                   value={newClassRoom}
                   onChange={(e) => setNewClassRoom(e.target.value)}
-                  className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white"
+                  className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs rounded-xl h-11 font-medium"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-zinc-300">Professor / Líder Responsável</Label>
+              <Label className="text-xs font-bold text-foreground">Professor / Líder Responsável</Label>
               <Input
                 type="text"
                 placeholder="Nome do professor titular"
                 value={newClassTeacher}
                 onChange={(e) => setNewClassTeacher(e.target.value)}
-                className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white"
+                className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs rounded-xl h-11 font-medium"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-zinc-300">Descrição / Ementa (Opcional)</Label>
+              <Label className="text-xs font-bold text-foreground">Descrição / Ementa (Opcional)</Label>
               <Textarea
                 rows={2}
                 placeholder="Tema central do semestre..."
                 value={newClassDescription}
                 onChange={(e) => setNewClassDescription(e.target.value)}
-                className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white resize-none"
+                className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs rounded-xl font-medium resize-none"
               />
             </div>
 
-            <div className="pt-3 flex justify-end gap-2 border-t border-white/[0.08]">
+            <div className="pt-3 flex justify-end gap-2 border-t border-border">
               <Button
                 type="button"
                 variant="ghost"
@@ -737,12 +737,12 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
         onOpenChange={(open) => !open && setSelectedClassForAttendance(null)}
       >
         <DialogContent className="max-w-lg p-6 bg-card border-border rounded-3xl">
-          <DialogHeader className="pb-3 border-b border-white/[0.08]">
-            <DialogTitle className="text-base font-black text-white flex items-center gap-2">
-              <BookCheck className="w-5 h-5 text-amber-400" />
+          <DialogHeader className="pb-3 border-b border-border">
+            <DialogTitle className="text-base font-black text-foreground flex items-center gap-2">
+              <BookCheck className="w-5 h-5 text-amber-500" />
               <span>Relatório do Domingo • {selectedClassForAttendance?.name}</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-400">
+            <DialogDescription className="text-xs text-muted-foreground">
               Lançamento rápido de frequência, visitantes, bíblias e oferta da aula.
             </DialogDescription>
           </DialogHeader>
@@ -750,76 +750,76 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
           <form onSubmit={handleRecordAttendance} className="space-y-4 pt-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-zinc-300">Data da Aula</Label>
+                <Label className="text-xs font-bold text-foreground">Data da Aula</Label>
                 <Input
                   type="date"
                   value={attendanceDate}
                   onChange={(e) => setAttendanceDate(e.target.value)}
                   required
-                  className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white"
+                  className="bg-muted/70 border border-border text-foreground focus:bg-background focus:border-primary text-xs rounded-xl h-11 font-medium"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-zinc-300">Lição Ministrada</Label>
+                <Label className="text-xs font-bold text-foreground">Lição Ministrada</Label>
                 <Input
                   type="text"
                   placeholder="Ex: Lição 07 - Fruto do Espírito"
                   value={lessonTitle}
                   onChange={(e) => setLessonTitle(e.target.value)}
-                  className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white"
+                  className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs rounded-xl h-11 font-medium"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-bold text-zinc-300">Alunos</Label>
+                <Label className="text-[11px] font-bold text-foreground">Alunos</Label>
                 <Input
                   type="number"
                   min="0"
                   value={membersCount}
                   onChange={(e) => setMembersCount(Number(e.target.value))}
-                  className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white text-center font-bold"
+                  className="bg-muted/70 border border-border text-foreground focus:bg-background focus:border-primary text-xs rounded-xl h-11 text-center font-bold"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-bold text-zinc-300">Visitantes</Label>
+                <Label className="text-[11px] font-bold text-foreground">Visitantes</Label>
                 <Input
                   type="number"
                   min="0"
                   value={visitorsCount}
                   onChange={(e) => setVisitorsCount(Number(e.target.value))}
-                  className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white text-center font-bold text-emerald-400"
+                  className="bg-muted/70 border border-border text-foreground focus:bg-background focus:border-primary text-xs rounded-xl h-11 text-center font-bold text-emerald-500"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-bold text-zinc-300">Bíblias</Label>
+                <Label className="text-[11px] font-bold text-foreground">Bíblias</Label>
                 <Input
                   type="number"
                   min="0"
                   value={biblesCount}
                   onChange={(e) => setBiblesCount(Number(e.target.value))}
-                  className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white text-center font-bold text-sky-400"
+                  className="bg-muted/70 border border-border text-foreground focus:bg-background focus:border-primary text-xs rounded-xl h-11 text-center font-bold text-sky-500"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-bold text-zinc-300">Revistas</Label>
+                <Label className="text-[11px] font-bold text-foreground">Revistas</Label>
                 <Input
                   type="number"
                   min="0"
                   value={magazinesCount}
                   onChange={(e) => setMagazinesCount(Number(e.target.value))}
-                  className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white text-center font-bold"
+                  className="bg-muted/70 border border-border text-foreground focus:bg-background focus:border-primary text-xs rounded-xl h-11 text-center font-bold"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-zinc-300">Valor da Oferta EBD (R$)</Label>
+              <Label className="text-xs font-bold text-foreground">Valor da Oferta EBD (R$)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -827,22 +827,22 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
                 placeholder="0.00"
                 value={offeringAmount}
                 onChange={(e) => setOfferingAmount(Number(e.target.value))}
-                className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white font-mono font-bold"
+                className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs rounded-xl h-11 font-mono font-bold"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-zinc-300">Observações / Pedidos de Oração</Label>
+              <Label className="text-xs font-bold text-foreground">Observações / Pedidos de Oração</Label>
               <Textarea
                 rows={2}
                 placeholder="Observações da aula..."
                 value={attendanceNotes}
                 onChange={(e) => setAttendanceNotes(e.target.value)}
-                className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white resize-none"
+                className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs rounded-xl font-medium resize-none"
               />
             </div>
 
-            <div className="pt-3 flex justify-end gap-2 border-t border-white/[0.08]">
+            <div className="pt-3 flex justify-end gap-2 border-t border-border">
               <Button
                 type="button"
                 variant="ghost"
@@ -868,28 +868,28 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
       {/* ========================================================================= */}
       <Dialog open={isEnrollDiscipleOpen} onOpenChange={setIsEnrollDiscipleOpen}>
         <DialogContent className="max-w-lg p-6 bg-card border-border rounded-3xl">
-          <DialogHeader className="pb-3 border-b border-white/[0.08]">
-            <DialogTitle className="text-base font-black text-white flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-purple-400" />
+          <DialogHeader className="pb-3 border-b border-border">
+            <DialogTitle className="text-base font-black text-foreground flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-purple-500" />
               <span>Matricular Novo Discípulo na Trilha</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-400">
+            <DialogDescription className="text-xs text-muted-foreground">
               Inicie a jornada de acolhimento e maturidade bíblica para o novo membro.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleEnrollDisciple} className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-zinc-300">Selecione o Membro / Convertido</Label>
+              <Label className="text-xs font-bold text-foreground">Selecione o Membro / Convertido</Label>
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
                 required
-                className="w-full h-10 px-3 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white font-medium focus:border-purple-400"
+                className="w-full h-11 px-3 bg-muted/70 border border-border rounded-xl text-xs text-foreground font-medium focus:border-purple-500 focus:bg-background outline-none"
               >
-                <option value="">Selecione um membro cadastrado...</option>
+                <option value="" className="bg-card text-foreground">Selecione um membro cadastrado...</option>
                 {initialData.members.map((m) => (
-                  <option key={m.id} value={m.id}>
+                  <option key={m.id} value={m.id} className="bg-card text-foreground">
                     {m.name} ({m.email})
                   </option>
                 ))}
@@ -897,33 +897,33 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-zinc-300">Líder / Mentor Responsável</Label>
+              <Label className="text-xs font-bold text-foreground">Líder / Mentor Responsável</Label>
               <Input
                 type="text"
                 placeholder="Ex: Pastor Paulo, Líder Mateus"
                 value={mentorName}
                 onChange={(e) => setMentorName(e.target.value)}
-                className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white"
+                className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-purple-500 text-xs rounded-xl h-11 font-medium"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-zinc-300">Data da Decisão / Observações Iniciais</Label>
+              <Label className="text-xs font-bold text-foreground">Data da Decisão / Observações Iniciais</Label>
               <Textarea
                 rows={2}
                 placeholder="Decidiu entregar a vida a Cristo no culto de domingo..."
                 value={enrollNotes}
                 onChange={(e) => setEnrollNotes(e.target.value)}
-                className="bg-zinc-900 border-white/10 text-xs rounded-xl text-white resize-none"
+                className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-purple-500 text-xs rounded-xl font-medium resize-none"
               />
             </div>
 
-            <div className="pt-3 flex justify-end gap-2 border-t border-white/[0.08]">
+            <div className="pt-3 flex justify-end gap-2 border-t border-border">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => setIsEnrollDiscipleOpen(false)}
-                className="text-xs font-bold text-zinc-400"
+                className="text-xs font-bold text-muted-foreground hover:text-foreground"
               >
                 Cancelar
               </Button>

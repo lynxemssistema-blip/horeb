@@ -314,21 +314,21 @@ export function CreateChurchDialog({
         />
 
         {/* Modal rigorosamente centralizado no meio da tela com viewport responsivo e scroll interno */}
-        <DialogContent className="w-[94vw] max-w-lg max-h-[88dvh] flex flex-col p-0 overflow-hidden bg-card border border-border rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.9),0_0_50px_rgba(245,158,11,0.06)] text-card-foreground">
+        <DialogContent className="w-[94vw] max-w-lg max-h-[88dvh] flex flex-col p-0 overflow-hidden bg-card border border-border rounded-3xl shadow-2xl text-card-foreground">
           {/* Glow de Iluminação */}
           <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-80 h-32 bg-amber-500/15 blur-3xl rounded-full" />
 
           {/* Cabeçalho Fixo */}
           <div className="p-5 sm:p-6 pb-2 shrink-0 border-b border-border relative z-10 space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-[10px] font-bold tracking-wider uppercase w-fit">
-              <ShieldCheck className="w-3 h-3 text-amber-400 shrink-0" />
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-500 text-[10px] font-bold tracking-wider uppercase w-fit">
+              <ShieldCheck className="w-3 h-3 text-amber-500 shrink-0" />
               <span>Portal Multi-Tenant • Lynx EMS Sistemas</span>
             </div>
             <div>
-              <DialogTitle className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              <DialogTitle className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
                 Portal da Liderança
               </DialogTitle>
-              <DialogDescription className="text-xs text-zinc-400 mt-0.5">
+              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                 Cadastre sua congregação sede, vincule filiais ou acesse seu painel.
               </DialogDescription>
             </div>
@@ -342,24 +342,24 @@ export function CreateChurchDialog({
           >
             {/* Seletor Segmentado de Abas Fixo */}
             <div className="px-5 sm:px-6 pt-3 shrink-0">
-              <TabsList className="grid grid-cols-3 w-full h-10 bg-zinc-900/90 border border-white/[0.08] p-1 rounded-xl gap-1">
+              <TabsList className="grid grid-cols-3 w-full h-10 bg-muted/80 border border-border p-1 rounded-xl gap-1">
                 <TabsTrigger
                   value="master"
-                  className="text-xs font-bold text-zinc-300 hover:text-white data-active:!bg-gradient-to-r data-active:!from-amber-500 data-active:!to-yellow-500 data-active:!text-black data-active:!shadow-md rounded-lg transition-all py-1"
+                  className="text-xs font-bold text-muted-foreground hover:text-foreground data-active:!bg-gradient-to-r data-active:!from-amber-500 data-active:!to-yellow-500 data-active:!text-black data-active:!shadow-md rounded-lg transition-all py-1"
                 >
                   <Church className="w-3.5 h-3.5 mr-1.5 shrink-0" />
                   <span>1. Matriz</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="branch"
-                  className="text-xs font-bold text-zinc-300 hover:text-white data-active:!bg-gradient-to-r data-active:!from-amber-500 data-active:!to-yellow-500 data-active:!text-black data-active:!shadow-md rounded-lg transition-all py-1"
+                  className="text-xs font-bold text-muted-foreground hover:text-foreground data-active:!bg-gradient-to-r data-active:!from-amber-500 data-active:!to-yellow-500 data-active:!text-black data-active:!shadow-md rounded-lg transition-all py-1"
                 >
                   <GitBranch className="w-3.5 h-3.5 mr-1.5 shrink-0" />
                   <span>2. Filial</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="login"
-                  className="text-xs font-bold text-zinc-300 hover:text-white data-active:!bg-gradient-to-r data-active:!from-amber-500 data-active:!to-yellow-500 data-active:!text-black data-active:!shadow-md rounded-lg transition-all py-1"
+                  className="text-xs font-bold text-muted-foreground hover:text-foreground data-active:!bg-gradient-to-r data-active:!from-amber-500 data-active:!to-yellow-500 data-active:!text-black data-active:!shadow-md rounded-lg transition-all py-1"
                 >
                   <LogIn className="w-3.5 h-3.5 mr-1.5 shrink-0" />
                   <span>Entrar</span>
@@ -374,15 +374,15 @@ export function CreateChurchDialog({
             >
               <form onSubmit={handleRegisterMaster} className="space-y-4">
                 {/* 1. Credenciais Master */}
-                <div className="rounded-2xl bg-zinc-900/60 border border-white/[0.07] p-4 space-y-3 backdrop-blur-sm">
-                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-400">
+                <div className="rounded-2xl bg-muted/30 border border-border p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-500">
                     <User className="w-3.5 h-3.5" />
                     <span>1. Credenciais do Pastor Presidente</span>
                   </div>
 
                   <div className="space-y-2.5">
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-300">
+                      <label className="text-xs font-bold text-foreground">
                         Nome do Pastor Presidente / Líder *
                       </label>
                       <Input
@@ -390,22 +390,22 @@ export function CreateChurchDialog({
                         value={masterName}
                         onChange={(e) => setMasterName(e.target.value)}
                         placeholder="Ex: Pr. Carlos Eduardo"
-                        className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl"
+                        className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl font-medium"
                       />
                     </div>
 
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                          <Mail className="w-3 h-3 text-amber-400" />
+                        <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                          <Mail className="w-3 h-3 text-amber-500" />
                           <span>E-mail Oficial (Login Master) *</span>
                         </label>
                         {masterEmail && (
                           <span
                             className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
                               isValidEmail(masterEmail)
-                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                                : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                                ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                                : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
                             }`}
                           >
                             {isValidEmail(masterEmail) ? "✓ Válido" : "✗ Incorreto"}
@@ -418,13 +418,13 @@ export function CreateChurchDialog({
                         value={masterEmail}
                         onChange={(e) => setMasterEmail(e.target.value)}
                         placeholder="pastor@igreja.org"
-                        className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl"
+                        className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl font-medium"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                        <Lock className="w-3 h-3 text-amber-400" />
+                      <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <Lock className="w-3 h-3 text-amber-500" />
                         <span>Senha de Acesso (mínimo 6 dígitos) *</span>
                       </label>
                       <div className="relative">
@@ -435,12 +435,12 @@ export function CreateChurchDialog({
                           onChange={(e) => setMasterPassword(e.target.value)}
                           placeholder="••••••••"
                           minLength={6}
-                          className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl pr-10"
+                          className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl pr-10 font-medium"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white cursor-pointer"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                           {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                         </button>
@@ -450,29 +450,29 @@ export function CreateChurchDialog({
                 </div>
 
                 {/* 2. Dados da Igreja Sede */}
-                <div className="rounded-2xl bg-zinc-900/60 border border-white/[0.07] p-4 space-y-3 backdrop-blur-sm">
-                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-400">
+                <div className="rounded-2xl bg-muted/30 border border-border p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-500">
                     <Church className="w-3.5 h-3.5" />
                     <span>2. Identidade & Logo da Igreja Sede</span>
                   </div>
 
                   <div className="space-y-2.5">
                     {/* Upload do Logo em Base64 - Sem Links Externos */}
-                    <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2">
-                      <label className="text-xs font-semibold text-zinc-300 flex items-center justify-between">
+                    <div className="p-3 rounded-xl bg-muted/50 border border-border space-y-2">
+                      <label className="text-xs font-bold text-foreground flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
-                          <ImageIcon className="w-3 h-3 text-amber-400" />
+                          <ImageIcon className="w-3 h-3 text-amber-500" />
                           Logo da Igreja (Salvo no Banco de Dados)
                         </span>
-                        <span className="text-[10px] text-zinc-400 font-mono">Max 2MB</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">Max 2MB</span>
                       </label>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-white/15 flex items-center justify-center overflow-hidden shrink-0">
+                        <div className="w-12 h-12 rounded-xl bg-background border border-border flex items-center justify-center overflow-hidden shrink-0">
                           {churchLogo ? (
                             <img src={churchLogo} alt="Logo" className="w-full h-full object-contain p-1" />
                           ) : (
-                            <Church className="w-5 h-5 text-zinc-600" />
+                            <Church className="w-5 h-5 text-muted-foreground" />
                           )}
                         </div>
 
@@ -487,9 +487,9 @@ export function CreateChurchDialog({
                           />
                           <label
                             htmlFor="master-logo-file"
-                            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/10 cursor-pointer flex items-center gap-1"
+                            className="px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-foreground text-xs font-semibold border border-border cursor-pointer flex items-center gap-1"
                           >
-                            <Upload className="w-3 h-3 text-amber-400" />
+                            <Upload className="w-3 h-3 text-amber-500" />
                             <span>{churchLogo ? "Alterar Logo" : "Upload Logo"}</span>
                           </label>
 
@@ -500,7 +500,7 @@ export function CreateChurchDialog({
                                 setChurchLogo(null);
                                 if (masterLogoInputRef.current) masterLogoInputRef.current.value = "";
                               }}
-                              className="px-2 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-xs hover:bg-red-500/20 cursor-pointer flex items-center gap-1"
+                              className="px-2 py-1.5 rounded-lg bg-red-500/10 text-red-500 text-xs hover:bg-red-500/20 cursor-pointer flex items-center gap-1"
                             >
                               <Trash2 className="w-3 h-3" />
                               <span>Remover</span>
@@ -511,7 +511,7 @@ export function CreateChurchDialog({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-300">
+                      <label className="text-xs font-bold text-foreground">
                         Nome Oficial da Igreja Sede *
                       </label>
                       <Input
@@ -519,15 +519,15 @@ export function CreateChurchDialog({
                         value={churchName}
                         onChange={(e) => handleNameChange(e.target.value, false)}
                         placeholder="Ex: Igreja Videira Central"
-                        className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl"
+                        className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl font-medium"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-300">
+                      <label className="text-xs font-bold text-foreground">
                         Endereço Web Exclusivo (Slug)
                       </label>
-                      <div className="flex items-center bg-muted/60 border border-border rounded-xl overflow-hidden px-2.5 h-9">
+                      <div className="flex items-center bg-muted/70 border border-border rounded-xl overflow-hidden px-2.5 h-9">
                         <span className="text-[11px] font-mono text-muted-foreground shrink-0">horeb.lynxems.com.br/</span>
                         <input
                           required
@@ -541,37 +541,37 @@ export function CreateChurchDialog({
 
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1">
-                          <Phone className="w-3 h-3 text-amber-400" />
+                        <label className="text-xs font-bold text-foreground flex items-center gap-1">
+                          <Phone className="w-3 h-3 text-amber-500" />
                           <span>WhatsApp</span>
                         </label>
                         <Input
                           value={churchPhone}
                           onChange={(e) => setChurchPhone(e.target.value)}
                           placeholder="(11) 98765-4321"
-                          className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl"
+                          className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl font-medium"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-amber-400" />
+                        <label className="text-xs font-bold text-foreground flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-amber-500" />
                           <span>Endereço</span>
                         </label>
                         <Input
                           value={churchAddress}
                           onChange={(e) => setChurchAddress(e.target.value)}
                           placeholder="Bairro / Cidade"
-                          className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl"
+                          className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl font-medium"
                         />
                       </div>
                     </div>
 
                     {/* Cores */}
                     <div className="space-y-1.5 pt-1">
-                      <label className="text-xs font-semibold text-zinc-300 flex items-center justify-between">
+                      <label className="text-xs font-bold text-foreground flex items-center justify-between">
                         <span>Cor Primária White-Label</span>
-                        <span className="font-mono text-[10px] text-zinc-400">{primaryColor}</span>
+                        <span className="font-mono text-[10px] text-muted-foreground font-semibold">{primaryColor}</span>
                       </label>
                       <div className="flex items-center gap-2 flex-wrap">
                         {colorPresets.map((c) => (
@@ -581,7 +581,7 @@ export function CreateChurchDialog({
                             onClick={() => setPrimaryColor(c.hex)}
                             className={`w-7 h-7 rounded-full ${c.bg} flex items-center justify-center transition-all cursor-pointer ${
                               primaryColor.toLowerCase() === c.hex.toLowerCase()
-                                ? "ring-2 ring-white scale-110 shadow-md"
+                                ? "ring-2 ring-primary scale-110 shadow-md"
                                 : "opacity-80 hover:opacity-100"
                             }`}
                           >
@@ -621,24 +621,24 @@ export function CreateChurchDialog({
               value="branch"
               className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-4 space-y-4 touch-pan-y overscroll-contain"
             >
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-zinc-300">
-                <span className="font-bold text-amber-400 block mb-0.5">Estrutura Completa de Filial</span>
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-foreground font-medium">
+                <span className="font-bold text-amber-500 block mb-0.5">Estrutura Completa de Filial</span>
                 Cada congregação filial tem sua própria URL, células nos lares, dízimos via PIX, espaço kids e ministérios independentes vinculados à Sede Matriz.
               </div>
 
               <form onSubmit={handleCreateBranch} className="space-y-4">
-                <div className="rounded-2xl bg-zinc-900/60 border border-white/[0.07] p-4 space-y-3 backdrop-blur-sm">
+                <div className="rounded-2xl bg-muted/30 border border-border p-4 space-y-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-zinc-300">
+                    <label className="text-xs font-bold text-foreground">
                       Igreja Sede Responsável (Matriz) *
                     </label>
                     <select
                       value={selectedParentId}
                       onChange={(e) => setSelectedParentId(e.target.value)}
-                      className="w-full h-9 rounded-xl bg-muted/60 border border-border text-xs px-3 text-foreground outline-none"
+                      className="w-full h-9 rounded-xl bg-muted/70 border border-border text-xs px-3 text-foreground font-medium outline-none focus:border-primary"
                     >
                       {existingTenants.map((t) => (
-                        <option key={t.id} value={t.id}>
+                        <option key={t.id} value={t.id} className="bg-card text-foreground">
                           {t.name} (/{t.slug})
                         </option>
                       ))}
@@ -646,20 +646,20 @@ export function CreateChurchDialog({
                   </div>
 
                   {/* Upload do Logo da Filial */}
-                  <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2">
-                    <label className="text-xs font-semibold text-zinc-300 flex items-center justify-between">
+                  <div className="p-3 rounded-xl bg-muted/50 border border-border space-y-2">
+                    <label className="text-xs font-bold text-foreground flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
-                        <ImageIcon className="w-3 h-3 text-amber-400" />
+                        <ImageIcon className="w-3 h-3 text-amber-500" />
                         Logo da Filial (Opcional - usa o da Matriz por padrão)
                       </span>
                     </label>
 
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-white/15 flex items-center justify-center overflow-hidden shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-background border border-border flex items-center justify-center overflow-hidden shrink-0">
                         {branchLogo ? (
                           <img src={branchLogo} alt="Logo" className="w-full h-full object-contain p-1" />
                         ) : (
-                          <GitBranch className="w-4 h-4 text-zinc-600" />
+                          <GitBranch className="w-4 h-4 text-muted-foreground" />
                         )}
                       </div>
 
@@ -673,16 +673,16 @@ export function CreateChurchDialog({
                       />
                       <label
                         htmlFor="branch-logo-file"
-                        className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/10 cursor-pointer flex items-center gap-1"
+                        className="px-2.5 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-foreground text-xs font-semibold border border-border cursor-pointer flex items-center gap-1"
                       >
-                        <Upload className="w-3 h-3 text-amber-400" />
+                        <Upload className="w-3 h-3 text-amber-500" />
                         <span>Upload Logo Filial</span>
                       </label>
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-zinc-300">
+                    <label className="text-xs font-bold text-foreground">
                       Nome da Congregação Filial / Campus *
                     </label>
                     <Input
@@ -690,15 +690,15 @@ export function CreateChurchDialog({
                       value={branchName}
                       onChange={(e) => handleNameChange(e.target.value, true)}
                       placeholder="Ex: Videira - Campus Sul"
-                      className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl"
+                      className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl font-medium"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-zinc-300">
+                    <label className="text-xs font-bold text-foreground">
                       Slug da URL da Filial *
                     </label>
-                    <div className="flex items-center bg-muted/60 border border-border rounded-xl overflow-hidden px-2.5 h-9">
+                    <div className="flex items-center bg-muted/70 border border-border rounded-xl overflow-hidden px-2.5 h-9">
                       <span className="text-[11px] font-mono text-muted-foreground shrink-0">horeb.lynxems.com.br/</span>
                       <input
                         required
@@ -712,9 +712,9 @@ export function CreateChurchDialog({
 
                   {/* Cores da Filial */}
                   <div className="space-y-1.5 pt-1">
-                    <label className="text-xs font-semibold text-zinc-300 flex items-center justify-between">
+                    <label className="text-xs font-bold text-foreground flex items-center justify-between">
                       <span>Cor Primária da Filial</span>
-                      <span className="font-mono text-[10px] text-zinc-400">{branchColor}</span>
+                      <span className="font-mono text-[10px] text-muted-foreground font-semibold">{branchColor}</span>
                     </label>
                     <div className="flex items-center gap-2 flex-wrap">
                       {colorPresets.map((c) => (
@@ -724,7 +724,7 @@ export function CreateChurchDialog({
                           onClick={() => setBranchColor(c.hex)}
                           className={`w-7 h-7 rounded-full ${c.bg} flex items-center justify-center transition-all cursor-pointer ${
                             branchColor.toLowerCase() === c.hex.toLowerCase()
-                              ? "ring-2 ring-white scale-110 shadow-md"
+                              ? "ring-2 ring-primary scale-110 shadow-md"
                               : "opacity-80 hover:opacity-100"
                           }`}
                         >
@@ -763,15 +763,15 @@ export function CreateChurchDialog({
               className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-4 space-y-4 touch-pan-y overscroll-contain"
             >
               <form onSubmit={handleLogin} className="space-y-4">
-                <div className="rounded-2xl bg-zinc-900/60 border border-white/[0.07] p-4 space-y-3 backdrop-blur-sm">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400">
+                <div className="rounded-2xl bg-muted/30 border border-border p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-500">
                     <KeyRound className="w-3.5 h-3.5" />
                     <span>Acesso à Sua Conta</span>
                   </div>
 
                   <div className="space-y-2.5">
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-300">
+                      <label className="text-xs font-bold text-foreground">
                         E-mail ou Nome de Usuário Cadastrado
                       </label>
                       <Input
@@ -782,12 +782,12 @@ export function CreateChurchDialog({
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         placeholder="pastor@igreja.org ou Pastor Luan"
-                        className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl"
+                        className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl font-medium"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-300">
+                      <label className="text-xs font-bold text-foreground">
                         Senha de Acesso
                       </label>
                       <div className="relative">
@@ -797,12 +797,12 @@ export function CreateChurchDialog({
                           value={loginPassword}
                           onChange={(e) => setLoginPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl pr-10"
+                          className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl pr-10 font-medium"
                         />
                         <button
                           type="button"
                           onClick={() => setShowLoginPassword(!showLoginPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white cursor-pointer"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                           {showLoginPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                         </button>

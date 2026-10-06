@@ -330,18 +330,18 @@ export function ChurchMinistriesManager({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Ex: Ministério de Louvor & Adoração"
-                    className="bg-black/50 border-white/10 text-white rounded-xl h-10 text-xs"
+                    className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-10 text-xs font-medium"
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-zinc-300">Líderes do Ministério</label>
-                    <span className="text-[10px] text-zinc-500">
+                    <label className="text-xs font-bold text-foreground">Líderes do Ministério</label>
+                    <span className="text-[10px] text-muted-foreground">
                       {selectedLeaderIds.length} selecionado(s) • pode ter mais de um
                     </span>
                   </div>
-                  <div className="p-2.5 rounded-2xl bg-black/50 border border-white/10 max-h-40 overflow-y-auto space-y-1.5">
+                  <div className="p-2.5 rounded-2xl bg-muted/40 border border-border max-h-40 overflow-y-auto space-y-1.5">
                     {potentialLeaders.map((u) => {
                       const isSelected = selectedLeaderIds.includes(u.id);
                       return (
@@ -424,12 +424,12 @@ export function ChurchMinistriesManager({
                       />
 
                       <div className="relative">
-                        <Link2 className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                        <Link2 className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           placeholder="Ou cole a URL do logotipo..."
                           value={logoUrl}
                           onChange={(e) => setLogoUrl(e.target.value)}
-                          className="pl-8 bg-black/50 border-white/10 text-white rounded-xl h-9 text-xs"
+                          className="pl-8 bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-9 text-xs font-medium"
                         />
                       </div>
                     </div>
@@ -437,19 +437,19 @@ export function ChurchMinistriesManager({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-300">Descrição / Propósito</label>
+                  <label className="text-xs font-bold text-foreground">Descrição / Propósito</label>
                   <textarea
                     rows={2}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Objetivo ministerial, requisitos para voluntários..."
-                    className="w-full p-2.5 rounded-xl bg-black/50 border border-white/10 text-xs text-white outline-none resize-none"
+                    className="w-full p-2.5 rounded-xl bg-muted/70 border border-border text-xs text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary outline-none resize-none font-medium"
                   />
                 </div>
 
                 {/* Seletor de Ícone */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-300">Ícone Representativo (Backup caso sem logo)</label>
+                  <label className="text-xs font-bold text-foreground">Ícone Representativo (Backup caso sem logo)</label>
                   <div className="flex items-center gap-2 flex-wrap">
                     {Object.keys(ICON_MAP).map((iconKey) => {
                       const IconComp = ICON_MAP[iconKey];
@@ -649,24 +649,24 @@ export function ChurchMinistriesManager({
 
           <form onSubmit={handleUpdate} className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300">Nome do Ministério *</label>
+              <label className="text-xs font-bold text-foreground">Nome do Ministério *</label>
               <Input
                 required
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 placeholder="Ex: Ministério de Louvor & Adoração"
-                className="bg-black/50 border-white/10 text-white rounded-xl h-10 text-xs"
+                className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-10 text-xs font-medium"
               />
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-zinc-300">Líderes do Ministério</label>
-                <span className="text-[10px] text-zinc-500">
+                <label className="text-xs font-bold text-foreground">Líderes do Ministério</label>
+                <span className="text-[10px] text-muted-foreground">
                   {editSelectedLeaderIds.length} selecionado(s) • pode ter mais de um
                 </span>
               </div>
-              <div className="p-2.5 rounded-2xl bg-black/50 border border-white/10 max-h-40 overflow-y-auto space-y-1.5">
+              <div className="p-2.5 rounded-2xl bg-muted/40 border border-border max-h-40 overflow-y-auto space-y-1.5">
                 {potentialLeaders.map((u) => {
                   const isSelected = editSelectedLeaderIds.includes(u.id);
                   return (
@@ -749,12 +749,12 @@ export function ChurchMinistriesManager({
                   />
 
                   <div className="relative">
-                    <Link2 className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                    <Link2 className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       placeholder="Ou cole a URL do logotipo..."
                       value={editLogoUrl}
                       onChange={(e) => setEditLogoUrl(e.target.value)}
-                      className="pl-8 bg-black/50 border-white/10 text-white rounded-xl h-9 text-xs"
+                      className="pl-8 bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-9 text-xs font-medium"
                     />
                   </div>
                 </div>
@@ -762,19 +762,19 @@ export function ChurchMinistriesManager({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300">Descrição / Propósito</label>
+              <label className="text-xs font-bold text-foreground">Descrição / Propósito</label>
               <textarea
                 rows={2}
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 placeholder="Objetivo ministerial, requisitos para voluntários..."
-                className="w-full p-2.5 rounded-xl bg-black/50 border border-white/10 text-xs text-white outline-none resize-none"
+                className="w-full p-2.5 rounded-xl bg-muted/70 border border-border text-xs text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary outline-none resize-none font-medium"
               />
             </div>
 
             {/* Seletor de Ícone */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300">Ícone Representativo (Backup)</label>
+              <label className="text-xs font-bold text-foreground">Ícone Representativo (Backup)</label>
               <div className="flex items-center gap-2 flex-wrap">
                 {Object.keys(ICON_MAP).map((iconKey) => {
                   const IconComp = ICON_MAP[iconKey];

@@ -133,65 +133,65 @@ export function MemberSignupDialog({
             <DialogTitle className="text-xl font-black text-foreground tracking-tight">
               Cadastro de Membro
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-400">
+            <DialogDescription className="text-xs text-muted-foreground">
               Faça parte da congregação <strong>{churchName}</strong>. Tenha acesso a células, orações, check-in infantil e avisos da igreja.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleRegister} className="space-y-4 pt-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300">Nome Completo *</label>
+              <label className="text-xs font-bold text-foreground">Nome Completo *</label>
               <div className="relative">
-                <User className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
+                <User className="w-4 h-4 text-muted-foreground absolute left-3 top-3.5" />
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Seu nome completo"
                   required
-                  className="pl-9 bg-black/60 border-white/10 text-white rounded-xl h-11 text-base sm:text-sm"
+                  className="pl-9 bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-medium"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300">E-mail *</label>
+              <label className="text-xs font-bold text-foreground">E-mail *</label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
+                <Mail className="w-4 h-4 text-muted-foreground absolute left-3 top-3.5" />
                 <Input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seuemail@exemplo.com"
                   required
-                  className="pl-9 bg-black/60 border-white/10 text-white rounded-xl h-11 text-base sm:text-sm"
+                  className="pl-9 bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-medium"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300">Crie Sua Senha *</label>
+              <label className="text-xs font-bold text-foreground">Crie Sua Senha *</label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
+                <Lock className="w-4 h-4 text-muted-foreground absolute left-3 top-3.5" />
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Mínimo 6 caracteres"
                   required
-                  className="pl-9 pr-10 bg-black/60 border-white/10 text-white rounded-xl h-11 text-base sm:text-sm"
+                  className="pl-9 pr-10 bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-medium"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-zinc-400 hover:text-white"
+                  className="absolute right-3 top-3 text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] text-zinc-400 flex items-start gap-2">
-              <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-xl bg-muted/40 border border-border text-[11px] text-muted-foreground flex items-start gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
               <span>
                 Por padrão, seu cadastro terá acesso como <strong>Membro Oficial</strong> na <strong>{churchName}</strong>. A liderança pastoral poderá atribuir funções adicionais.
               </span>
@@ -217,7 +217,7 @@ export function MemberSignupDialog({
             </Button>
           </form>
 
-          <div className="text-center text-[10px] text-zinc-500 pt-1">
+          <div className="text-center text-[10px] text-muted-foreground pt-1">
             Plataforma Horeb • Desenvolvido por <strong>Lynx EMS Sistemas</strong>
           </div>
         </DialogContent>

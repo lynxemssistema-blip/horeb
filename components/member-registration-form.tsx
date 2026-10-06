@@ -111,22 +111,22 @@ export function MemberRegistrationForm({
             <Church className="w-6 h-6" />
           </div>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-xs font-bold text-zinc-300">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted border border-border text-xs font-bold text-foreground">
             <span
               className="w-2 h-2 rounded-full"
               style={{ backgroundColor: tenant.primaryColor }}
             />
             <span>{tenant.name}</span>
             {tenant.parentName && (
-              <span className="text-zinc-500 font-normal">• Filial de {tenant.parentName}</span>
+              <span className="text-muted-foreground font-normal">• Filial de {tenant.parentName}</span>
             )}
           </div>
 
-          <h1 className="text-2xl font-black text-white tracking-tight">
+          <h1 className="text-2xl font-black text-foreground tracking-tight">
             Completar Cadastro
           </h1>
 
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-muted-foreground">
             Você foi convidado para ingressar com o perfil:
           </p>
 
@@ -146,50 +146,50 @@ export function MemberRegistrationForm({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-zinc-300">Seu Nome Completo *</label>
+            <label className="text-xs font-bold text-foreground">Seu Nome Completo *</label>
             <div className="relative">
-              <User className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
+              <User className="w-4 h-4 text-muted-foreground absolute left-3 top-3.5" />
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: Pr. André Luiz"
                 required
-                className="pl-9 bg-black/60 border-white/10 text-white rounded-xl h-11 text-xs"
+                className="pl-9 bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-medium"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-zinc-300">Seu E-mail *</label>
+            <label className="text-xs font-bold text-foreground">Seu E-mail *</label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
+              <Mail className="w-4 h-4 text-muted-foreground absolute left-3 top-3.5" />
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seuemail@exemplo.com"
                 required
-                className="pl-9 bg-black/60 border-white/10 text-white rounded-xl h-11 text-xs"
+                className="pl-9 bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-medium"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-zinc-300">Defina Sua Senha *</label>
+            <label className="text-xs font-bold text-foreground">Defina Sua Senha *</label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
+              <Lock className="w-4 h-4 text-muted-foreground absolute left-3 top-3.5" />
               <Input
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Mínimo de 6 caracteres"
                 required
-                className="pl-9 pr-10 bg-black/60 border-white/10 text-white rounded-xl h-11 text-xs"
+                className="pl-9 pr-10 bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-11 text-xs font-medium"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-zinc-400 hover:text-white"
+                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>

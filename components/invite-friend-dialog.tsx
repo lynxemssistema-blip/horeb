@@ -145,19 +145,19 @@ export function InviteFriendDialog({
           <DialogTitle className="text-lg font-black text-foreground">
             Convidar Amigo para a Igreja
           </DialogTitle>
-          <DialogDescription className="text-xs text-zinc-400">
+          <DialogDescription className="text-xs text-muted-foreground">
             Convide amigos e familiares para se conectarem à {churchName}.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
           {/* Perfil Atribuído Travado como Membro */}
-          <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-between gap-3">
+          <div className="p-3 rounded-2xl bg-muted/40 border border-border flex items-center justify-between gap-3">
             <div className="space-y-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
                 Perfil de Acesso do Convidado:
               </span>
-              <span className="text-xs font-black text-white flex items-center gap-1.5">
+              <span className="text-xs font-black text-foreground flex items-center gap-1.5">
                 <span
                   className="w-2 h-2 rounded-full"
                   style={{ backgroundColor: primaryColor }}
@@ -166,8 +166,8 @@ export function InviteFriendDialog({
               </span>
             </div>
 
-            <div className="flex items-center gap-1 text-[11px] font-semibold text-zinc-400 bg-white/5 px-2 py-1 rounded-lg border border-white/5">
-              <Lock className="w-3 h-3 text-amber-400" />
+            <div className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground bg-muted px-2 py-1 rounded-lg border border-border">
+              <Lock className="w-3 h-3 text-amber-500" />
               <span>Fixo</span>
             </div>
           </div>
@@ -175,19 +175,19 @@ export function InviteFriendDialog({
           {/* Dados Opcionais do Convidado */}
           <div className="space-y-3">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-zinc-300">
+              <label className="text-xs font-bold text-foreground">
                 Nome do Convidado (Opcional)
               </label>
               <Input
                 value={friendName}
                 onChange={(e) => setFriendName(e.target.value)}
                 placeholder="Ex: João da Silva"
-                className="bg-black/60 border-white/10 text-white rounded-xl h-10 text-xs"
+                className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-10 text-xs font-medium"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-zinc-300">
+              <label className="text-xs font-bold text-foreground">
                 E-mail do Convidado (Opcional)
               </label>
               <Input
@@ -196,17 +196,17 @@ export function InviteFriendDialog({
                 value={friendEmail}
                 onChange={(e) => setFriendEmail(e.target.value)}
                 placeholder="amigo@exemplo.com"
-                className="bg-black/60 border-white/10 text-white rounded-xl h-10 text-xs"
+                className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary rounded-xl h-10 text-xs font-medium"
               />
             </div>
           </div>
 
           {/* Prévia do Link Direto */}
-          <div className="p-3 rounded-2xl bg-black/40 border border-white/10 space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 block">
+          <div className="p-3 rounded-2xl bg-muted/50 border border-border space-y-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500 block">
               Link de Cadastro Direto:
             </span>
-            <p className="font-mono text-[11px] text-zinc-300 break-all select-all line-clamp-2">
+            <p className="font-mono text-[11px] text-foreground font-medium break-all select-all line-clamp-2">
               {inviteUrl}
             </p>
 
@@ -215,10 +215,10 @@ export function InviteFriendDialog({
                 type="button"
                 onClick={handleCopyLink}
                 size="sm"
-                className="flex-1 min-w-[90px] h-9 text-xs bg-white/10 hover:bg-white/20 text-white border border-white/10 rounded-xl gap-1.5 cursor-pointer font-bold"
+                className="flex-1 min-w-[90px] h-9 text-xs bg-muted hover:bg-muted/80 text-foreground border border-border rounded-xl gap-1.5 cursor-pointer font-bold"
               >
                 {copied ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <Check className="w-3.5 h-3.5 text-emerald-500" />
                 ) : (
                   <Copy className="w-3.5 h-3.5" />
                 )}
