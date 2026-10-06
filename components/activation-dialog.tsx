@@ -84,11 +84,11 @@ export function ActivationDialog({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in-0">
-      <div className="bg-zinc-950 border border-amber-500/30 rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-5 shadow-2xl relative">
+      <div className="bg-card border border-border rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-5 shadow-2xl text-card-foreground relative">
         {onClose && (
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white"
+            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>

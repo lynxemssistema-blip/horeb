@@ -78,13 +78,13 @@ export function MemberQuickBadgeModal({
       )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-sm p-5 sm:p-6 bg-zinc-950/95 border-white/10 rounded-3xl backdrop-blur-2xl text-center">
+        <DialogContent className="max-w-sm p-5 sm:p-6 bg-card border border-border rounded-3xl backdrop-blur-2xl text-center text-card-foreground">
           <DialogHeader className="pb-2">
-            <DialogTitle className="text-base font-black text-white flex items-center justify-center gap-2">
-              <QrCode className="w-5 h-5 text-amber-400" />
+            <DialogTitle className="text-base font-black text-foreground flex items-center justify-center gap-2">
+              <QrCode className="w-5 h-5 text-amber-500" />
               <span>Crachá Digital de Entrada</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-400">
+            <DialogDescription className="text-xs text-muted-foreground">
               Apresente o QR Code na câmera do celular da portaria ao entrar na igreja.
             </DialogDescription>
           </DialogHeader>

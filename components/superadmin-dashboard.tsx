@@ -60,6 +60,7 @@ import {
 } from "lucide-react";
 import { AgentManager } from "@/app/[slug]/admin/agentes/AgentManager";
 import { RolePermissionsManager } from "@/components/role-permissions-manager";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface SuperAdminDashboardProps {
   metrics: any;
@@ -348,9 +349,9 @@ export function SuperAdminDashboard({
   };
 
   return (
-    <div className="min-h-[100dvh] bg-[#070709] text-zinc-100 flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200 overflow-x-hidden">
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200 overflow-x-hidden">
       {/* Top Header do Super Admin */}
-      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-black/80 backdrop-blur-xl px-3 sm:px-8 py-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pl-[env(safe-area-inset-left,0px))] pr-[env(safe-area-inset-right,0px))]">
+      <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-xl px-3 sm:px-8 py-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pl-[env(safe-area-inset-left,0px))] pr-[env(safe-area-inset-right,0px))]">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group min-w-0">
@@ -358,13 +359,13 @@ export function SuperAdminDashboard({
                 <Crown className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <span className="font-black text-white text-xs sm:text-base tracking-tight flex items-center gap-1.5 sm:gap-2">
+                <span className="font-black text-foreground text-xs sm:text-base tracking-tight flex items-center gap-1.5 sm:gap-2">
                   <span className="truncate">Horeb SaaS</span>
                   <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
                     SUPER ADMIN
                   </span>
                 </span>
-                <span className="text-[10px] sm:text-[11px] text-zinc-400 block -mt-0.5 truncate hidden xs:block">
+                <span className="text-[10px] sm:text-[11px] text-muted-foreground block -mt-0.5 truncate hidden xs:block">
                   Desenvolvido e Gerenciado por Lynx EMS Sistemas
                 </span>
               </div>
@@ -372,18 +373,20 @@ export function SuperAdminDashboard({
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <div className="hidden sm:flex items-center gap-2 bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-1.5 text-xs text-zinc-300">
+            <div className="hidden sm:flex items-center gap-2 bg-muted/40 border border-border rounded-xl px-3 py-1.5 text-xs text-foreground">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>
                 Logado como: <strong>{user?.name || "Super Admin"}</strong> ({user?.email || "admin@lynxems.com.br"})
               </span>
             </div>
 
+            <ThemeToggle />
+
             <Link href="/">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl border-white/[0.12] bg-white/[0.04] text-xs font-bold text-zinc-200 hover:text-white"
+                className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl border-border bg-card text-xs font-bold text-foreground hover:bg-accent"
               >
                 <span>Ver App</span>
                 <ExternalLink className="w-3.5 h-3.5 ml-1" />
@@ -693,7 +696,7 @@ export function SuperAdminDashboard({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/[0.08] bg-zinc-950 overflow-hidden shadow-2xl">
+            <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-2xl">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs text-zinc-300">
                   <thead className="bg-white/[0.03] border-b border-white/[0.08] text-zinc-400 font-bold uppercase tracking-wider text-[10px]">
@@ -890,8 +893,8 @@ export function SuperAdminDashboard({
                 return (
                   <Card
                     key={p.id}
-                    className={`bg-zinc-950 border ${
-                      p.highlight ? "border-amber-500/50 shadow-amber-500/10" : "border-white/[0.08]"
+                    className={`bg-card border ${
+                      p.highlight ? "border-amber-500/50 shadow-amber-500/10" : "border-border"
                     } rounded-2xl relative flex flex-col justify-between`}
                   >
                     {p.badge && (
@@ -987,7 +990,7 @@ export function SuperAdminDashboard({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/[0.08] bg-zinc-950 overflow-hidden shadow-2xl">
+            <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-2xl">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs text-zinc-300">
                   <thead className="bg-white/[0.03] border-b border-white/[0.08] text-zinc-400 font-bold uppercase tracking-wider text-[10px]">
@@ -1104,7 +1107,7 @@ export function SuperAdminDashboard({
 
             {/* Resultado do Diagnóstico */}
             {diagResult && (
-              <div className="p-4 rounded-xl bg-zinc-950 border border-white/10 text-xs space-y-2">
+              <div className="p-4 rounded-xl bg-card border border-border text-xs space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-zinc-300">
                     Status SMTP (smtp.hostinger.com:465):
@@ -1147,14 +1150,14 @@ export function SuperAdminDashboard({
 
                 <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
                   {inbox.length === 0 ? (
-                    <div className="p-6 rounded-2xl bg-zinc-950 border border-white/[0.08] text-center text-xs text-zinc-500">
+                    <div className="p-6 rounded-2xl bg-card border border-border text-center text-xs text-muted-foreground">
                       Nenhuma mensagem encontrada na caixa de entrada.
                     </div>
                   ) : (
                     inbox.map((msg: any) => (
                       <div
                         key={msg.id}
-                        className="p-4 rounded-xl bg-zinc-950 border border-white/[0.08] hover:border-amber-500/30 transition-colors space-y-1.5"
+                        className="p-4 rounded-xl bg-card border border-border hover:border-amber-500/30 transition-colors space-y-1.5"
                       >
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-bold text-white truncate max-w-[200px]">
@@ -1193,14 +1196,14 @@ export function SuperAdminDashboard({
 
                 <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
                   {emailLogs.length === 0 ? (
-                    <div className="p-6 rounded-2xl bg-zinc-950 border border-white/[0.08] text-center text-xs text-zinc-500">
+                    <div className="p-6 rounded-2xl bg-card border border-border text-center text-xs text-muted-foreground">
                       Nenhum e-mail registrado ainda.
                     </div>
                   ) : (
                     emailLogs.map((log: any) => (
                       <div
                         key={log.id}
-                        className="p-4 rounded-xl bg-zinc-950 border border-white/[0.08] space-y-1.5"
+                        className="p-4 rounded-xl bg-card border border-border space-y-1.5"
                       >
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-bold text-white font-mono">{log.to}</span>
@@ -1225,7 +1228,7 @@ export function SuperAdminDashboard({
             </div>
 
             {/* Enviar E-mail Direto da Plataforma */}
-            <div className="p-6 rounded-2xl bg-zinc-950 border border-white/[0.08] space-y-4">
+            <div className="p-6 rounded-2xl bg-card border border-border space-y-4">
               <h4 className="text-sm font-black text-white flex items-center gap-2">
                 <Send className="w-4 h-4 text-amber-400" />
                 <span>Disparo Avulso de E-mail via Hostinger SMTP</span>
@@ -1317,7 +1320,7 @@ export function SuperAdminDashboard({
             {/* Painel de Edição e Live Preview Lado a Lado */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Formulário de Configuração */}
-              <div className="p-6 rounded-2xl bg-zinc-950 border border-white/10 space-y-4">
+              <div className="p-6 rounded-2xl bg-card border border-border space-y-4">
                 <h4 className="text-sm font-black text-white flex items-center gap-2 border-b border-white/[0.08] pb-3">
                   <Sliders className="w-4 h-4 text-amber-400" />
                   <span>Editar Parâmetros da Campanha</span>
@@ -1546,7 +1549,7 @@ export function SuperAdminDashboard({
       {/* Modal Criar / Editar Plano */}
       {showPlanModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-zinc-950 border border-white/10 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-card border border-border rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
               <h3 className="text-lg font-black text-white">
                 {editingPlan ? "Editar Plano Comercial" : "Criar Novo Plano Comercial"}

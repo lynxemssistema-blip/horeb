@@ -176,12 +176,12 @@ export function MemberDigitalCard({ user, credentialCode }: MemberDigitalCardPro
           {/* ================================================================= */}
           {/* VERSO DA CARTEIRINHA COM QR CODE                                 */}
           {/* ================================================================= */}
-          <div className="absolute inset-0 w-full h-full rounded-3xl p-6 flex flex-col justify-between bg-zinc-950 border border-white/15 [transform:rotateY(180deg)] [backface-visibility:hidden] text-center">
+          <div className="absolute inset-0 w-full h-full rounded-3xl p-6 flex flex-col justify-between bg-card border border-border [transform:rotateY(180deg)] [backface-visibility:hidden] text-center text-card-foreground">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">
                 Validação de Membresia & Acesso
               </span>
-              <h4 className="text-sm font-black text-white mt-0.5">
+              <h4 className="text-sm font-black text-foreground mt-0.5">
                 {user.tenant.name}
               </h4>
             </div>

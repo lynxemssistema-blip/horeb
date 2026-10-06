@@ -225,7 +225,7 @@ export function AssemblyManager({ slug, initialData }: AssemblyManagerProps) {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header Principal */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-950 border border-white/[0.08] p-6 sm:p-8 shadow-2xl overflow-hidden">
+      <div className="relative rounded-3xl bg-gradient-to-br from-card via-card/90 to-muted/40 border border-border p-6 sm:p-8 shadow-2xl overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 blur-[100px] rounded-full pointer-events-none" />
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
@@ -234,10 +234,10 @@ export function AssemblyManager({ slug, initialData }: AssemblyManagerProps) {
               <Scale className="w-4 h-4 text-blue-400" />
               <span>Governança & Estatuto Eclesial</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               Assembleias Estatutárias & Votação com Quórum
             </h1>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl">
+            <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
               Convoque assembleias gerais (AGO / AGE), permita votação secreta ou aberta dos membros pelo celular, compute o quórum em tempo real e emita a ata oficial pronta para cartório.
             </p>
           </div>
@@ -255,10 +255,10 @@ export function AssemblyManager({ slug, initialData }: AssemblyManagerProps) {
       </div>
 
       {assemblies.length === 0 ? (
-        <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] p-12 text-center">
-          <Scale className="w-12 h-12 mx-auto text-zinc-600 mb-3" />
-          <h3 className="text-base font-bold text-white">Nenhuma assembleia registrada</h3>
-          <p className="text-xs text-zinc-400 max-w-sm mx-auto mt-1 mb-4">
+        <Card className="rounded-3xl bg-card border-border p-12 text-center">
+          <Scale className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+          <h3 className="text-base font-bold text-foreground">Nenhuma assembleia registrada</h3>
+          <p className="text-xs text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
             Convoque uma assembleia geral ordinária ou extraordinária para deliberar e votar pautas com os membros.
           </p>
           {isLeader && (
@@ -291,7 +291,7 @@ export function AssemblyManager({ slug, initialData }: AssemblyManagerProps) {
                     className={`p-4 rounded-2xl border transition-all cursor-pointer text-left space-y-2.5 ${
                       isSelected
                         ? "bg-blue-600/10 border-blue-500/60 shadow-lg shadow-blue-500/10"
-                        : "bg-zinc-950 border-white/[0.08] hover:border-white/20"
+                        : "bg-card border-border hover:border-primary/40"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -331,8 +331,8 @@ export function AssemblyManager({ slug, initialData }: AssemblyManagerProps) {
           {/* Coluna da Direita: Detalhes da Assembleia Selecionada */}
           <div className="lg:col-span-2 space-y-6">
             {selectedAssembly && (
-              <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] shadow-2xl overflow-hidden">
-                <CardHeader className="pb-4 border-b border-white/[0.08] space-y-3">
+              <Card className="rounded-3xl bg-card border-border shadow-2xl overflow-hidden">
+                <CardHeader className="pb-4 border-b border-border space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2">
@@ -634,9 +634,9 @@ export function AssemblyManager({ slug, initialData }: AssemblyManagerProps) {
       {/* MODAL: CONVOCAR NOVA ASSEMBLEIA                                          */}
       {/* ========================================================================= */}
       <Dialog open={isNewAssemblyOpen} onOpenChange={setIsNewAssemblyOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6 bg-zinc-950/95 border-white/10 rounded-3xl">
-          <DialogHeader className="pb-3 border-b border-white/[0.08]">
-            <DialogTitle className="text-base font-black text-white flex items-center gap-2">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6 bg-card border-border text-card-foreground rounded-3xl">
+          <DialogHeader className="pb-3 border-b border-border">
+            <DialogTitle className="text-base font-black text-foreground flex items-center gap-2">
               <Scale className="w-5 h-5 text-blue-400" />
               <span>Convocação de Assembleia Geral</span>
             </DialogTitle>
@@ -815,10 +815,10 @@ export function AssemblyManager({ slug, initialData }: AssemblyManagerProps) {
         open={Boolean(viewingMinutesText)}
         onOpenChange={(open) => !open && setViewingMinutesText(null)}
       >
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 bg-zinc-950 border-white/10 rounded-3xl">
-          <DialogHeader className="pb-3 border-b border-white/[0.08] flex flex-row items-center justify-between print:hidden">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 bg-card border-border text-card-foreground rounded-3xl">
+          <DialogHeader className="pb-3 border-b border-border flex flex-row items-center justify-between print:hidden">
             <div>
-              <DialogTitle className="text-base font-black text-white flex items-center gap-2">
+              <DialogTitle className="text-base font-black text-foreground flex items-center gap-2">
                 <FileText className="w-5 h-5 text-blue-400" />
                 <span>Minuta Oficial da Ata da Assembleia</span>
               </DialogTitle>

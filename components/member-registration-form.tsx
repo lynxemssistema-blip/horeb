@@ -96,7 +96,7 @@ export function MemberRegistrationForm({
 
   return (
     <>
-      <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-zinc-950/90 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative overflow-hidden backdrop-blur-xl text-zinc-100 space-y-6">
+      <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-card border border-border shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative overflow-hidden backdrop-blur-xl text-card-foreground space-y-6">
         {/* Glow Superior com a Cor da Igreja */}
         <div
           className="absolute top-0 left-0 right-0 h-1.5 transition-all"

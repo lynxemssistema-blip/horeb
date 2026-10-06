@@ -174,7 +174,7 @@ export function AssetInventoryManager({ slug, initialData }: AssetInventoryManag
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header Principal */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-950 border border-white/[0.08] p-6 sm:p-8 shadow-2xl overflow-hidden">
+      <div className="relative rounded-3xl bg-gradient-to-br from-card via-card/90 to-muted/40 border border-border p-6 sm:p-8 shadow-2xl overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none" />
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
@@ -183,10 +183,10 @@ export function AssetInventoryManager({ slug, initialData }: AssetInventoryManag
               <Package className="w-4 h-4 text-amber-400" />
               <span>Gestão de Bens & Tombamento</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               Patrimônio & Inventário da Congregação
             </h1>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl">
+            <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
               Controle físico e contábil de equipamentos de som, instrumentos, mobiliário, veículos e imóveis da igreja com etiquetas de patrimônio e código QR.
             </p>
           </div>
@@ -243,15 +243,15 @@ export function AssetInventoryManager({ slug, initialData }: AssetInventoryManag
       </div>
 
       {/* Barra de Filtros e Busca */}
-      <div className="p-4 rounded-3xl bg-zinc-950 border border-white/[0.08] shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="p-4 rounded-3xl bg-card border border-border shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Buscar por nome, tombamento ou local..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-zinc-900 border-white/10 text-xs rounded-xl text-white"
+            className="pl-9 bg-muted border-border text-xs rounded-xl text-foreground"
           />
         </div>
 
@@ -260,7 +260,7 @@ export function AssetInventoryManager({ slug, initialData }: AssetInventoryManag
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="h-9 px-3 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white"
+            className="h-9 px-3 bg-muted border border-border rounded-xl text-xs text-foreground"
           >
             <option value="ALL">Todas Categorias</option>
             {Object.entries(CATEGORY_MAP).map(([key, val]) => (
@@ -274,7 +274,7 @@ export function AssetInventoryManager({ slug, initialData }: AssetInventoryManag
           <select
             value={conditionFilter}
             onChange={(e) => setConditionFilter(e.target.value)}
-            className="h-9 px-3 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white"
+            className="h-9 px-3 bg-muted border border-border rounded-xl text-xs text-foreground"
           >
             <option value="ALL">Todos os Estados</option>
             {Object.entries(CONDITION_MAP).map(([key, val]) => (
@@ -288,10 +288,10 @@ export function AssetInventoryManager({ slug, initialData }: AssetInventoryManag
 
       {/* Grid de Bens Patrimoniais */}
       {filteredAssets.length === 0 ? (
-        <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] p-12 text-center">
-          <Package className="w-12 h-12 mx-auto text-zinc-600 mb-3" />
-          <h3 className="text-base font-bold text-white">Nenhum bem patrimonial localizado</h3>
-          <p className="text-xs text-zinc-400 max-w-sm mx-auto mt-1 mb-4">
+        <Card className="rounded-3xl bg-card border-border p-12 text-center">
+          <Package className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+          <h3 className="text-base font-bold text-foreground">Nenhum bem patrimonial localizado</h3>
+          <p className="text-xs text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
             Cadastre os equipamentos, instrumentos e móveis da igreja para manter o inventário em dia.
           </p>
           {isLeader && (
@@ -313,15 +313,15 @@ export function AssetInventoryManager({ slug, initialData }: AssetInventoryManag
             return (
               <Card
                 key={asset.id}
-                className="rounded-3xl bg-zinc-950 border-white/[0.08] hover:border-amber-500/30 transition-all shadow-xl flex flex-col justify-between overflow-hidden"
+                className="rounded-3xl bg-card border-border hover:border-primary/30 transition-all shadow-xl flex flex-col justify-between overflow-hidden"
               >
-                <CardHeader className="pb-3 border-b border-white/[0.06]">
+                <CardHeader className="pb-3 border-b border-border">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <span className="font-mono text-[11px] font-bold text-amber-400 block tracking-wider">
+                      <span className="font-mono text-[11px] font-bold text-amber-500 block tracking-wider">
                         {asset.code}
                       </span>
-                      <h3 className="text-base font-black text-white truncate leading-snug">
+                      <h3 className="text-base font-black text-foreground truncate leading-snug">
                         {asset.name}
                       </h3>
                       <div className="flex items-center gap-1.5 text-xs text-zinc-400 mt-1">
@@ -412,9 +412,9 @@ export function AssetInventoryManager({ slug, initialData }: AssetInventoryManag
       {/* MODAL: NOVO BEM PATRIMONIAL                                               */}
       {/* ========================================================================= */}
       <Dialog open={isNewAssetOpen} onOpenChange={setIsNewAssetOpen}>
-        <DialogContent className="max-w-lg p-6 bg-zinc-950/95 border-white/10 rounded-3xl">
-          <DialogHeader className="pb-3 border-b border-white/[0.08]">
-            <DialogTitle className="text-base font-black text-white flex items-center gap-2">
+        <DialogContent className="max-w-lg p-6 bg-card border-border text-card-foreground rounded-3xl">
+          <DialogHeader className="pb-3 border-b border-border">
+            <DialogTitle className="text-base font-black text-foreground flex items-center gap-2">
               <Package className="w-5 h-5 text-amber-400" />
               <span>Cadastrar Bem Patrimonial</span>
             </DialogTitle>
@@ -563,9 +563,9 @@ export function AssetInventoryManager({ slug, initialData }: AssetInventoryManag
       {/* MODAL: ETIQUETA DE TOMBAMENTO COM QR CODE                                  */}
       {/* ========================================================================= */}
       <Dialog open={Boolean(assetForLabel)} onOpenChange={(open) => !open && setAssetForLabel(null)}>
-        <DialogContent className="max-w-sm p-6 bg-zinc-950 border-white/10 rounded-3xl text-center">
+        <DialogContent className="max-w-sm p-6 bg-card border-border text-card-foreground rounded-3xl text-center">
           <DialogHeader className="pb-2">
-            <DialogTitle className="text-base font-black text-white">
+            <DialogTitle className="text-base font-black text-foreground">
               Etiqueta de Patrimônio
             </DialogTitle>
             <DialogDescription className="text-xs text-zinc-400">

@@ -160,13 +160,13 @@ export function RolePermissionsManager({ initialPermissions }: RolePermissionsMa
               <span>+ Criar Novo Perfil</span>
             </Button>
           } />
-          <DialogContent className="max-w-md bg-zinc-950 border border-white/10 rounded-3xl p-6">
+          <DialogContent className="max-w-md bg-card border border-border text-card-foreground rounded-3xl p-6">
             <DialogHeader className="text-left space-y-2">
-              <DialogTitle className="text-xl font-black text-white flex items-center gap-2">
+              <DialogTitle className="text-xl font-black text-foreground flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-amber-500" />
                 Criar Novo Perfil de Acesso
               </DialogTitle>
-              <DialogDescription className="text-xs text-zinc-400">
+              <DialogDescription className="text-xs text-muted-foreground">
                 O ID do perfil será gerado automaticamente em maiúsculas (ex: LIDER_JOVENS).
               </DialogDescription>
             </DialogHeader>

@@ -161,7 +161,7 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
   return (
     <div className="space-y-8">
       {/* Top Banner de Identidade Visual */}
-      <div className="p-6 rounded-3xl bg-zinc-950 border border-white/10 shadow-2xl relative overflow-hidden">
+      <div className="p-6 rounded-3xl bg-card border border-border shadow-2xl relative overflow-hidden">
         <div
           className="absolute top-0 left-0 right-0 h-1.5 transition-all"
           style={{ backgroundColor: primaryColor }}
@@ -169,13 +169,13 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/[0.06] text-zinc-300 border border-white/10">
+            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-muted text-foreground border border-border">
               {tenant.isMatriz ? "Igreja Sede (Matriz)" : "Congregação Filial"}
             </span>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               Configurações da Igreja
             </h1>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-muted-foreground">
               Personalize o logo direto no banco, cores da marca, dados pastorais e chaves PIX de doação.
             </p>
           </div>
@@ -218,13 +218,13 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
         <div className="lg:col-span-2 space-y-6">
           <form
             onSubmit={handleSave}
-            className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 shadow-xl space-y-6"
+            className="p-6 rounded-3xl bg-card border border-border shadow-xl space-y-6"
           >
             {/* SEÇÃO 1: IDENTIDADE & LOGO (UPLOAD DIRETO NO BANCO) */}
             <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-3 border-b border-white/10">
-                <Church className="w-4 h-4 text-amber-400" />
-                <h2 className="text-sm font-black uppercase tracking-wider text-white">
+              <div className="flex items-center gap-2 pb-3 border-b border-border">
+                <Church className="w-4 h-4 text-amber-500" />
+                <h2 className="text-sm font-black uppercase tracking-wider text-foreground">
                   1. Identidade & Logo da Igreja
                 </h2>
               </div>
@@ -520,22 +520,22 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
         {/* Coluna 3: Rede de Filiais & Assinatura */}
         <div className="space-y-6">
           {/* Card da Rede de Igrejas */}
-          <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+          <div className="p-6 rounded-3xl bg-card border border-border shadow-xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-amber-400" />
-                <h3 className="text-xs font-black uppercase tracking-wider text-white">
+                <Building2 className="w-4 h-4 text-amber-500" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-foreground">
                   Rede & Congregações
                 </h3>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/[0.06] text-zinc-300">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-foreground">
                 {tenant.branches.length} Filiais
               </span>
             </div>
 
             {tenant.isMatriz ? (
               <div className="space-y-2">
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-muted-foreground">
                   Esta congregação é a <strong>Sede Matriz</strong> e gerencia as congregações filiais abaixo:
                 </p>
 
@@ -545,21 +545,21 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
                       <a
                         key={b.id}
                         href={`/${b.slug}`}
-                        className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] text-xs transition-colors border border-white/5 group"
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-muted/50 hover:bg-muted text-xs transition-colors border border-border group"
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <span
                             className="w-2.5 h-2.5 rounded-full shrink-0"
                             style={{ backgroundColor: b.primaryColor }}
                           />
-                          <span className="font-bold text-white truncate">{b.name}</span>
+                          <span className="font-bold text-foreground truncate">{b.name}</span>
                         </div>
-                        <ExternalLink className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 transition-colors" />
+                        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </a>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-zinc-500 italic py-2">
+                  <p className="text-xs text-muted-foreground/60 italic py-2">
                     Nenhuma filial vinculada no momento.
                   </p>
                 )}
@@ -580,7 +580,7 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full text-xs font-bold gap-1.5 border-dashed border-amber-500/40 hover:border-amber-400 text-amber-400 hover:bg-amber-500/10 h-10 rounded-xl cursor-pointer"
+                        className="w-full text-xs font-bold gap-1.5 border-dashed border-amber-500/40 hover:border-amber-400 text-amber-500 hover:bg-amber-500/10 h-10 rounded-xl cursor-pointer"
                       >
                         <PlusCircle className="w-3.5 h-3.5" />
                         <span>Cadastrar Mais Uma Filial</span>
@@ -591,13 +591,13 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-muted-foreground">
                   Esta congregação é uma filial vinculada à Sede:
                 </p>
                 {tenant.parent && (
                   <a
                     href={`/${tenant.parent.slug}`}
-                    className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs font-bold text-amber-400 hover:bg-amber-500/20 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs font-bold text-amber-500 hover:bg-amber-500/20 transition-colors"
                   >
                     <span>{tenant.parent.name}</span>
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -608,37 +608,37 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
           </div>
 
           {/* Card de Assinatura */}
-          <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 shadow-xl space-y-3">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+          <div className="p-6 rounded-3xl bg-card border border-border shadow-xl space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <h3 className="text-xs font-black uppercase tracking-wider text-white">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-foreground">
                   Plano & Licença
                 </h3>
               </div>
-              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500 border border-emerald-500/30">
                 {tenant.status}
               </span>
             </div>
 
             <div className="space-y-1">
-              <span className="text-[11px] text-zinc-400">Plano Ativo:</span>
-              <p className="text-base font-black text-white tracking-wide">
+              <span className="text-[11px] text-muted-foreground">Plano Ativo:</span>
+              <p className="text-base font-black text-foreground tracking-wide">
                 PLANO {tenant.plan || "GESTAO"}
               </p>
             </div>
 
-            <p className="text-[11px] text-zinc-400 leading-relaxed">
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
               Plataforma com motor multi-tenant e segurança em nuvem. Desenvolvido por Lynx EMS Sistemas.
             </p>
           </div>
 
           {/* Card de Sessão e Desconexão */}
-          <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 shadow-xl space-y-3">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+          <div className="p-6 rounded-3xl bg-card border border-border shadow-xl space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
-                <LogOut className="w-4 h-4 text-rose-400" />
-                <h3 className="text-xs font-black uppercase tracking-wider text-white">
+                <LogOut className="w-4 h-4 text-rose-500" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-foreground">
                   Sessão & Desconexão
                 </h3>
               </div>

@@ -314,12 +314,12 @@ export function CreateChurchDialog({
         />
 
         {/* Modal rigorosamente centralizado no meio da tela com viewport responsivo e scroll interno */}
-        <DialogContent className="w-[94vw] max-w-lg max-h-[88dvh] flex flex-col p-0 overflow-hidden bg-zinc-950 border border-white/10 rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.9),0_0_50px_rgba(245,158,11,0.06)] text-zinc-100">
+        <DialogContent className="w-[94vw] max-w-lg max-h-[88dvh] flex flex-col p-0 overflow-hidden bg-card border border-border rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.9),0_0_50px_rgba(245,158,11,0.06)] text-card-foreground">
           {/* Glow de Iluminação */}
           <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-80 h-32 bg-amber-500/15 blur-3xl rounded-full" />
 
           {/* Cabeçalho Fixo */}
-          <div className="p-5 sm:p-6 pb-2 shrink-0 border-b border-white/5 relative z-10 space-y-1.5">
+          <div className="p-5 sm:p-6 pb-2 shrink-0 border-b border-border relative z-10 space-y-1.5">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-[10px] font-bold tracking-wider uppercase w-fit">
               <ShieldCheck className="w-3 h-3 text-amber-400 shrink-0" />
               <span>Portal Multi-Tenant • Lynx EMS Sistemas</span>
@@ -390,7 +390,7 @@ export function CreateChurchDialog({
                         value={masterName}
                         onChange={(e) => setMasterName(e.target.value)}
                         placeholder="Ex: Pr. Carlos Eduardo"
-                        className="bg-zinc-950/80 border-white/[0.08] text-xs h-9 rounded-xl"
+                        className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl"
                       />
                     </div>
 
@@ -418,7 +418,7 @@ export function CreateChurchDialog({
                         value={masterEmail}
                         onChange={(e) => setMasterEmail(e.target.value)}
                         placeholder="pastor@igreja.org"
-                        className="bg-zinc-950/80 border-white/[0.08] text-xs h-9 rounded-xl"
+                        className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl"
                       />
                     </div>
 
@@ -435,7 +435,7 @@ export function CreateChurchDialog({
                           onChange={(e) => setMasterPassword(e.target.value)}
                           placeholder="••••••••"
                           minLength={6}
-                          className="bg-zinc-950/80 border-white/[0.08] text-xs h-9 rounded-xl pr-10"
+                          className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl pr-10"
                         />
                         <button
                           type="button"
@@ -519,7 +519,7 @@ export function CreateChurchDialog({
                         value={churchName}
                         onChange={(e) => handleNameChange(e.target.value, false)}
                         placeholder="Ex: Igreja Videira Central"
-                        className="bg-zinc-950/80 border-white/[0.08] text-xs h-9 rounded-xl"
+                        className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl"
                       />
                     </div>
 
@@ -527,14 +527,14 @@ export function CreateChurchDialog({
                       <label className="text-xs font-semibold text-zinc-300">
                         Endereço Web Exclusivo (Slug)
                       </label>
-                      <div className="flex items-center bg-zinc-950/80 border border-white/[0.08] rounded-xl overflow-hidden px-2.5 h-9">
-                        <span className="text-[11px] font-mono text-zinc-500 shrink-0">horeb.lynxems.com.br/</span>
+                      <div className="flex items-center bg-muted/60 border border-border rounded-xl overflow-hidden px-2.5 h-9">
+                        <span className="text-[11px] font-mono text-muted-foreground shrink-0">horeb.lynxems.com.br/</span>
                         <input
                           required
                           value={churchSlug}
                           onChange={(e) => setChurchSlug(e.target.value.toLowerCase())}
                           placeholder="videira-central"
-                          className="bg-transparent border-0 text-white font-mono text-xs px-1 outline-none flex-1 min-w-0"
+                          className="bg-transparent border-0 text-foreground font-mono text-xs px-1 outline-none flex-1 min-w-0"
                         />
                       </div>
                     </div>
@@ -549,7 +549,7 @@ export function CreateChurchDialog({
                           value={churchPhone}
                           onChange={(e) => setChurchPhone(e.target.value)}
                           placeholder="(11) 98765-4321"
-                          className="bg-zinc-950/80 border-white/[0.08] text-xs h-9 rounded-xl"
+                          className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl"
                         />
                       </div>
 
@@ -562,7 +562,7 @@ export function CreateChurchDialog({
                           value={churchAddress}
                           onChange={(e) => setChurchAddress(e.target.value)}
                           placeholder="Bairro / Cidade"
-                          className="bg-zinc-950/80 border-white/[0.08] text-xs h-9 rounded-xl"
+                          className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl"
                         />
                       </div>
                     </div>
@@ -635,7 +635,7 @@ export function CreateChurchDialog({
                     <select
                       value={selectedParentId}
                       onChange={(e) => setSelectedParentId(e.target.value)}
-                      className="w-full h-9 rounded-xl bg-zinc-950/80 border border-white/[0.08] text-xs px-3 text-zinc-200 outline-none"
+                      className="w-full h-9 rounded-xl bg-muted/60 border border-border text-xs px-3 text-foreground outline-none"
                     >
                       {existingTenants.map((t) => (
                         <option key={t.id} value={t.id}>
@@ -690,7 +690,7 @@ export function CreateChurchDialog({
                       value={branchName}
                       onChange={(e) => handleNameChange(e.target.value, true)}
                       placeholder="Ex: Videira - Campus Sul"
-                      className="bg-zinc-950/80 border-white/[0.08] text-xs h-9 rounded-xl"
+                      className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl"
                     />
                   </div>
 
@@ -698,14 +698,14 @@ export function CreateChurchDialog({
                     <label className="text-xs font-semibold text-zinc-300">
                       Slug da URL da Filial *
                     </label>
-                    <div className="flex items-center bg-zinc-950/80 border border-white/[0.08] rounded-xl overflow-hidden px-2.5 h-9">
-                      <span className="text-[11px] font-mono text-zinc-500 shrink-0">horeb.lynxems.com.br/</span>
+                    <div className="flex items-center bg-muted/60 border border-border rounded-xl overflow-hidden px-2.5 h-9">
+                      <span className="text-[11px] font-mono text-muted-foreground shrink-0">horeb.lynxems.com.br/</span>
                       <input
                         required
                         value={branchSlug}
                         onChange={(e) => setBranchSlug(e.target.value.toLowerCase())}
                         placeholder="videira-sul"
-                        className="bg-transparent border-0 text-white font-mono text-xs px-1 outline-none flex-1 min-w-0"
+                        className="bg-transparent border-0 text-foreground font-mono text-xs px-1 outline-none flex-1 min-w-0"
                       />
                     </div>
                   </div>
@@ -782,7 +782,7 @@ export function CreateChurchDialog({
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         placeholder="pastor@igreja.org ou Pastor Luan"
-                        className="bg-zinc-950/80 border-white/[0.08] text-xs h-9 rounded-xl"
+                        className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl"
                       />
                     </div>
 
@@ -797,7 +797,7 @@ export function CreateChurchDialog({
                           value={loginPassword}
                           onChange={(e) => setLoginPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="bg-zinc-950/80 border-white/[0.08] text-xs h-9 rounded-xl pr-10"
+                          className="bg-muted/60 border-border text-foreground text-xs h-9 rounded-xl pr-10"
                         />
                         <button
                           type="button"

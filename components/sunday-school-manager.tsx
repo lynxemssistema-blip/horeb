@@ -246,7 +246,7 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header Principal */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-950 border border-white/[0.08] p-6 sm:p-8 shadow-2xl overflow-hidden">
+      <div className="relative rounded-3xl bg-gradient-to-br from-card via-card/90 to-muted/40 border border-border p-6 sm:p-8 shadow-2xl overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none" />
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
@@ -255,10 +255,10 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
               <GraduationCap className="w-4 h-4 text-amber-400" />
               <span>Educação Cristã & Liderança</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               Escola Bíblica Dominical & Trilhas de Discipulado
             </h1>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl">
+            <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
               Gerencie turmas dominicais, chamadas de presença, oferta e acompanhe a evolução dos novos convertidos até a maturidade e integração em células e ministérios.
             </p>
           </div>
@@ -324,7 +324,7 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
 
       {/* Tabs Principais: Turmas vs Trilhas */}
       <Tabs defaultValue="classes" className="space-y-6">
-        <TabsList className="grid grid-cols-2 max-w-md h-11 rounded-2xl bg-zinc-900/90 border border-white/[0.08] p-1 gap-1">
+        <TabsList className="grid grid-cols-2 max-w-md h-11 rounded-2xl bg-muted/80 border border-border p-1 gap-1">
           <TabsTrigger
             value="classes"
             className="rounded-xl text-xs font-bold data-[state=active]:bg-amber-500 data-[state=active]:text-black transition-all gap-1.5 cursor-pointer"
@@ -347,7 +347,7 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
         {/* ========================================================================= */}
         <TabsContent value="classes" className="space-y-4">
           {classes.length === 0 ? (
-            <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] p-12 text-center">
+            <Card className="rounded-3xl bg-card border-border p-12 text-center">
               <BookOpen className="w-12 h-12 mx-auto text-zinc-600 mb-3" />
               <h3 className="text-base font-bold text-white">Nenhuma turma cadastrada</h3>
               <p className="text-xs text-zinc-400 max-w-sm mx-auto mt-1 mb-4">
@@ -367,7 +367,7 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
                 return (
                   <Card
                     key={cls.id}
-                    className="rounded-3xl bg-zinc-950 border-white/[0.08] hover:border-amber-500/30 transition-all shadow-xl flex flex-col justify-between overflow-hidden"
+                    className="rounded-3xl bg-card border-border hover:border-amber-500/30 transition-all shadow-xl flex flex-col justify-between overflow-hidden"
                   >
                     <CardHeader className="pb-3 border-b border-white/[0.06]">
                       <div className="flex items-start justify-between gap-2">
@@ -464,7 +464,7 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
         {/* ========================================================================= */}
         <TabsContent value="discipleship" className="space-y-6">
           {tracks.map((track) => (
-            <Card key={track.id} className="rounded-3xl bg-zinc-950 border-white/[0.08] shadow-2xl overflow-hidden">
+            <Card key={track.id} className="rounded-3xl bg-card border-border shadow-2xl overflow-hidden">
               <CardHeader className="pb-4 border-b border-white/[0.06]">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
@@ -638,7 +638,7 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
       {/* MODAL: NOVA TURMA DA EBD                                                  */}
       {/* ========================================================================= */}
       <Dialog open={isNewClassOpen} onOpenChange={setIsNewClassOpen}>
-        <DialogContent className="max-w-lg p-6 bg-zinc-950/95 border-white/10 rounded-3xl">
+        <DialogContent className="max-w-lg p-6 bg-card border-border rounded-3xl">
           <DialogHeader className="pb-3 border-b border-white/[0.08]">
             <DialogTitle className="text-base font-black text-white flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-amber-400" />
@@ -736,7 +736,7 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
         open={Boolean(selectedClassForAttendance)}
         onOpenChange={(open) => !open && setSelectedClassForAttendance(null)}
       >
-        <DialogContent className="max-w-lg p-6 bg-zinc-950/95 border-white/10 rounded-3xl">
+        <DialogContent className="max-w-lg p-6 bg-card border-border rounded-3xl">
           <DialogHeader className="pb-3 border-b border-white/[0.08]">
             <DialogTitle className="text-base font-black text-white flex items-center gap-2">
               <BookCheck className="w-5 h-5 text-amber-400" />
@@ -867,7 +867,7 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
       {/* MODAL: MATRICULAR DISCÍPULO                                              */}
       {/* ========================================================================= */}
       <Dialog open={isEnrollDiscipleOpen} onOpenChange={setIsEnrollDiscipleOpen}>
-        <DialogContent className="max-w-lg p-6 bg-zinc-950/95 border-white/10 rounded-3xl">
+        <DialogContent className="max-w-lg p-6 bg-card border-border rounded-3xl">
           <DialogHeader className="pb-3 border-b border-white/[0.08]">
             <DialogTitle className="text-base font-black text-white flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-purple-400" />

@@ -159,20 +159,20 @@ export function NativeMobileTools({
       {/* 2. Modal Nativo com Instruções de Instalação (para iPhone ou navegadores sem prompt automático) */}
       {showInstallModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] animate-in fade-in-0">
-          <div className="bg-zinc-950 border border-white/10 rounded-3xl p-5 sm:p-6 max-w-sm w-full space-y-4 shadow-2xl relative">
+          <div className="bg-card border border-border text-card-foreground rounded-3xl p-5 sm:p-6 max-w-sm w-full space-y-4 shadow-2xl relative">
             <button
               onClick={() => setShowInstallModal(false)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white"
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500">
               <Smartphone className="w-6 h-6" />
             </div>
 
             <div>
-              <h3 className="text-lg font-black text-white">
+              <h3 className="text-lg font-black text-foreground">
                 Como Instalar no seu Celular
               </h3>
               <p className="text-xs text-zinc-400 mt-1">

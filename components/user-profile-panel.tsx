@@ -264,7 +264,7 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6 pb-12">
       {/* Header do Perfil com Avatar e Identificação */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-900/80 to-zinc-950 border border-white/[0.08] p-6 sm:p-8 shadow-2xl overflow-hidden">
+      <div className="relative rounded-3xl bg-gradient-to-br from-card via-card/90 to-muted/40 border border-border p-6 sm:p-8 shadow-2xl overflow-hidden">
         {/* Ambient halo glow */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none" />
 
@@ -412,7 +412,7 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
 
       {/* Tabs de Configuração do Painel do Usuário */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-2 sm:grid-cols-5 h-auto sm:h-12 rounded-2xl bg-zinc-900/90 border border-white/[0.08] p-1 gap-1">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-5 h-auto sm:h-12 rounded-2xl bg-muted/80 border border-border p-1 gap-1">
           <TabsTrigger
             value="data"
             className="rounded-xl text-xs font-bold data-[state=active]:bg-amber-500 data-[state=active]:text-black transition-all gap-1.5 cursor-pointer"
@@ -458,13 +458,13 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
         {/* ABA 1: MEUS DADOS PESSOAIS & MINISTERIAIS                                  */}
         {/* ========================================================================= */}
         <TabsContent value="data">
-          <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] shadow-2xl">
+          <Card className="rounded-3xl bg-card border-border shadow-2xl">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-black text-white flex items-center gap-2">
+              <CardTitle className="text-lg font-black text-foreground flex items-center gap-2">
                 <User className="w-5 h-5 text-amber-400" />
                 <span>Informações Pessoais & Contato</span>
               </CardTitle>
-              <CardDescription className="text-xs text-zinc-400">
+              <CardDescription className="text-xs text-muted-foreground">
                 Mantenha suas informações cadastrais atualizadas para comunicação e secretaria da igreja.
               </CardDescription>
             </CardHeader>
@@ -473,70 +473,70 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
               <form onSubmit={handleSaveProfile} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-zinc-300">Nome Completo</Label>
+                    <Label className="text-xs font-bold text-foreground">Nome Completo</Label>
                     <Input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Seu nome completo"
                       required
-                      className="bg-zinc-900/90 border-white/10 rounded-xl text-xs text-white focus:border-amber-400"
+                      className="bg-background border-border rounded-xl text-xs text-foreground focus:border-primary"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-zinc-300">E-mail de Login</Label>
+                    <Label className="text-xs font-bold text-foreground">E-mail de Login</Label>
                     <Input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="seu.email@exemplo.com"
                       required
-                      className="bg-zinc-900/90 border-white/10 rounded-xl text-xs text-white focus:border-amber-400"
+                      className="bg-background border-border rounded-xl text-xs text-foreground focus:border-primary"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-zinc-300">Telefone / WhatsApp</Label>
+                    <Label className="text-xs font-bold text-foreground">Telefone / WhatsApp</Label>
                     <Input
                       type="text"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="(11) 98765-4321"
-                      className="bg-zinc-900/90 border-white/10 rounded-xl text-xs text-white focus:border-amber-400"
+                      className="bg-background border-border rounded-xl text-xs text-foreground focus:border-primary"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-zinc-300">CPF (Opcional - Relatórios)</Label>
+                    <Label className="text-xs font-bold text-foreground">CPF (Opcional - Relatórios)</Label>
                     <Input
                       type="text"
                       value={cpf}
                       onChange={(e) => setCpf(e.target.value)}
                       placeholder="000.000.000-00"
-                      className="bg-zinc-900/90 border-white/10 rounded-xl text-xs text-white focus:border-amber-400"
+                      className="bg-background border-border rounded-xl text-xs text-foreground focus:border-primary"
                     />
                   </div>
 
                   <div className="space-y-1.5 sm:col-span-2">
-                    <Label className="text-xs font-bold text-zinc-300">Cargo / Função Ministerial</Label>
+                    <Label className="text-xs font-bold text-foreground">Cargo / Função Ministerial</Label>
                     <Input
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="Ex: Pastor Titular, Líder de Jovens, Diácono, Membro"
-                      className="bg-zinc-900/90 border-white/10 rounded-xl text-xs text-white focus:border-amber-400"
+                      className="bg-background border-border rounded-xl text-xs text-foreground focus:border-primary"
                     />
                   </div>
 
                   <div className="space-y-1.5 sm:col-span-2">
-                    <Label className="text-xs font-bold text-zinc-300">Biografia / Testemunho Breve</Label>
+                    <Label className="text-xs font-bold text-foreground">Biografia / Testemunho Breve</Label>
                     <Textarea
                       rows={3}
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
                       placeholder="Conte um pouco sobre sua trajetória ministerial ou versículo favorito..."
-                      className="bg-zinc-900/90 border-white/10 rounded-xl text-xs text-white focus:border-amber-400 resize-none"
+                      className="bg-background border-border rounded-xl text-xs text-foreground focus:border-primary resize-none"
                     />
                   </div>
                 </div>
@@ -560,13 +560,13 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
         {/* ABA 2: SEGURANÇA & ALTERAÇÃO DE SENHA                                     */}
         {/* ========================================================================= */}
         <TabsContent value="password">
-          <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] shadow-2xl">
+          <Card className="rounded-3xl bg-card border-border shadow-2xl">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-black text-white flex items-center gap-2">
+              <CardTitle className="text-lg font-black text-foreground flex items-center gap-2">
                 <Lock className="w-5 h-5 text-amber-400" />
                 <span>Alteração de Senha de Acesso</span>
               </CardTitle>
-              <CardDescription className="text-xs text-zinc-400">
+              <CardDescription className="text-xs text-muted-foreground">
                 Escolha uma senha forte com no mínimo 6 dígitos para proteger sua conta e ministério.
               </CardDescription>
             </CardHeader>
@@ -574,19 +574,19 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
             <CardContent>
               <form onSubmit={handleSavePassword} className="space-y-4 max-w-md">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-zinc-300">Senha Atual</Label>
+                  <Label className="text-xs font-bold text-foreground">Senha Atual</Label>
                   <div className="relative">
                     <Input
                       type={showCurrentPassword ? "text" : "password"}
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="Digite sua senha atual"
-                      className="bg-zinc-900/90 border-white/10 rounded-xl text-xs text-white pr-10 focus:border-amber-400"
+                      className="bg-background border-border rounded-xl text-xs text-foreground pr-10 focus:border-primary"
                     />
                     <button
                       type="button"
                       onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
                       {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -594,7 +594,7 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-zinc-300">Nova Senha</Label>
+                  <Label className="text-xs font-bold text-foreground">Nova Senha</Label>
                   <div className="relative">
                     <Input
                       type={showNewPassword ? "text" : "password"}
@@ -602,12 +602,12 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Mínimo de 6 caracteres"
                       required
-                      className="bg-zinc-900/90 border-white/10 rounded-xl text-xs text-white pr-10 focus:border-amber-400"
+                      className="bg-background border-border rounded-xl text-xs text-foreground pr-10 focus:border-primary"
                     />
                     <button
                       type="button"
                       onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
                       {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -615,14 +615,14 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-zinc-300">Confirmar Nova Senha</Label>
+                  <Label className="text-xs font-bold text-foreground">Confirmar Nova Senha</Label>
                   <Input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Repita a nova senha"
                     required
-                    className="bg-zinc-900/90 border-white/10 rounded-xl text-xs text-white focus:border-amber-400"
+                    className="bg-background border-border rounded-xl text-xs text-foreground focus:border-primary"
                   />
                 </div>
 
@@ -671,13 +671,13 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
         {/* ABA 3: FOTO DE PERFIL & AVATARES                                          */}
         {/* ========================================================================= */}
         <TabsContent value="avatar">
-          <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] shadow-2xl">
+          <Card className="rounded-3xl bg-card border-border shadow-2xl">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-black text-white flex items-center gap-2">
+              <CardTitle className="text-lg font-black text-foreground flex items-center gap-2">
                 <Camera className="w-5 h-5 text-amber-400" />
                 <span>Foto de Perfil & Identificação Visual</span>
               </CardTitle>
-              <CardDescription className="text-xs text-zinc-400">
+              <CardDescription className="text-xs text-muted-foreground">
                 Envie uma foto do seu dispositivo, use uma imagem da web ou selecione um avatar predefinido.
               </CardDescription>
             </CardHeader>
@@ -800,13 +800,13 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
         {/* ABA 4: CONGREGAÇÕES VINCULADAS AO USUÁRIO                                 */}
         {/* ========================================================================= */}
         <TabsContent value="churches">
-          <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] shadow-2xl">
+          <Card className="rounded-3xl bg-card border-border shadow-2xl">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-black text-white flex items-center gap-2">
+              <CardTitle className="text-lg font-black text-foreground flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-amber-400" />
                 <span>Congregações Vinculadas & Acessos</span>
               </CardTitle>
-              <CardDescription className="text-xs text-zinc-400">
+              <CardDescription className="text-xs text-muted-foreground">
                 Você pode alternar sua congregação ativa a qualquer momento com sua mesma conta e senha.
               </CardDescription>
             </CardHeader>
@@ -903,24 +903,24 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
         {/* ABA 5: APARÊNCIA & TEMA DO APLICATIVO                                     */}
         {/* ========================================================================= */}
         <TabsContent value="theme" className="space-y-6">
-          <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] shadow-2xl">
+          <Card className="rounded-3xl bg-card border-border shadow-2xl">
             <CardHeader className="pb-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <CardTitle className="text-lg font-black text-white flex items-center gap-2">
+                  <CardTitle className="text-lg font-black text-foreground flex items-center gap-2">
                     <Palette className="w-5 h-5 text-amber-400" />
                     <span>Aparência & Tema de Cores</span>
                   </CardTitle>
-                  <CardDescription className="text-xs text-zinc-400">
+                  <CardDescription className="text-xs text-muted-foreground">
                     Personalize o modo e a cor de fundo do aplicativo de acordo com a sua preferência. A configuração é salva na sua conta e aplicada em qualquer dispositivo.
                   </CardDescription>
                 </div>
 
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs font-bold text-zinc-300 w-fit">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/60 border border-border text-xs font-bold text-foreground w-fit">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   <span>
                     Ativo:{" "}
-                    <strong className="text-white">
+                    <strong className="text-foreground">
                       {THEME_PRESETS.find((p) => p.id === activePresetId)?.name || "Padrão"}
                     </strong>
                   </span>
@@ -945,7 +945,7 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
                     className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 ${
                       mode === "system"
                         ? "bg-amber-500/10 border-amber-500/50 shadow-lg shadow-amber-500/10"
-                        : "bg-zinc-900/40 border-white/[0.08] hover:border-white/20"
+                        : "bg-card border-border hover:border-primary/40"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -959,8 +959,8 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
                       )}
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-white">Automático (Sistema)</h4>
-                      <p className="text-xs text-zinc-400 mt-0.5">
+                      <h4 className="text-sm font-bold text-foreground">Automático (Sistema)</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         Altera entre Claro e Escuro conforme a configuração do seu sistema.
                       </p>
                     </div>
@@ -975,7 +975,7 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
                     className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 ${
                       mode === "light"
                         ? "bg-amber-500/10 border-amber-500/50 shadow-lg shadow-amber-500/10"
-                        : "bg-zinc-900/40 border-white/[0.08] hover:border-white/20"
+                        : "bg-card border-border hover:border-primary/40"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -989,8 +989,8 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
                       )}
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-white">Modo Claro</h4>
-                      <p className="text-xs text-zinc-400 mt-0.5">
+                      <h4 className="text-sm font-bold text-foreground">Modo Claro</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         Fundo claro iluminado com textos escuros para leitura durante o dia.
                       </p>
                     </div>
@@ -1005,7 +1005,7 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
                     className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 ${
                       mode === "dark"
                         ? "bg-amber-500/10 border-amber-500/50 shadow-lg shadow-amber-500/10"
-                        : "bg-zinc-900/40 border-white/[0.08] hover:border-white/20"
+                        : "bg-card border-border hover:border-primary/40"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -1019,8 +1019,8 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
                       )}
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-white">Modo Escuro</h4>
-                      <p className="text-xs text-zinc-400 mt-0.5">
+                      <h4 className="text-sm font-bold text-foreground">Modo Escuro</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         Tons escuros elegantes que descansam a visão e economizam bateria.
                       </p>
                     </div>
@@ -1029,12 +1029,12 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
               </div>
 
               {/* 2. PALETAS PRÉ-DEFINIDAS DE COR DE FUNDO */}
-              <div className="space-y-3 pt-3 border-t border-white/[0.06]">
+              <div className="space-y-3 pt-3 border-t border-border">
                 <div>
-                  <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">
+                  <label className="text-xs font-bold text-foreground uppercase tracking-wider block">
                     Paletas Pré-definidas de Superfície & Fundo
                   </label>
-                  <p className="text-xs text-zinc-400 mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Selecione uma tonalidade de fundo com harmonia calibrada para o aplicativo:
                   </p>
                 </div>
@@ -1053,7 +1053,7 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
                         className={`p-4 rounded-2xl border transition-all cursor-pointer relative group flex flex-col justify-between gap-3 ${
                           isCurrent
                             ? "border-amber-500 bg-amber-500/[0.06] shadow-xl shadow-amber-500/10 ring-1 ring-amber-500/30"
-                            : "bg-zinc-900/30 border-white/[0.08] hover:border-white/25 hover:bg-zinc-900/60"
+                            : "bg-card border-border hover:border-primary/40 hover:bg-muted/40"
                         }`}
                       >
                         {/* Header do Card com Prévia de Cores */}
@@ -1114,13 +1114,13 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
 
       {/* Modal da Carteirinha Digital */}
       <Dialog open={isCardOpen} onOpenChange={setIsCardOpen}>
-        <DialogContent className="max-w-md p-6 bg-zinc-950/95 border-white/10 rounded-3xl backdrop-blur-xl">
+        <DialogContent className="max-w-md p-6 bg-card border-border rounded-3xl shadow-2xl">
           <DialogHeader className="pb-2 text-center sm:text-left">
-            <DialogTitle className="text-base font-black text-white flex items-center gap-2">
+            <DialogTitle className="text-base font-black text-foreground flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-amber-400" />
               <span>Carteirinha Digital Oficial</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-400">
+            <DialogDescription className="text-xs text-muted-foreground">
               Sua credencial eclesiástica oficial com QR Code de verificação em tempo real.
             </DialogDescription>
           </DialogHeader>

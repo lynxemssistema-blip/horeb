@@ -16,6 +16,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function SelectChurchPage() {
   const session = await getSession();
@@ -131,10 +132,15 @@ export default async function SelectChurchPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-[#070709] flex flex-col items-center justify-start p-4 sm:p-8 text-zinc-100">
+    <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-start p-4 sm:p-8 text-foreground">
       {/* Background Glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-amber-500/10 blur-[130px] rounded-full" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-primary/10 blur-[130px] rounded-full" />
+      </div>
+
+      {/* Top Floating Controls */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle showLabel />
       </div>
 
       <div className="relative z-10 w-full max-w-4xl space-y-6 sm:space-y-8 my-auto py-6">
@@ -151,18 +157,18 @@ export default async function SelectChurchPage() {
           </div>
 
           <div className="flex items-center justify-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               Olá, {session.name}!
             </h1>
             {isSuperAdmin && (
-              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
-                <Crown className="w-3 h-3 text-amber-400" />
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/40 flex items-center gap-1">
+                <Crown className="w-3 h-3 text-amber-500" />
                 SUPER ADMIN
               </span>
             )}
           </div>
 
-          <p className="text-xs sm:text-sm text-zinc-400 max-w-xl mx-auto">
+          <p className="text-xs sm:text-sm text-muted-foreground max-w-xl mx-auto">
             {isSuperAdmin
               ? `Você possui autorização master para visualizar e alternar entre todas as ${churchList.length} congregações do ecossistema Horeb.`
               : "Você possui acesso autorizado a múltiplas congregações. Selecione onde deseja atuar agora:"}
@@ -173,14 +179,14 @@ export default async function SelectChurchPage() {
         {isSuperAdmin && (
           <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
             <div className="flex items-center gap-3 text-center sm:text-left">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-white">
+                <p className="text-xs font-bold text-foreground">
                   Controle Global de Assinaturas e Configurações
                 </p>
-                <p className="text-[11px] text-zinc-400">
+                <p className="text-[11px] text-muted-foreground">
                   Acesse métricas de faturamento, central de e-mails Hostinger e agentes de IA no painel central.
                 </p>
               </div>
@@ -206,7 +212,7 @@ export default async function SelectChurchPage() {
             return (
               <div
                 key={t.id}
-                className="bg-zinc-900/90 border border-white/10 hover:border-amber-500/50 hover:bg-zinc-800/90 rounded-2xl p-4 sm:p-5 transition-all group flex flex-col justify-between gap-4 relative overflow-hidden shadow-xl"
+                className="bg-card border border-border hover:border-primary/50 hover:bg-accent/40 rounded-2xl p-4 sm:p-5 transition-all group flex flex-col justify-between gap-4 relative overflow-hidden shadow-xl"
               >
                 {/* Faixa com cor primária da igreja */}
                 <div
@@ -217,7 +223,7 @@ export default async function SelectChurchPage() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-start gap-2">
                     <div
-                      className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border border-white/10 overflow-hidden shadow-inner"
+                      className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border border-border overflow-hidden shadow-inner"
                       style={{ backgroundColor: `${t.primaryColor || "#f59e0b"}20` }}
                     >
                       {t.logoUrl ? (
@@ -235,7 +241,7 @@ export default async function SelectChurchPage() {
                     </div>
 
                     <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-zinc-400 flex items-center gap-1">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted border border-border text-muted-foreground flex items-center gap-1">
                         {isMatriz ? (
                           <>
                             <Church className="w-3 h-3 text-amber-500" /> Matriz
@@ -248,7 +254,7 @@ export default async function SelectChurchPage() {
                       </span>
 
                       {t.plan && (
-                        <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-white/[0.04] text-zinc-400 border border-white/[0.08]">
+                        <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground border border-border">
                           {t.plan}
                         </span>
                       )}
@@ -256,25 +262,25 @@ export default async function SelectChurchPage() {
                   </div>
 
                   <div>
-                    <h3 className="text-base font-bold text-white group-hover:text-amber-400 transition-colors line-clamp-1">
+                    <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">
                       {t.name}
                     </h3>
-                    <p className="text-xs text-zinc-500 font-mono mt-0.5">/{t.slug}</p>
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5">/{t.slug}</p>
                     {t.parent && (
-                      <p className="text-[11px] text-zinc-400 mt-1 truncate">
+                      <p className="text-[11px] text-muted-foreground mt-1 truncate">
                         Sede: {t.parent.name}
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-white/[0.06]">
-                  <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                <div className="space-y-2 pt-2 border-t border-border">
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                     <span className="flex items-center gap-1 font-mono">
-                      <Users className="w-3 h-3 text-zinc-500" />
+                      <Users className="w-3 h-3 text-muted-foreground" />
                       {t._count?.users ?? 0} membros
                     </span>
-                    <span className="text-[10px] uppercase font-bold text-amber-400/90">
+                    <span className="text-[10px] uppercase font-bold text-amber-500">
                       {isSuperAdmin ? "Acesso Master" : role}
                     </span>
                   </div>
@@ -296,7 +302,7 @@ export default async function SelectChurchPage() {
                   >
                     <Button
                       type="submit"
-                      className="w-full h-9 rounded-xl text-xs font-bold bg-white/[0.08] hover:bg-amber-500 hover:text-black text-white justify-between transition-all cursor-pointer group-hover:bg-amber-500 group-hover:text-black shadow-sm"
+                      className="w-full h-9 rounded-xl text-xs font-bold bg-muted hover:bg-primary hover:text-primary-foreground text-foreground justify-between transition-all cursor-pointer group-hover:bg-primary group-hover:text-primary-foreground shadow-sm"
                     >
                       <span>Acessar Congregação</span>
                       <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />

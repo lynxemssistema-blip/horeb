@@ -277,7 +277,7 @@ export function ChurchMinistriesManager({
   return (
     <div className="space-y-8 pb-12">
       {/* Top Banner */}
-      <div className="p-6 rounded-3xl bg-zinc-950 border border-white/10 shadow-2xl relative overflow-hidden">
+      <div className="p-6 rounded-3xl bg-card border border-border shadow-2xl relative overflow-hidden">
         <div
           className="absolute top-0 left-0 right-0 h-1.5 transition-all"
           style={{ backgroundColor: tenant.primaryColor }}
@@ -285,14 +285,14 @@ export function ChurchMinistriesManager({
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/[0.06] text-zinc-300 border border-white/10 flex items-center gap-1.5 w-fit">
+            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-muted text-foreground border border-border flex items-center gap-1.5 w-fit">
               <Sparkles className="w-3 h-3 text-red-500" />
               <span>Corpo de Cristo • Liderança</span>
             </span>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               Ministérios da Igreja
             </h1>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-muted-foreground">
               Cadastre e gerencie quantos ministérios a sua congregação desejar (Louvor, Diaconia, Família, Missões e mais).
             </p>
           </div>
@@ -301,7 +301,7 @@ export function ChurchMinistriesManager({
             {(allowedActions.includes("create_ministry") || allowedActions.includes("ALL")) && (
               <DialogTrigger
                 render={
-                  <Button className="h-10 text-xs font-bold bg-white text-zinc-950 hover:bg-zinc-200 border border-white/20 rounded-xl shadow-md gap-2 cursor-pointer shrink-0 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                  <Button className="h-10 text-xs font-bold bg-primary text-primary-foreground hover:brightness-110 border border-primary/20 rounded-xl shadow-md gap-2 cursor-pointer shrink-0 transition-all hover:scale-[1.02] active:scale-[0.98]">
                     <Plus className="w-4 h-4" />
                     <span>Novo Ministério</span>
                   </Button>
@@ -309,14 +309,14 @@ export function ChurchMinistriesManager({
               />
             )}
 
-            <DialogContent className="max-w-lg w-[94vw] bg-zinc-950 border border-white/10 rounded-3xl p-0 overflow-hidden shadow-2xl">
-              <div className="p-5 sm:p-6 border-b border-white/10">
+            <DialogContent className="max-w-lg w-[94vw] bg-card border border-border text-card-foreground rounded-3xl p-0 overflow-hidden shadow-2xl">
+              <div className="p-5 sm:p-6 border-b border-border">
                 <DialogHeader className="text-left space-y-1">
-                  <DialogTitle className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-red-400" />
+                  <DialogTitle className="text-lg sm:text-xl font-black text-foreground flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-red-500" />
                     <span>Cadastrar Novo Ministério</span>
                   </DialogTitle>
-                  <DialogDescription className="text-xs text-zinc-400">
+                  <DialogDescription className="text-xs text-muted-foreground">
                     Defina o nome, líder, propósito, logotipo e cores do ministério.
                   </DialogDescription>
                 </DialogHeader>
@@ -324,7 +324,7 @@ export function ChurchMinistriesManager({
 
               <form onSubmit={handleCreate} className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-300">Nome do Ministério *</label>
+                  <label className="text-xs font-bold text-foreground">Nome do Ministério *</label>
                   <Input
                     required
                     value={name}
@@ -521,7 +521,7 @@ export function ChurchMinistriesManager({
             return (
               <div
                 key={ministry.id}
-                className="p-5 rounded-2xl bg-zinc-950 border border-white/10 hover:border-white/20 transition-all space-y-4 shadow-xl relative overflow-hidden group"
+                className="p-5 rounded-2xl bg-card border border-border hover:border-primary/40 transition-all space-y-4 shadow-xl relative overflow-hidden group"
               >
                 <div
                   className="absolute top-0 left-0 right-0 h-1"
@@ -538,14 +538,14 @@ export function ChurchMinistriesManager({
                         <img
                           src={ministry.logoUrl}
                           alt={ministry.name}
-                          className="w-full h-full object-cover rounded-xl border border-white/10"
+                          className="w-full h-full object-cover rounded-xl border border-border"
                         />
                       ) : (
                         <IconComp className="w-5 h-5" />
                       )}
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-white group-hover:text-amber-400 transition-colors">
+                      <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
                         {ministry.name}
                       </h3>
                       {ministry.leaders && ministry.leaders.length > 0 ? (
@@ -553,20 +553,20 @@ export function ChurchMinistriesManager({
                           {ministry.leaders.map((ldr) => (
                             <span
                               key={ldr.id}
-                              className="text-[10px] text-zinc-300 font-medium px-2 py-0.5 rounded-md bg-white/5 border border-white/10 flex items-center gap-1"
+                              className="text-[10px] text-foreground font-medium px-2 py-0.5 rounded-md bg-muted border border-border flex items-center gap-1"
                             >
-                              <UserCheck className="w-3 h-3 text-emerald-400" />
+                              <UserCheck className="w-3 h-3 text-emerald-500" />
                               <span>{ldr.name}</span>
                             </span>
                           ))}
                         </div>
                       ) : ministry.leader ? (
-                        <p className="text-[11px] text-zinc-400 flex items-center gap-1 mt-0.5">
-                          <UserCheck className="w-3 h-3 text-emerald-400" />
+                        <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <UserCheck className="w-3 h-3 text-emerald-500" />
                           <span>Líder: {ministry.leader.name}</span>
                         </p>
                       ) : (
-                        <p className="text-[11px] text-zinc-500 italic mt-0.5">
+                        <p className="text-[11px] text-muted-foreground/60 italic mt-0.5">
                           Sem líder designado
                         </p>
                       )}
@@ -578,7 +578,7 @@ export function ChurchMinistriesManager({
                       <button
                         type="button"
                         onClick={() => openEditModal(ministry)}
-                        className="w-7 h-7 rounded-lg text-zinc-500 hover:text-amber-400 hover:bg-white/5 flex items-center justify-center transition-colors cursor-pointer"
+                        className="w-7 h-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center transition-colors cursor-pointer"
                         title="Editar ministério"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
@@ -589,7 +589,7 @@ export function ChurchMinistriesManager({
                       <button
                         type="button"
                         onClick={() => handleDelete(ministry.id, ministry.name)}
-                        className="w-7 h-7 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-white/5 flex items-center justify-center transition-colors cursor-pointer"
+                        className="w-7 h-7 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-muted flex items-center justify-center transition-colors cursor-pointer"
                         title="Excluir ministério"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -599,7 +599,7 @@ export function ChurchMinistriesManager({
                 </div>
 
                 {ministry.description && (
-                  <p className="text-xs text-zinc-300 leading-relaxed">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     {ministry.description}
                   </p>
                 )}
@@ -609,7 +609,7 @@ export function ChurchMinistriesManager({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full text-xs font-bold gap-1.5 h-9 rounded-xl border-white/10 hover:border-white/30 hover:bg-white/5 text-zinc-200 cursor-pointer"
+                      className="w-full text-xs font-bold gap-1.5 h-9 rounded-xl border-border hover:border-primary hover:bg-muted text-foreground cursor-pointer"
                     >
                       <Users className="w-3.5 h-3.5" />
                       <span>Acessar Workspace (Atas & Tarefas) &rarr;</span>
@@ -621,12 +621,12 @@ export function ChurchMinistriesManager({
           })}
         </div>
       ) : (
-        <div className="p-12 text-center rounded-3xl bg-zinc-950/60 border border-white/10 space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-white/5 text-zinc-300 flex items-center justify-center mx-auto">
+        <div className="p-12 text-center rounded-3xl bg-card/60 border border-border space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-muted text-foreground flex items-center justify-center mx-auto">
             <Sparkles className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-bold text-white">Nenhum ministério cadastrado ainda</h3>
-          <p className="text-xs text-zinc-400 max-w-md mx-auto">
+          <h3 className="text-base font-bold text-foreground">Nenhum ministério cadastrado ainda</h3>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">
             A igreja pode cadastrar quantos ministérios desejar: Louvor, Jovens, Casais, Intercessão, Diaconia e Missões.
           </p>
         </div>
@@ -634,7 +634,7 @@ export function ChurchMinistriesManager({
 
       {/* Modal de Edição de Ministério */}
       <Dialog open={!!editingMinistry} onOpenChange={(open) => !open && setEditingMinistry(null)}>
-        <DialogContent className="max-w-lg w-[94vw] bg-zinc-950 border border-white/10 rounded-3xl p-0 overflow-hidden shadow-2xl">
+        <DialogContent className="max-w-lg w-[94vw] bg-card border border-border text-card-foreground rounded-3xl p-0 overflow-hidden shadow-2xl">
           <div className="p-5 sm:p-6 border-b border-white/10">
             <DialogHeader className="text-left space-y-1">
               <DialogTitle className="text-lg sm:text-xl font-black text-white flex items-center gap-2">

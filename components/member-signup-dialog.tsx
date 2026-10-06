@@ -115,7 +115,7 @@ export function MemberSignupDialog({
           }
         />
 
-        <DialogContent className="max-w-md w-full p-5 sm:p-6 bg-zinc-950 border border-white/10 rounded-3xl shadow-2xl text-zinc-100 overflow-y-auto max-h-[88dvh]">
+        <DialogContent className="max-w-md w-full p-5 sm:p-6 bg-card border border-border rounded-3xl shadow-2xl text-card-foreground overflow-y-auto max-h-[88dvh]">
           {/* Top Glow Bar */}
           <div
             className="absolute top-0 left-0 right-0 h-1.5"
@@ -130,7 +130,7 @@ export function MemberSignupDialog({
               <Church className="w-5 h-5" />
             </div>
 
-            <DialogTitle className="text-xl font-black text-white tracking-tight">
+            <DialogTitle className="text-xl font-black text-foreground tracking-tight">
               Cadastro de Membro
             </DialogTitle>
             <DialogDescription className="text-xs text-zinc-400">

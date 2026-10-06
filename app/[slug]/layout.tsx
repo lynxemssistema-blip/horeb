@@ -194,10 +194,13 @@ export default async function TenantLayout({
         <style
           dangerouslySetInnerHTML={{
             __html: `
-              :root {
+              :root:not([data-theme-palette]), :root[data-theme-palette="default"] {
                 --primary: ${theme.hex} !important;
                 --primary-foreground: ${theme.foreground} !important;
                 --ring: ${theme.hex} !important;
+              }
+              :root {
+                --church-primary: ${theme.hex};
               }
             `,
           }}
@@ -241,12 +244,15 @@ export default async function TenantLayout({
       <style
         dangerouslySetInnerHTML={{
           __html: `
-            :root {
+            :root:not([data-theme-palette]), :root[data-theme-palette="default"] {
               --primary: ${theme.hex} !important;
               --primary-foreground: ${theme.foreground} !important;
               --ring: ${theme.hex} !important;
               --sidebar-primary: ${theme.hex} !important;
               --sidebar-primary-foreground: ${theme.foreground} !important;
+            }
+            :root {
+              --church-primary: ${theme.hex};
             }
           `,
         }}

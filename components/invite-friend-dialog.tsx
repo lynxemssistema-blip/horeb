@@ -127,7 +127,7 @@ export function InviteFriendDialog({
         }
       />
 
-      <DialogContent className="max-w-md w-full p-5 sm:p-6 bg-zinc-950 border border-white/10 rounded-3xl shadow-2xl text-zinc-100 overflow-hidden relative">
+      <DialogContent className="max-w-md w-full p-5 sm:p-6 bg-card border border-border rounded-3xl shadow-2xl text-card-foreground overflow-hidden relative">
         {/* Glow Superior */}
         <div
           className="absolute top-0 left-0 right-0 h-1.5"
@@ -142,7 +142,7 @@ export function InviteFriendDialog({
             <Church className="w-6 h-6" />
           </div>
 
-          <DialogTitle className="text-lg font-black text-white">
+          <DialogTitle className="text-lg font-black text-foreground">
             Convidar Amigo para a Igreja
           </DialogTitle>
           <DialogDescription className="text-xs text-zinc-400">

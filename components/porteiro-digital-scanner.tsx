@@ -418,7 +418,7 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4">
       {/* Header da Portaria Digital */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-950 border border-white/[0.08] p-5 sm:p-8 shadow-2xl overflow-hidden">
+      <div className="relative rounded-3xl bg-gradient-to-br from-card via-card/90 to-muted/40 border border-border p-5 sm:p-8 shadow-2xl overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none" />
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
@@ -427,10 +427,10 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>Recepção & Portaria Digital</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               Porteiro Digital • Recepção de Culto
             </h1>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl">
+            <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
               Leitura de crachá digital via câmera do smartphone para acolhimento caloroso e controle de frequência em tempo real.
             </p>
           </div>
@@ -491,7 +491,7 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Coluna Esquerda: Câmera / Scanner Mobile (7 Colunas) */}
         <div className="lg:col-span-7 space-y-4">
-          <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] shadow-2xl overflow-hidden">
+          <Card className="rounded-3xl bg-card border-border shadow-2xl overflow-hidden">
             <CardHeader className="pb-3 border-b border-white/[0.06] space-y-2">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <CardTitle className="text-base font-black text-white flex items-center gap-2">
@@ -703,7 +703,7 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
 
             {/* ABA 1: PRESENTES HOJE */}
             <TabsContent value="today">
-              <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] shadow-2xl overflow-hidden max-h-[560px] flex flex-col">
+              <Card className="rounded-3xl bg-card border-border shadow-2xl overflow-hidden max-h-[560px] flex flex-col">
                 <CardHeader className="pb-3 border-b border-white/[0.06]">
                   <CardTitle className="text-sm font-bold text-white flex items-center justify-between">
                     <span>Membros Recepcionados Hoje</span>
@@ -756,7 +756,7 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
 
             {/* ABA 2: RADAR DE AUSÊNCIA PASTORAL */}
             <TabsContent value="radar">
-              <Card className="rounded-3xl bg-zinc-950 border-white/[0.08] shadow-2xl overflow-hidden max-h-[560px] flex flex-col">
+              <Card className="rounded-3xl bg-card border-border shadow-2xl overflow-hidden max-h-[560px] flex flex-col">
                 <CardHeader className="pb-3 border-b border-white/[0.06]">
                   <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
                     <HeartHandshake className="w-4 h-4 text-rose-400" />
@@ -816,7 +816,7 @@ export function PorteiroDigitalScanner({ slug, initialData }: PorteiroDigitalSca
 
       {/* MODAL: NOVO CULTO */}
       <Dialog open={isNewServiceOpen} onOpenChange={setIsNewServiceOpen}>
-        <DialogContent className="max-w-md p-6 bg-zinc-950/95 border-white/10 rounded-3xl">
+        <DialogContent className="max-w-md p-6 bg-card border-border rounded-3xl">
           <DialogHeader className="pb-3 border-b border-white/[0.08]">
             <DialogTitle className="text-base font-black text-white flex items-center gap-2">
               <Calendar className="w-5 h-5 text-emerald-400" />

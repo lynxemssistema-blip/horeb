@@ -301,7 +301,7 @@ export function FinanceDashboardView({
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* 1. Header Administrativo Executivo (Desktop-First) */}
-      <div className="p-6 rounded-3xl bg-gradient-to-br from-zinc-900/90 via-zinc-950/95 to-black border border-white/10 shadow-2xl relative overflow-hidden">
+      <div className="p-6 rounded-3xl bg-gradient-to-br from-card via-card/95 to-muted/40 border border-border shadow-2xl relative overflow-hidden">
         {/* Glow de Iluminação */}
         <div className="pointer-events-none absolute -top-24 left-1/3 w-96 h-36 bg-amber-500/10 blur-3xl rounded-full" />
 
@@ -312,15 +312,15 @@ export function FinanceDashboardView({
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>{isMasterRole ? "Controle Consolidado • Master" : "Gestão Local • Filial"}</span>
               </span>
-              <span className="text-xs text-zinc-400">
+              <span className="text-xs text-muted-foreground">
                 {currentChurch.name} {currentChurch.isMatriz ? "(Sede Matriz)" : "(Filial)"}
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-2.5">
               <span>Gestão Financeira & Tesouraria</span>
             </h1>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl leading-relaxed">
               Painel ERP de fluxo de caixa em tempo real, controle de entradas com rastreamento nominal para Imposto de Renda (IRPF), saídas operacionais e visão integrada Sede & Filiais.
             </p>
           </div>
@@ -404,7 +404,7 @@ export function FinanceDashboardView({
       {/* 2. Top 4 KPIs Executivos */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1: Saldo Líquido em Caixa */}
-        <Card className="bg-zinc-950/80 border-white/10 shadow-lg relative overflow-hidden">
+        <Card className="bg-card border-border shadow-lg relative overflow-hidden">
           <div
             className={`absolute top-0 left-0 right-0 h-1 ${
               kpis.balance >= 0 ? "bg-emerald-500" : "bg-rose-500"
@@ -445,7 +445,7 @@ export function FinanceDashboardView({
         </Card>
 
         {/* KPI 2: Entradas / Arrecadação */}
-        <Card className="bg-zinc-950/80 border-white/10 shadow-lg relative overflow-hidden">
+        <Card className="bg-card border-border shadow-lg relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500" />
           <CardHeader className="pb-2 pt-4">
             <div className="flex items-center justify-between">
@@ -469,7 +469,7 @@ export function FinanceDashboardView({
         </Card>
 
         {/* KPI 3: Saídas / Despesas */}
-        <Card className="bg-zinc-950/80 border-white/10 shadow-lg relative overflow-hidden">
+        <Card className="bg-card border-border shadow-lg relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-rose-500" />
           <CardHeader className="pb-2 pt-4">
             <div className="flex items-center justify-between">
@@ -492,7 +492,7 @@ export function FinanceDashboardView({
         </Card>
 
         {/* KPI 4: Rastreabilidade Fiscal (IRPF) */}
-        <Card className="bg-zinc-950/80 border-white/10 shadow-lg relative overflow-hidden">
+        <Card className="bg-card border-border shadow-lg relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500" />
           <CardHeader className="pb-2 pt-4">
             <div className="flex items-center justify-between">
@@ -518,7 +518,7 @@ export function FinanceDashboardView({
       {/* 3. Gráficos Analíticos com Recharts (Desktop-First) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Gráfico 1: Fluxo de Caixa Mensal (BarChart Entradas vs Saídas) */}
-        <Card className="lg:col-span-2 bg-zinc-950/90 border-white/10 shadow-xl">
+        <Card className="lg:col-span-2 bg-card border-border shadow-xl">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
@@ -571,13 +571,13 @@ export function FinanceDashboardView({
         </Card>
 
         {/* Gráfico 2: Distribuição por Categoria (PieChart) */}
-        <Card className="bg-zinc-950/90 border-white/10 shadow-xl">
+        <Card className="bg-card border-border shadow-xl">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-bold text-white flex items-center gap-2">
+            <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
               <PieIcon className="w-4 h-4 text-amber-400" />
               <span>Distribuição por Categoria</span>
             </CardTitle>
-            <CardDescription className="text-xs text-zinc-400">
+            <CardDescription className="text-xs text-muted-foreground">
               Dízimos, ofertas e maiores despesas
             </CardDescription>
           </CardHeader>
@@ -613,7 +613,7 @@ export function FinanceDashboardView({
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-full flex items-center justify-center text-zinc-500 text-xs">
+                <div className="h-full flex items-center justify-center text-muted-foreground text-xs">
                   Sem dados para exibição.
                 </div>
               )}
@@ -625,9 +625,9 @@ export function FinanceDashboardView({
                 <div key={item.category} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                    <span className="text-zinc-300 truncate">{item.label}</span>
+                    <span className="text-foreground truncate">{item.label}</span>
                   </div>
-                  <span className="font-mono text-zinc-400 text-[11px]">
+                  <span className="font-mono text-muted-foreground text-[11px]">
                     R$ {item.amount.toLocaleString("pt-BR")}
                   </span>
                 </div>
@@ -638,7 +638,7 @@ export function FinanceDashboardView({
       </div>
 
       {/* 4. Tabela de Lançamentos com Filtros Avançados */}
-      <Card className="bg-zinc-950/90 border-white/10 shadow-xl overflow-hidden">
+      <Card className="bg-card border-border shadow-xl overflow-hidden">
         <CardHeader className="pb-3 border-b border-white/10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
@@ -809,13 +809,13 @@ export function FinanceDashboardView({
 
       {/* 5. Modal: Nova Movimentação Financeira */}
       <Dialog open={showNewModal} onOpenChange={setShowNewModal}>
-        <DialogContent className="max-w-md w-full bg-zinc-950 border border-white/10 rounded-3xl p-6 text-zinc-100 shadow-2xl">
+        <DialogContent className="max-w-md w-full bg-card border border-border rounded-3xl p-6 text-foreground shadow-2xl">
           <DialogHeader className="space-y-1">
-            <DialogTitle className="text-xl font-black text-white flex items-center gap-2">
+            <DialogTitle className="text-xl font-black text-foreground flex items-center gap-2">
               <PlusCircle className="w-5 h-5 text-amber-400" />
               <span>Lançar Movimentação Financeira</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-400">
+            <DialogDescription className="text-xs text-muted-foreground">
               Registre dízimos nominais com CPF para IRPF, ofertas avulsas ou pagamentos de despesas.
             </DialogDescription>
           </DialogHeader>
@@ -910,7 +910,7 @@ export function FinanceDashboardView({
                 <select
                   value={newMemberId}
                   onChange={(e) => setNewMemberId(e.target.value)}
-                  className="w-full h-10 px-3 bg-zinc-950 border border-amber-500/30 rounded-xl text-xs text-amber-200 outline-none"
+                  className="w-full h-10 px-3 bg-muted/70 border border-border rounded-xl text-xs text-foreground outline-none"
                 >
                   <option value="">-- Dízimo Avulso (Sem Membro Vinculado) --</option>
                   {availableMembers.map((m) => (
@@ -994,16 +994,16 @@ export function FinanceDashboardView({
 
       {/* 6. Modal: Relatório IRPF Nominal para Declaração */}
       <Dialog open={showReportModal} onOpenChange={setShowReportModal}>
-        <DialogContent className="max-w-2xl w-full bg-zinc-950 border border-white/10 rounded-3xl p-6 text-zinc-100 shadow-2xl">
+        <DialogContent className="max-w-2xl w-full bg-card border border-border rounded-3xl p-6 text-foreground shadow-2xl">
           <DialogHeader className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-black uppercase tracking-wider w-fit">
               <FileText className="w-3 h-3" />
               <span>Comprovante de Contribuições & Dízimos Nominais</span>
             </div>
-            <DialogTitle className="text-xl font-black text-white">
+            <DialogTitle className="text-xl font-black text-foreground">
               Relatório Fiscal para Imposto de Renda (IRPF)
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-400">
+            <DialogDescription className="text-xs text-muted-foreground">
               Valores acumulados por membro da congregação {currentChurch.name} para emissão de informes de rendimentos eclesiásticos.
             </DialogDescription>
           </DialogHeader>

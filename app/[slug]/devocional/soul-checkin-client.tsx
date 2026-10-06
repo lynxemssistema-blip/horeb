@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { OrchestratorChat } from "@/components/orchestrator-chat";
 import type { SessionData } from "@/lib/session";
 import { recordMoodCheckIn } from "@/app/actions/devotional";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type Step = "checkin" | "loading" | "result";
 
@@ -167,25 +168,26 @@ export function SoulCheckInClient({ slug, initialUser }: SoulCheckInClientProps)
   };
 
   return (
-    <div className="min-h-[100dvh] bg-[#070709] text-zinc-100 flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200 pb-16 relative overflow-x-hidden">
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200 pb-16 relative overflow-x-hidden">
       {/* Luz ambiente / ambient glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-amber-500/10 blur-[130px] rounded-full" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/10 blur-[130px] rounded-full" />
       </div>
 
       {/* Barra Superior / Voltar */}
-      <header className="sticky top-0 z-30 backdrop-blur-xl bg-black/70 border-b border-white/[0.08] px-4 py-3.5 flex items-center justify-between">
+      <header className="sticky top-0 z-30 backdrop-blur-xl bg-card/80 border-b border-border px-4 py-3.5 flex items-center justify-between">
         <Link
           href={`/${slug}`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-400 hover:text-white transition-colors p-1 -ml-1 rounded-lg"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors p-1 -ml-1 rounded-lg"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Voltar ao App</span>
         </Link>
 
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-            <Sparkles className="w-3 h-3 text-amber-400" />
+          <ThemeToggle />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-500 border border-amber-500/30">
+            <Sparkles className="w-3 h-3 text-amber-500" />
             <span>Check-in de Alma</span>
           </span>
         </div>
@@ -208,17 +210,17 @@ export function SoulCheckInClient({ slug, initialUser }: SoulCheckInClientProps)
             >
               {/* Header Acolhedor com Nome Real do Usuário */}
               <div className="space-y-2 pt-2">
-                <span className="text-xs uppercase tracking-widest font-bold text-amber-400/90 flex items-center justify-center gap-1.5">
-                  <Feather className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-xs uppercase tracking-widest font-bold text-amber-500 flex items-center justify-center gap-1.5">
+                  <Feather className="w-3.5 h-3.5 text-amber-500" />
                   <span>Momento de Conexão</span>
                 </span>
 
-                <h1 className="text-3xl sm:text-4xl font-light tracking-tight text-white">
+                <h1 className="text-3xl sm:text-4xl font-light tracking-tight text-foreground">
                   {greeting},{" "}
-                  <span className="font-bold text-amber-400">{displayName}</span>.
+                  <span className="font-bold text-primary">{displayName}</span>.
                 </h1>
 
-                <p className="text-sm sm:text-base text-zinc-400 max-w-sm mx-auto leading-relaxed">
+                <p className="text-sm sm:text-base text-muted-foreground max-w-sm mx-auto leading-relaxed">
                   Como está o seu coração hoje? Respire fundo e escolha como você se sente:
                 </p>
               </div>

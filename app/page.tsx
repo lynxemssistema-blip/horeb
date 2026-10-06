@@ -41,6 +41,7 @@ import { HelpGuideDialog } from "@/components/help-guide-dialog";
 import { getSession } from "@/lib/session";
 import { logoutUser } from "@/app/actions/tenant";
 import { redirect } from "next/navigation";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function HomePage(props: {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -74,7 +75,7 @@ export default async function HomePage(props: {
   ]);
 
   return (
-    <div className="min-h-[100dvh] bg-[#070709] text-zinc-100 flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200 relative overflow-x-hidden">
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200 relative overflow-x-hidden">
       {/* Ferramentas Nativas para Celular (PWA Banner & Instalação) */}
       <NativeMobileTools />
 
@@ -429,24 +430,27 @@ export default async function HomePage(props: {
       </div>
 
       {/* Footer Final com Glassmorphism */}
-      <footer className="border-t border-white/[0.08] bg-black/70 backdrop-blur-xl py-6 px-4 relative z-10">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-zinc-300">
-              Horeb • Desenvolvido e Gerenciado por <strong className="text-white">Lynx EMS Sistemas</strong>
+      <footer className="border-t border-border bg-card/70 backdrop-blur-xl py-6 px-4 relative z-10">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="font-semibold text-foreground">
+              Horeb • Desenvolvido e Gerenciado por <strong>Lynx EMS Sistemas</strong>
             </span>
-            <span className="text-zinc-600">•</span>
+            <span className="text-muted-foreground/40">•</span>
             <Link
               href="/admin"
-              className="text-zinc-400 hover:text-amber-400 transition-colors flex items-center gap-1 font-bold"
+              className="text-muted-foreground hover:text-amber-400 transition-colors flex items-center gap-1 font-bold"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
               <span>Painel Super Admin</span>
             </Link>
           </div>
-          <span className="italic text-amber-400 font-medium tracking-wide">
-            &ldquo;Juntos por um maior alcance.&rdquo;
-          </span>
+          <div className="flex items-center gap-3">
+            <ThemeToggle showLabel />
+            <span className="italic text-amber-400 font-medium tracking-wide hidden md:inline">
+              &ldquo;Juntos por um maior alcance.&rdquo;
+            </span>
+          </div>
         </div>
       </footer>
     </div>

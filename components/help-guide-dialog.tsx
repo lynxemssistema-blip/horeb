@@ -60,21 +60,21 @@ export function HelpGuideDialog({ triggerButton }: HelpGuideDialogProps) {
         }
       />
 
-      <DialogContent className="w-[94vw] max-w-3xl max-h-[88dvh] flex flex-col p-0 overflow-hidden bg-zinc-950 border border-white/10 rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.95)] text-zinc-100">
+      <DialogContent className="w-[94vw] max-w-3xl max-h-[88dvh] flex flex-col p-0 overflow-hidden bg-card border border-border rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.95)] text-card-foreground">
         {/* Glow de Iluminação */}
         <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-36 bg-amber-500/15 blur-3xl rounded-full" />
 
         {/* Header Fixo */}
-        <div className="p-5 sm:p-6 pb-2 shrink-0 border-b border-white/10 relative z-10 space-y-1">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-[10px] font-bold tracking-wider uppercase w-fit">
-            <BookOpen className="w-3 h-3 text-amber-400 shrink-0" />
+        <div className="p-5 sm:p-6 pb-2 shrink-0 border-b border-border relative z-10 space-y-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-500 text-[10px] font-bold tracking-wider uppercase w-fit">
+            <BookOpen className="w-3 h-3 text-amber-500 shrink-0" />
             <span>Central de Ajuda & Guia Operacional • Horeb</span>
           </div>
           <div>
-            <DialogTitle className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+            <DialogTitle className="text-xl sm:text-2xl font-black text-foreground tracking-tight flex items-center gap-2">
               <span>Manual do Horeb: Como Funciona o Ecossistema</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-400 mt-0.5">
+            <DialogDescription className="text-xs text-muted-foreground mt-0.5">
               Entenda tudo sobre Matriz, Filiais, níveis de liderança, passo a passo do primeiro acesso e os recursos por plano.
             </DialogDescription>
           </div>

@@ -314,7 +314,7 @@ export function ChurchMembersManager({
   return (
     <div className="space-y-6">
       {/* Top Banner de Apresentação */}
-      <div className="p-6 rounded-3xl bg-gradient-to-br from-zinc-900/90 via-zinc-950/90 to-black border border-white/10 shadow-2xl relative overflow-hidden">
+      <div className="p-6 rounded-3xl bg-gradient-to-br from-card via-card/95 to-muted/40 border border-border shadow-2xl relative overflow-hidden">
         <div
           className="absolute top-0 left-0 right-0 h-1.5"
           style={{ backgroundColor: currentChurch.primaryColor }}
@@ -325,14 +325,14 @@ export function ChurchMembersManager({
               <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
                 {isMatriz ? "Gestão Master • Rede de Igrejas" : "Gestão Local • Filial"}
               </span>
-              <span className="text-xs text-zinc-400 font-mono">
+              <span className="text-xs text-muted-foreground font-mono">
                 {allNetworkChurches.length} congregações conectadas
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-2.5">
               <span>Membros, Líderes & Convites</span>
             </h1>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl">
+            <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
               Cadastre novos usuários, defina níveis de acesso personalizados (Pastores, Líderes de Célula, Ministério Infantil, Tesouraria) e envie links diretos de convite para a Matriz ou filiais.
             </p>
           </div>
@@ -343,7 +343,7 @@ export function ChurchMembersManager({
               <>
                 <Button
                   onClick={() => setShowInviteModal(true)}
-                  className="flex-1 md:flex-initial h-11 bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/15 font-bold text-xs rounded-xl shadow-lg gap-2 cursor-pointer"
+                  className="flex-1 md:flex-initial h-11 bg-muted/80 hover:bg-muted text-foreground border border-border font-bold text-xs rounded-xl shadow-lg gap-2 cursor-pointer"
                 >
                   <Mail className="w-4 h-4 text-amber-400" />
                   <span>Gerar Convite / Enviar E-mail</span>
@@ -386,10 +386,10 @@ export function ChurchMembersManager({
       </div>
 
       {/* Barra de Filtro por Congregação */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 rounded-2xl bg-zinc-950 border border-white/10 shadow-lg">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 rounded-2xl bg-card border border-border shadow-lg">
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-zinc-400" />
-          <span className="text-xs font-bold text-zinc-300">Filtrar por Congregação:</span>
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <span className="text-xs font-bold text-foreground">Filtrar por Congregação:</span>
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-thin">
@@ -397,8 +397,8 @@ export function ChurchMembersManager({
             onClick={() => setSelectedFilterChurch("ALL")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               selectedFilterChurch === "ALL"
-                ? "bg-amber-500 text-black shadow-md font-black"
-                : "bg-white/[0.04] text-zinc-300 hover:text-white hover:bg-white/[0.08] border border-white/5"
+                ? "bg-primary text-primary-foreground shadow-md font-black"
+                : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 border border-border"
             }`}
           >
             Todas as Congregações ({users.length})
@@ -413,8 +413,8 @@ export function ChurchMembersManager({
                 onClick={() => setSelectedFilterChurch(c.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
                   isSelected
-                    ? "bg-white text-black shadow-md font-black"
-                    : "bg-white/[0.04] text-zinc-300 hover:text-white hover:bg-white/[0.08] border border-white/5"
+                    ? "bg-foreground text-background shadow-md font-black"
+                    : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 border border-border"
                 }`}
               >
                 <span
@@ -430,18 +430,18 @@ export function ChurchMembersManager({
       </div>
 
       {/* Tabela de Membros */}
-      <div className="rounded-2xl border border-white/10 bg-zinc-950/80 backdrop-blur-xl overflow-hidden shadow-2xl">
+      <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-2xl">
         {/* Dica de Scroll no Celular */}
-        <div className="sm:hidden px-4 py-2 bg-white/[0.03] border-b border-white/10 text-[11px] text-zinc-400 flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-amber-400/90 font-medium">
+        <div className="sm:hidden px-4 py-2 bg-muted/50 border-b border-border text-[11px] text-muted-foreground flex items-center justify-between">
+          <span className="flex items-center gap-1.5 text-primary font-medium">
             <span>👉 Deslize para o lado para ver perfis e ações</span>
           </span>
-          <span className="text-[10px] text-zinc-500 font-mono">⟷ Scroll</span>
+          <span className="text-[10px] text-muted-foreground font-mono">⟷ Scroll</span>
         </div>
 
         <div className="overflow-x-auto scroll-touch">
-          <table className="w-full min-w-[680px] text-left text-xs text-zinc-300">
-            <thead className="bg-black/60 border-b border-white/10 text-zinc-400 uppercase text-[10px] font-black tracking-wider">
+          <table className="w-full min-w-[680px] text-left text-xs text-foreground">
+            <thead className="bg-muted/60 border-b border-border text-muted-foreground uppercase text-[10px] font-black tracking-wider">
               <tr>
                 <th className="px-4 py-3.5">Membro / Usuário</th>
                 <th className="px-4 py-3.5">Nível de Acesso (Perfil)</th>
@@ -555,31 +555,31 @@ export function ChurchMembersManager({
       {/* MODAL 1: CADASTRAR NOVO USUÁRIO COM NÍVEL DE ACESSO                       */}
       {/* ========================================================================= */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="max-w-md w-full p-6 bg-zinc-950 border border-white/10 rounded-3xl shadow-2xl text-zinc-100">
+        <DialogContent className="max-w-md w-full p-6 bg-card border border-border rounded-3xl shadow-2xl text-card-foreground">
           <DialogHeader className="space-y-1.5 text-left">
-            <DialogTitle className="text-xl font-black text-white flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-amber-400" />
+            <DialogTitle className="text-xl font-black text-foreground flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-amber-500" />
               <span>Cadastrar Novo Usuário</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-400">
+            <DialogDescription className="text-xs text-muted-foreground">
               Crie uma conta para liderança ou membro na Matriz ou em qualquer filial da rede.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateUser} className="space-y-4 pt-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300">Nome Completo *</label>
+              <label className="text-xs font-bold text-foreground">Nome Completo *</label>
               <Input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Ex: João da Silva"
                 required
-                className="bg-black/50 border-white/10 text-white rounded-xl h-11"
+                className="bg-muted/50 border-border text-foreground rounded-xl h-11"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300">E-mail de Acesso *</label>
+              <label className="text-xs font-bold text-foreground">E-mail de Acesso *</label>
               <Input
                 type="email"
                 value={newEmail}
@@ -672,13 +672,13 @@ export function ChurchMembersManager({
       {/* MODAL 2: GERAR CONVITE / ENVIAR E-MAIL COM LINK DIRETO                    */}
       {/* ========================================================================= */}
       <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
-        <DialogContent className="max-w-lg w-full p-6 bg-zinc-950 border border-white/10 rounded-3xl shadow-2xl text-zinc-100">
+        <DialogContent className="max-w-lg w-full p-6 bg-card border border-border rounded-3xl shadow-2xl text-card-foreground">
           <DialogHeader className="space-y-1.5 text-left">
-            <DialogTitle className="text-xl font-black text-white flex items-center gap-2">
-              <Mail className="w-5 h-5 text-amber-400" />
+            <DialogTitle className="text-xl font-black text-foreground flex items-center gap-2">
+              <Mail className="w-5 h-5 text-amber-500" />
               <span>Gerar Convite de Membresia</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-400">
+            <DialogDescription className="text-xs text-muted-foreground">
               Envie convites por e-mail ou gere links diretos para novos membros se cadastrarem com o perfil já definido.
             </DialogDescription>
           </DialogHeader>
@@ -686,14 +686,14 @@ export function ChurchMembersManager({
           <form onSubmit={handleSendInvite} className="space-y-4 pt-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-300">Congregação de Destino</label>
+                <label className="text-xs font-bold text-foreground">Congregação de Destino</label>
                 <select
                   value={inviteTenantId}
                   onChange={(e) => setInviteTenantId(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 text-white rounded-xl h-11 px-3 text-xs font-medium focus:outline-none"
+                  className="w-full bg-muted/50 border border-border text-foreground rounded-xl h-11 px-3 text-xs font-medium focus:outline-none"
                 >
                   {allNetworkChurches.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-zinc-900 text-white">
+                    <option key={c.id} value={c.id} className="bg-card text-foreground">
                       {c.name} {c.isMatriz ? "(Sede Matriz)" : "(Filial)"}
                     </option>
                   ))}
@@ -701,13 +701,13 @@ export function ChurchMembersManager({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-300">Perfil Atribuído</label>
+                <label className="text-xs font-bold text-foreground">Perfil Atribuído</label>
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 text-white rounded-xl h-11 px-3 text-xs font-medium focus:outline-none"
+                  className="w-full bg-muted/50 border border-border text-foreground rounded-xl h-11 px-3 text-xs font-medium focus:outline-none"
                 >
-                  <option value="MEMBER" className="bg-zinc-900 text-white">Membro da Igreja</option>
+                  <option value="MEMBER" className="bg-card text-foreground">Membro da Igreja</option>
                   <option value="LEADER" className="bg-zinc-900 text-white">Líder de Célula</option>
                   <option value="KIDS" className="bg-zinc-900 text-white">Ministério Kids</option>
                   <option value="FINANCIAL" className="bg-zinc-900 text-white">Tesouraria / Finanças</option>
