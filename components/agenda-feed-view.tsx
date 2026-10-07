@@ -337,7 +337,7 @@ export function AgendaFeedView({
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5 pb-20">
+    <div className="w-full max-w-[1760px] 2xl:max-w-[1920px] mx-auto space-y-6 pb-20">
       {/* Top Banner & Header Mobile-First */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
         <div>
@@ -463,7 +463,7 @@ export function AgendaFeedView({
           )}
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredEvents.map((event) => {
             const isInactive = event.isActive === false;
 

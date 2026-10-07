@@ -29,6 +29,8 @@ import {
   Scale,
   Package,
   QrCode,
+  Ticket,
+  Camera,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -118,6 +120,11 @@ export function AppSidebar({
       icon: Calendar,
     },
     {
+      name: "Meus Ingressos",
+      href: `/${slug}/meus-ingressos`,
+      icon: Ticket,
+    },
+    {
       name: "Ministérios da Igreja",
       href: `/${slug}/ministerios`,
       icon: Sparkles,
@@ -131,6 +138,12 @@ export function AppSidebar({
       name: "Membros & Convites",
       href: `/${slug}/membros`,
       icon: UserPlus,
+    },
+    {
+      name: "Minhas Ferramentas",
+      href: `/${slug}#minhas-ferramentas`,
+      icon: Camera,
+      highlightBadge: "Insta",
     },
     {
       name: "Meu Perfil",
@@ -179,61 +192,76 @@ export function AppSidebar({
     } as any);
   }
 
-  // Painel de Pedidos de Oração para ADMIN, PASTOR e SUPERADMIN em qualquer congregação
+  // Módulos Especializados / Eclesiásticos / Administrativos
   const isLeadership =
     currentUser?.role === "SUPERADMIN" ||
     currentUser?.role === "ADMIN" ||
     currentUser?.role === "PASTOR";
 
-  if (isLeadership) {
-    const leadershipItems = [
-      {
-        name: "Pedidos de Oração",
-        href: `/${slug}/admin/oracoes`,
-        icon: HeartHandshake,
-        highlightBadge: "Pastoral",
-      },
-      {
-        name: "Secretaria & Documentos",
-        href: `/${slug}/admin/secretaria`,
-        icon: FileText,
-        highlightBadge: "Oficial",
-      },
-      {
-        name: "EBD & Discipulado",
-        href: `/${slug}/admin/ebd`,
-        icon: GraduationCap,
-        highlightBadge: "EBD",
-      },
-      {
-        name: "Assembleias & Votação",
-        href: `/${slug}/admin/assembleias`,
-        icon: Scale,
-        highlightBadge: "Voto",
-      },
-      {
-        name: "Patrimônio & Inventário",
-        href: `/${slug}/admin/patrimonio`,
-        icon: Package,
-        highlightBadge: "Bens",
-      },
-      {
-        name: "Porteiro Digital (Recepção)",
-        href: `/${slug}/admin/porteiro`,
-        icon: QrCode,
-        highlightBadge: "Portaria",
-      },
-    ];
+  const specializedAdminItems = [
+    {
+      name: "Pedidos de Oração",
+      href: `/${slug}/admin/oracoes`,
+      icon: HeartHandshake,
+      highlightBadge: "Pastoral",
+    },
+    {
+      name: "Secretaria & Documentos",
+      href: `/${slug}/admin/secretaria`,
+      icon: FileText,
+      highlightBadge: "Oficial",
+    },
+    {
+      name: "EBD & Discipulado",
+      href: `/${slug}/admin/ebd`,
+      icon: GraduationCap,
+      highlightBadge: "EBD",
+    },
+    {
+      name: "Assembleias & Votação",
+      href: `/${slug}/admin/assembleias`,
+      icon: Scale,
+      highlightBadge: "Voto",
+    },
+    {
+      name: "Patrimônio & Inventário",
+      href: `/${slug}/admin/patrimonio`,
+      icon: Package,
+      highlightBadge: "Bens",
+    },
+    {
+      name: "Porteiro Digital (Recepção)",
+      href: `/${slug}/admin/porteiro`,
+      icon: QrCode,
+      highlightBadge: "Portaria",
+    },
+    {
+      name: "Check-in Kids",
+      href: `/${slug}/admin/checkin`,
+      icon: Baby,
+      highlightBadge: "Checkin",
+    },
+    {
+      name: "Gestão de Eventos",
+      href: `/${slug}/admin/eventos`,
+      icon: Ticket,
+      highlightBadge: "Lotes",
+    },
+  ];
 
-    leadershipItems.forEach((leadItem, index) => {
-      if (
-        !filteredNavigation.some((item) => item.href === leadItem.href) &&
-        (!accessRules || accessRules.allowedMenus.includes("ALL") || accessRules.allowedMenus.some((allowed) => leadItem.href.endsWith(allowed)))
-      ) {
-        filteredNavigation.splice(2 + index, 0, leadItem as any);
-      }
-    });
-  }
+  specializedAdminItems.forEach((adminItem, index) => {
+    const isGrantedByRBAC =
+      accessRules?.allowedMenus.includes("ALL") ||
+      accessRules?.allowedMenus.some((allowed) => adminItem.href.endsWith(allowed));
+
+    // Visível se for liderança padrão OU se a regra do RBAC concedeu expressamente o menu
+    if (
+      !filteredNavigation.some((item) => item.href === adminItem.href) &&
+      (isLeadership || isGrantedByRBAC)
+    ) {
+      filteredNavigation.splice(2 + index, 0, adminItem as any);
+    }
+  });
 
   return (
     <aside className="hidden md:flex flex-col w-64 lg:w-72 border-r border-border bg-card/60 backdrop-blur-md min-h-screen sticky top-0 shrink-0">

@@ -126,6 +126,7 @@ export async function createOrUpdatePlan(data: {
   badge?: string;
   setupPrice: number;
   monthlyPrice: number;
+  annualPrice?: number;
   targetAudience?: string;
   features: string[];
   highlight?: boolean;
@@ -133,6 +134,7 @@ export async function createOrUpdatePlan(data: {
 }) {
   try {
     const featuresJson = JSON.stringify(data.features || []);
+    const calculatedAnnual = data.annualPrice && data.annualPrice > 0 ? data.annualPrice : data.monthlyPrice * 10;
 
     if (data.id) {
       const plan = await prisma.plan.update({
@@ -144,6 +146,7 @@ export async function createOrUpdatePlan(data: {
           badge: data.badge || null,
           setupPrice: data.setupPrice,
           monthlyPrice: data.monthlyPrice,
+          annualPrice: calculatedAnnual,
           targetAudience: data.targetAudience,
           features: featuresJson,
           highlight: data.highlight ?? false,
@@ -162,6 +165,7 @@ export async function createOrUpdatePlan(data: {
           badge: data.badge || null,
           setupPrice: data.setupPrice,
           monthlyPrice: data.monthlyPrice,
+          annualPrice: calculatedAnnual,
           targetAudience: data.targetAudience,
           features: featuresJson,
           highlight: data.highlight ?? false,

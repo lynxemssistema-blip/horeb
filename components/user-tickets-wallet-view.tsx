@@ -100,7 +100,7 @@ export function UserTicketsWalletView({
   });
 
   return (
-    <div className="max-w-xl mx-auto space-y-6 pb-20">
+    <div className="max-w-5xl 2xl:max-w-6xl mx-auto space-y-6 pb-20">
       {/* Header com Navegação */}
       <div className="flex items-center justify-between gap-3 pt-1">
         <div>
@@ -186,7 +186,7 @@ export function UserTicketsWalletView({
           </Link>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredTickets.map((ticket) => {
             const isUsed = ticket.status === "USED";
             const isValid = ticket.status === "VALID";

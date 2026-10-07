@@ -244,7 +244,7 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-[1760px] 2xl:max-w-[1920px] w-full mx-auto">
       {/* Header Principal */}
       <div className="relative rounded-3xl bg-gradient-to-br from-card via-card/90 to-muted/40 border border-border p-6 sm:p-8 shadow-2xl overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none" />

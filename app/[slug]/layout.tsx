@@ -9,6 +9,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { getTenantBySlug } from "@/lib/supabase-service";
 import { checkChurchAccess } from "@/lib/session";
 import { AccessDeniedScreen } from "@/components/access-denied-screen";
+import { TrialBanner } from "@/components/trial-banner";
+import { HelpGuideDialog } from "@/components/help-guide-dialog";
 
 interface TenantLayoutProps {
   children: React.ReactNode;
@@ -116,6 +118,9 @@ export default async function TenantLayout({
     parentId?: string | null;
     parent?: { id: string; name: string; slug: string } | null;
     branches?: { id: string; name: string; slug: string; primaryColor: string }[];
+    status?: string;
+    plan?: string;
+    subscriptionExpiresAt?: Date | string | null;
   } | null = null;
 
   try {
@@ -135,6 +140,9 @@ export default async function TenantLayout({
           slug: b.slug,
           primaryColor: b.primary_color,
         })),
+        status: (supabaseTenant as any).status || "ACTIVE",
+        plan: (supabaseTenant as any).plan || "GESTAO",
+        subscriptionExpiresAt: (supabaseTenant as any).subscription_expires_at || null,
       };
     }
   } catch (err) {
@@ -160,6 +168,9 @@ export default async function TenantLayout({
         parentId: prismaTenant.parentId,
         parent: prismaTenant.parent,
         branches: prismaTenant.branches,
+        status: prismaTenant.status,
+        plan: prismaTenant.plan,
+        subscriptionExpiresAt: prismaTenant.subscriptionExpiresAt,
       };
     }
   }
@@ -300,12 +311,23 @@ export default async function TenantLayout({
           userAvatar={access.user.avatarUrl}
         />
 
-        <main className="flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-10 max-w-7xl w-full mx-auto px-3 sm:px-6 pt-3 sm:pt-6 pl-[max(0.75rem,env(safe-area-inset-left,0px))] pr-[max(0.75rem,env(safe-area-inset-right,0px))]">
+        <TrialBanner
+          slug={tenant.slug}
+          status={tenant.status || "ACTIVE"}
+          plan={tenant.plan || "GESTAO"}
+          subscriptionExpiresAt={tenant.subscriptionExpiresAt}
+          userRole={access?.effectiveRole}
+        />
+
+        <main className="flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-10 max-w-[1760px] 2xl:max-w-[1920px] w-full mx-auto px-3 sm:px-6 lg:px-8 xl:px-10 pt-3 sm:pt-6 pl-[max(0.75rem,env(safe-area-inset-left,0px))] pr-[max(0.75rem,env(safe-area-inset-right,0px))]">
           {children}
         </main>
 
         {/* Bottom Navigation Bar para Telas Mobile (abaixo de md) */}
         <BottomNav slug={tenant.slug} />
+
+        {/* Copiloto Flutuante Não-Bloqueante de Ajuda do App */}
+        <HelpGuideDialog />
       </div>
     </div>
   );

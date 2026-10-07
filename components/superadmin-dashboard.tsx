@@ -57,10 +57,15 @@ import {
   Sliders,
   Check,
   Bot,
+  CreditCard,
+  Camera,
 } from "lucide-react";
 import { AgentManager } from "@/app/[slug]/admin/agentes/AgentManager";
 import { RolePermissionsManager } from "@/components/role-permissions-manager";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AsaasSubscriptionDialog } from "@/components/asaas-subscription-dialog";
+import { SaasBillingManager } from "@/components/saas-billing-manager";
+import { SuperAdminPersonalToolsManager } from "@/components/superadmin-personal-tools-manager";
 
 interface SuperAdminDashboardProps {
   metrics: any;
@@ -128,6 +133,7 @@ export function SuperAdminDashboard({
   const [planBadge, setPlanBadge] = useState("");
   const [planSetupPrice, setPlanSetupPrice] = useState("790");
   const [planMonthlyPrice, setPlanMonthlyPrice] = useState("249");
+  const [planAnnualPrice, setPlanAnnualPrice] = useState("2490");
   const [planFeatures, setPlanFeatures] = useState("");
   const [planHighlight, setPlanHighlight] = useState(false);
 
@@ -140,6 +146,10 @@ export function SuperAdminDashboard({
   // Diagnóstico de Conexão
   const [diagRunning, setDiagRunning] = useState(false);
   const [diagResult, setDiagResult] = useState<any>(null);
+
+  // Modal de Cobrança e Assinatura Asaas
+  const [selectedAsaasTenant, setSelectedAsaasTenant] = useState<any | null>(null);
+  const [isAsaasModalOpen, setIsAsaasModalOpen] = useState(false);
 
   // Ação: Alterar Status ou Plano da Igreja
   const handleUpdateTenant = async (
@@ -209,6 +219,9 @@ export function SuperAdminDashboard({
       setPlanBadge(plan.badge || "");
       setPlanSetupPrice(plan.setupPrice.toString());
       setPlanMonthlyPrice(plan.monthlyPrice.toString());
+      setPlanAnnualPrice(
+        (plan.annualPrice && plan.annualPrice > 0 ? plan.annualPrice : plan.monthlyPrice * 10).toString()
+      );
       try {
         const feats = JSON.parse(plan.features || "[]");
         setPlanFeatures(feats.join("\n"));
@@ -224,6 +237,7 @@ export function SuperAdminDashboard({
       setPlanBadge("");
       setPlanSetupPrice("790");
       setPlanMonthlyPrice("249");
+      setPlanAnnualPrice("2490");
       setPlanFeatures("Cadastro de membros\nÁrea do membro\nMural de avisos\nPIX instantâneo");
       setPlanHighlight(false);
     }
@@ -247,6 +261,7 @@ export function SuperAdminDashboard({
         badge: planBadge.trim() || undefined,
         setupPrice: parseFloat(planSetupPrice) || 0,
         monthlyPrice: parseFloat(planMonthlyPrice) || 0,
+        annualPrice: parseFloat(planAnnualPrice) || 0,
         features: featuresArray,
         highlight: planHighlight,
       });
@@ -352,7 +367,7 @@ export function SuperAdminDashboard({
     <div className="min-h-[100dvh] bg-background text-foreground flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200 overflow-x-hidden">
       {/* Top Header do Super Admin */}
       <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-xl px-3 sm:px-8 py-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pl-[env(safe-area-inset-left,0px))] pr-[env(safe-area-inset-right,0px))]">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+        <div className="max-w-[1850px] w-full mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group min-w-0">
               <div className="relative w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform shrink-0">
@@ -397,7 +412,7 @@ export function SuperAdminDashboard({
       </header>
 
       {/* Conteúdo Principal com Sidebar */}
-      <div className="max-w-7xl mx-auto w-full px-4 sm:px-8 py-8 flex flex-col md:flex-row gap-6 lg:gap-8 flex-1">
+      <div className="max-w-[1850px] mx-auto w-full px-4 sm:px-8 py-8 flex flex-col md:flex-row gap-6 lg:gap-8 flex-1">
         
         {/* Menu Vertical (Sidebar) */}
         <aside className="w-full md:w-64 shrink-0 space-y-2 relative">
@@ -408,6 +423,7 @@ export function SuperAdminDashboard({
             <div className="flex flex-col gap-1">
               {[
                 { id: "overview", label: "Visão Geral (MRR)", icon: TrendingUp },
+                { id: "saas", label: "Gestão SaaS & Inadimplência", icon: DollarSign, badge: "ASAAS" },
                 { id: "tenants", label: "Igrejas (Assinaturas)", icon: Building2 },
                 { id: "plans", label: "Planos Comerciais", icon: Layers },
                 { id: "users", label: "Usuários & Ativação", icon: Users },
@@ -415,6 +431,7 @@ export function SuperAdminDashboard({
                 { id: "agents", label: "Agentes de IA", icon: Bot, badge: "NOVO" },
                 { id: "permissions", label: "Controle de Acessos", icon: ShieldCheck },
                 { id: "promo", label: "Promoção Especial", icon: Gift, badge: "Outubro" },
+                { id: "personal-tools", label: "Minhas Ferramentas (B2C)", icon: Camera, badge: "VENDAS" },
               ].map((tab) => {
                 const isActive = activeTab === tab.id;
                 const Icon = tab.icon;
@@ -681,6 +698,13 @@ export function SuperAdminDashboard({
           </TabsContent>
 
           {/* ========================================================================= */}
+          {/* TAB: GESTÃO SAAS, INADIMPLÊNCIA & FATURAMENTO                             */}
+          {/* ========================================================================= */}
+          <TabsContent value="saas" className="space-y-6">
+            <SaasBillingManager initialTenants={tenants} />
+          </TabsContent>
+
+          {/* ========================================================================= */}
           {/* TAB 2: GESTÃO DE ASSINATURAS & IGREJAS (TENANTS)                          */}
           {/* ========================================================================= */}
           <TabsContent value="tenants" className="space-y-6">
@@ -809,6 +833,24 @@ export function SuperAdminDashboard({
                           {/* Ações Impersonate */}
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedAsaasTenant(t);
+                                  setIsAsaasModalOpen(true);
+                                }}
+                                className={`h-8 px-2.5 rounded-lg text-xs font-bold gap-1.5 transition-all ${
+                                  t.asaasSubscriptionId
+                                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                                    : "border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                                }`}
+                                title="Gerenciar Cobrança Recorrente Asaas"
+                              >
+                                <CreditCard className="w-3.5 h-3.5" />
+                                <span>{t.asaasSubscriptionId ? "Asaas Ativo" : "Cobrança Asaas"}</span>
+                              </Button>
+
                               <Link href={`/${t.slug}`}>
                                 <Button
                                   size="sm"
@@ -1542,6 +1584,13 @@ export function SuperAdminDashboard({
               </div>
             </div>
           </TabsContent>
+
+          {/* ========================================================================= */}
+          {/* TAB 10: MINHAS FERRAMENTAS (B2C)                                         */}
+          {/* ========================================================================= */}
+          <TabsContent value="personal-tools" className="space-y-6">
+            <SuperAdminPersonalToolsManager />
+          </TabsContent>
         </Tabs>
         </main>
       </div>
@@ -1586,9 +1635,9 @@ export function SuperAdminDashboard({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs text-zinc-300 font-semibold">Taxa de Implantação (R$)</label>
+                  <label className="text-xs text-zinc-300 font-semibold">Taxa Implantação (R$)</label>
                   <Input
                     required
                     type="number"
@@ -1598,13 +1647,28 @@ export function SuperAdminDashboard({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-zinc-300 font-semibold">Mensalidade (R$ /mês)</label>
+                  <label className="text-xs text-zinc-300 font-semibold">Mensalidade (R$/mês)</label>
                   <Input
                     required
                     type="number"
                     value={planMonthlyPrice}
-                    onChange={(e) => setPlanMonthlyPrice(e.target.value)}
+                    onChange={(e) => {
+                      setPlanMonthlyPrice(e.target.value);
+                      const m = parseFloat(e.target.value) || 0;
+                      setPlanAnnualPrice((m * 10).toString());
+                    }}
                     className="bg-zinc-900 border-white/10 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-amber-400 font-semibold">Anuidade (R$/ano)</label>
+                  <Input
+                    required
+                    type="number"
+                    value={planAnnualPrice}
+                    onChange={(e) => setPlanAnnualPrice(e.target.value)}
+                    className="bg-zinc-900 border-amber-500/30 text-xs font-bold text-amber-300"
+                    placeholder="10x a mensalidade"
                   />
                 </div>
               </div>
@@ -1629,17 +1693,83 @@ export function SuperAdminDashboard({
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs text-zinc-300 font-semibold">
-                  Recursos Inclusos (um por linha)
-                </label>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-foreground font-semibold">
+                    Recursos Inclusos (um por linha)
+                  </label>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {planFeatures.split("\n").filter((f) => f.trim().length > 0).length} itens inclusos
+                  </span>
+                </div>
                 <textarea
-                  rows={4}
+                  rows={5}
                   value={planFeatures}
                   onChange={(e) => setPlanFeatures(e.target.value)}
                   placeholder="Cadastro de membros&#10;Área do membro PWA&#10;PIX instantâneo&#10;Células"
-                  className="w-full bg-zinc-900 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:ring-1 focus:ring-amber-500 font-mono"
+                  className="w-full bg-background border border-border rounded-xl p-3 text-xs text-foreground outline-none focus:ring-1 focus:ring-amber-500 font-mono"
                 />
+
+                {/* Chips de Adição Rápida de Módulos */}
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Inserção Rápida de Módulos Oficiais (clique para adicionar/remover):
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 rounded-xl bg-muted/40 border border-border">
+                    {[
+                      "Check-in de Alma / Devocional IA",
+                      "Células & Grupos nos Lares",
+                      "Dízimos & Doações PIX Instantâneo",
+                      "Gestão Financeira Completa (ERP)",
+                      "Secretaria Eclesiástica & Certificados",
+                      "Pedidos de Oração & Pastoral",
+                      "Porteiro Digital & Scanner de QR Code",
+                      "EBD & Discipulado",
+                      "Assembleias & Votação de Atas",
+                      "Patrimônio & Inventário de Bens",
+                      "Check-in Kids & Segurança Infantil",
+                      "Agenda & Ingressos de Eventos",
+                      "Cultos Online & Transmissões",
+                      "Múltiplas Congregações (Matriz/Filiais)",
+                      "Suporte Prioritário WhatsApp",
+                    ].map((featureName) => {
+                      const alreadyIncluded = planFeatures
+                        .toLowerCase()
+                        .includes(featureName.toLowerCase());
+
+                      return (
+                        <button
+                          key={featureName}
+                          type="button"
+                          onClick={() => {
+                            if (alreadyIncluded) {
+                              const lines = planFeatures
+                                .split("\n")
+                                .filter(
+                                  (line) =>
+                                    line.trim().toLowerCase() !== featureName.toLowerCase()
+                                );
+                              setPlanFeatures(lines.join("\n"));
+                            } else {
+                              const trimmed = planFeatures.trim();
+                              setPlanFeatures(
+                                trimmed ? `${trimmed}\n${featureName}` : featureName
+                              );
+                            }
+                          }}
+                          className={`text-[10.5px] px-2.5 py-1 rounded-lg border font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                            alreadyIncluded
+                              ? "bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-xs"
+                              : "bg-background/80 text-muted-foreground border-border hover:text-foreground hover:bg-muted"
+                          }`}
+                        >
+                          <span className="font-bold">{alreadyIncluded ? "✓" : "+"}</span>
+                          <span>{featureName}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 pt-1">
@@ -1674,6 +1804,33 @@ export function SuperAdminDashboard({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Modal de Gestão de Assinatura Recorrente Asaas */}
+      {selectedAsaasTenant && (
+        <AsaasSubscriptionDialog
+          tenant={selectedAsaasTenant}
+          isOpen={isAsaasModalOpen}
+          onClose={() => {
+            setIsAsaasModalOpen(false);
+            setSelectedAsaasTenant(null);
+          }}
+          onUpdate={(updatedData) => {
+            setTenants((prev) =>
+              prev.map((item) =>
+                item.id === updatedData.tenantId
+                  ? {
+                      ...item,
+                      asaasCustomerId: updatedData.asaasCustomerId,
+                      asaasSubscriptionId: updatedData.asaasSubscriptionId,
+                      status: updatedData.status,
+                      billingType: updatedData.billingType,
+                    }
+                  : item
+              )
+            );
+          }}
+        />
       )}
     </div>
   );

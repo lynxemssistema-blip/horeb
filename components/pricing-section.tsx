@@ -44,18 +44,20 @@ interface PricingSectionProps {
 }
 
 export function PricingSection({ existingTenants, promoConfig }: PricingSectionProps) {
+  const [billingCycle, setBillingCycle] = useState<"MONTHLY" | "YEARLY">("MONTHLY");
+
   // Configurações com fallback caso não venha do banco
   const promo = promoConfig || {
     active: true,
     badge: "CONDIÇÃO EXCLUSIVA DE LANÇAMENTO",
     title: "Programa Especial: Primeiras 100 Igrejas de Outubro/2026",
     description:
-      "Para as primeiras 100 igrejas parceiras do mês de outubro/2026, oferecemos 50% de desconto na taxa de implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança. Em troca, construiremos juntos seu case de sucesso ministerial.",
+      "Para as primeiras 100 igrejas parceiras do mês de outubro/2026, oferecemos implantação 100% gratuita, acompanhamento presencial na secretaria e treinamento VIP de liderança. Em troca, construiremos juntos seu case de sucesso ministerial.",
     discountPercent: 50,
     currentCount: 63,
     targetCount: 100,
     validityText: "Válido até 31 de Outubro de 2026",
-    ctaText: "Garantir Minha Vaga (50% OFF)",
+    ctaText: "Garantir Minha Vaga (Implantação Grátis)",
   };
 
   const currentCount = promo.currentCount ?? 63;
@@ -67,9 +69,9 @@ export function PricingSection({ existingTenants, promoConfig }: PricingSectionP
       id: "essencial",
       name: "Essencial",
       subtitle: "Para igrejas pequenas e comunidades em formação",
-      badge: null,
+      badge: "30 DIAS GRÁTIS",
       priceMonthly: 149,
-      priceSetup: 490,
+      priceAnnual: 1490, // 10x mensalidade (2 meses grátis)
       targetAudience: "Até ~150 membros",
       description:
         "Tudo o que sua congregação precisa para organizar o cadastro, fortalecer a comunicação e agilizar ofertas com PIX.",
@@ -95,9 +97,9 @@ export function PricingSection({ existingTenants, promoConfig }: PricingSectionP
       id: "gestao",
       name: "Gestão",
       subtitle: "O plano principal para igrejas médias em franco crescimento",
-      badge: "MAIS ESCOLHIDO",
+      badge: "PADRÃO DO TESTE DE 30 DIAS",
       priceMonthly: 249,
-      priceSetup: 790,
+      priceAnnual: 2490, // 10x mensalidade (2 meses grátis)
       targetAudience: "Igrejas de 150 a 600 membros",
       description:
         "A estrutura ideal para organizar ministérios, células nos lares, escalas de louvor/diaconia e a saúde financeira.",
@@ -123,9 +125,9 @@ export function PricingSection({ existingTenants, promoConfig }: PricingSectionP
       id: "premium",
       name: "Premium",
       subtitle: "Para igrejas maiores, catedrais e redes com congregações",
-      badge: "MULTISSEDE VIP",
+      badge: "MULTISSEDE VIP • 30 DIAS GRÁTIS",
       priceMonthly: 399,
-      priceSetup: 1290,
+      priceAnnual: 3990, // 10x mensalidade (2 meses grátis)
       targetAudience: "Acima de 600 membros ou multissede",
       description:
         "Ecossistema completo com gestão de matriz e congregações integradas, Check-in Kids seguro e EBD avançada.",
@@ -153,9 +155,15 @@ export function PricingSection({ existingTenants, promoConfig }: PricingSectionP
     <section className="space-y-12 pt-10" id="planos">
       {/* Cabeçalho da Seção */}
       <div className="text-center space-y-4 max-w-3xl mx-auto">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-xs font-bold tracking-widest uppercase">
-          <Zap className="w-3.5 h-3.5" />
-          <span>Investimento Transparente & Sem Surpresas</span>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 text-xs font-black tracking-wider uppercase">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            <span>⭐ 30 Dias Grátis • Entre Direto no Plano Gestão</span>
+          </div>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-xs font-bold tracking-widest uppercase">
+            <Zap className="w-3.5 h-3.5" />
+            <span>Sem Cartão de Crédito</span>
+          </div>
         </div>
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
           Planos sob medida para o{" "}
@@ -164,9 +172,45 @@ export function PricingSection({ existingTenants, promoConfig }: PricingSectionP
           </span>
         </h2>
         <p className="text-sm sm:text-base text-zinc-400 leading-relaxed">
-          Taxa única de implantação com treinamento presencial incluso + mensalidade sem fidelidade que
-          cabe no orçamento da sua igreja. Desenvolvido pela <strong>Lynx EMS Sistemas</strong>.
+          Sem taxa de implantação (R$ 0,00) e com 30 dias de degustação gratuita em todos os planos. Escolha entre mensalidade sem fidelidade ou anuidade com desconto especial. Desenvolvido pela <strong>Lynx EMS Sistemas</strong>.
         </p>
+
+        {/* Seletor Segmentado Mensal vs Anual */}
+        <div className="flex items-center justify-center pt-2">
+          <div className="p-1 rounded-2xl bg-zinc-900/90 border border-white/10 flex items-center gap-1 shadow-xl">
+            <button
+              type="button"
+              onClick={() => setBillingCycle("MONTHLY")}
+              className={`px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                billingCycle === "MONTHLY"
+                  ? "bg-amber-500 text-black shadow-md font-black"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              Cobrança Mensal
+            </button>
+            <button
+              type="button"
+              onClick={() => setBillingCycle("YEARLY")}
+              className={`px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                billingCycle === "YEARLY"
+                  ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-black shadow-md font-black"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              <span>Plano Anual</span>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                  billingCycle === "YEARLY"
+                    ? "bg-black/25 text-black"
+                    : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                }`}
+              >
+                2 Meses Grátis
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Grid com os 3 Planos */}
@@ -208,21 +252,45 @@ export function PricingSection({ existingTenants, promoConfig }: PricingSectionP
                 )}
               </div>
 
-              {/* Preço da Mensalidade */}
+              {/* Preço Dinâmico (Mensal ou Anual com Desconto) */}
               <div className="mt-6 pb-6 border-b border-white/[0.08]">
                 <div className="flex items-baseline gap-1">
                   <span className="text-xs font-semibold text-zinc-400">R$</span>
                   <span className="text-4xl sm:text-5xl font-black text-white tracking-tight">
-                    {plan.priceMonthly}
+                    {billingCycle === "YEARLY"
+                      ? Math.round(plan.priceAnnual / 12)
+                      : plan.priceMonthly}
                   </span>
                   <span className="text-xs font-semibold text-zinc-400">/mês</span>
                 </div>
 
-                <div className="mt-2.5 flex items-center justify-between text-xs bg-black/40 rounded-xl px-3 py-2 border border-white/[0.06]">
-                  <span className="text-zinc-400">Implantação + Treinamento:</span>
-                  <span className="font-bold text-amber-400">
-                    R$ {plan.priceSetup}{" "}
-                    <span className="text-[10px] text-zinc-500 font-normal">(taxa única)</span>
+                {billingCycle === "YEARLY" ? (
+                  <div className="mt-2 text-xs font-bold text-emerald-400">
+                    R$ {plan.priceAnnual},00 /ano • <span className="underline">2 meses grátis</span> (economia de R$ {plan.priceMonthly * 2},00)
+                  </div>
+                ) : (
+                  <div className="mt-2 text-xs text-amber-400/90 font-semibold">
+                    Cobrança mensal regular sem fidelidade
+                  </div>
+                )}
+
+                <div className="mt-2.5 flex items-center justify-between text-xs bg-emerald-500/10 rounded-xl px-3 py-2 border border-emerald-500/30">
+                  <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Taxa de Implantação:</span>
+                  </span>
+                  <span className="font-black text-emerald-400 uppercase text-[11px] tracking-wider">
+                    Zero • Gratuita (R$ 0,00)
+                  </span>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between text-xs bg-amber-500/10 rounded-xl px-3 py-1.5 border border-amber-500/30">
+                  <span className="text-amber-300 font-bold flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Período de Degustação:</span>
+                  </span>
+                  <span className="font-bold text-amber-300 text-[11px]">
+                    30 Dias Grátis
                   </span>
                 </div>
 
@@ -338,7 +406,7 @@ export function PricingSection({ existingTenants, promoConfig }: PricingSectionP
 
               <div className="flex flex-wrap gap-4 pt-1 text-xs text-zinc-400 justify-center md:justify-start">
                 <span className="flex items-center gap-1.5">
-                  <Check className="w-4 h-4 text-emerald-400" /> 50% OFF na Implantação
+                  <Check className="w-4 h-4 text-emerald-400" /> Implantação 100% Gratuita (Taxa Zero)
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Check className="w-4 h-4 text-emerald-400" /> Treinamento Presencial da Equipe
@@ -356,7 +424,7 @@ export function PricingSection({ existingTenants, promoConfig }: PricingSectionP
                 triggerButton={
                   <Button className="h-13 px-8 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:brightness-110 text-black font-black text-sm rounded-2xl shadow-xl shadow-amber-500/30 gap-2 cursor-pointer transition-transform hover:scale-105">
                     <Sparkles className="w-4 h-4" />
-                    <span>{promo.ctaText || "Garantir Minha Vaga (50% OFF)"}</span>
+                    <span>{promo.ctaText || "Cadastrar Minha Igreja (30 Dias Grátis)"}</span>
                   </Button>
                 }
               />
@@ -368,42 +436,41 @@ export function PricingSection({ existingTenants, promoConfig }: PricingSectionP
         </div>
       )}
 
-      {/* Entenda o Modelo: Implantação vs Mensalidade */}
+      {/* Entenda o Modelo: Degustação Gratuita & Assinatura Recorrente */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
         <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.08] space-y-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
-            <Laptop className="w-5 h-5" />
+            <Sparkles className="w-5 h-5" />
           </div>
           <h4 className="text-base font-bold text-white">
-            O que cobre a Taxa de Implantação?
+            Como Funcionam os 30 Dias Grátis?
           </h4>
           <p className="text-xs text-zinc-400 leading-relaxed">
-            A implantação é paga uma única vez e garante que sua igreja não enfrente dores de cabeça
-            técnicas:
+            Sua congregação experimenta toda a tecnologia do Horeb sem nenhum risco, compromisso ou pegadinha:
           </p>
           <ul className="space-y-1.5 text-xs text-zinc-300 pt-1">
             <li className="flex items-start gap-2">
-              <span className="text-amber-400">•</span>
+              <span className="text-emerald-400 font-bold">•</span>
               <span>
-                Configuração do ambiente exclusivo e seguro em nuvem de alta velocidade.
+                <strong>Taxa de Implantação Zero:</strong> Sem nenhum custo inicial de configuração ou taxa de setup.
               </span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-amber-400">•</span>
+              <span className="text-emerald-400 font-bold">•</span>
               <span>
-                Personalização completa da identidade visual (logo, cores, domínio oficial).
+                <strong>Sem cartão de crédito no cadastro:</strong> Você só insere dados de pagamento se desejar continuar após o teste.
               </span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-amber-400">•</span>
+              <span className="text-emerald-400 font-bold">•</span>
               <span>
-                Importação assistida de dados (planilhas de membros, grupos e histórico).
+                <strong>Plano Gestão automático:</strong> Acesso completo imediato a membros, células nos lares, finanças e escalas.
               </span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-amber-400">•</span>
+              <span className="text-emerald-400 font-bold">•</span>
               <span>
-                Treinamento prático e humanizado pela equipe da <strong>Lynx EMS Sistemas</strong>.
+                <strong>Opção de Plano Anual:</strong> Opção de contratação anual com até 2 meses grátis de economia.
               </span>
             </li>
           </ul>
@@ -414,10 +481,10 @@ export function PricingSection({ existingTenants, promoConfig }: PricingSectionP
             <ShieldCheck className="w-5 h-5" />
           </div>
           <h4 className="text-base font-bold text-white">
-            O que cobre a Mensalidade Recorrente?
+            O que cobre a Assinatura Recorrente?
           </h4>
           <p className="text-xs text-zinc-400 leading-relaxed">
-            A mensalidade garante a tranquilidade da liderança e a evolução contínua da sua
+            A assinatura garante a tranquilidade da liderança e a evolução contínua da sua
             plataforma:
           </p>
           <ul className="space-y-1.5 text-xs text-zinc-300 pt-1">

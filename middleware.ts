@@ -10,8 +10,10 @@ export function middleware(request: NextRequest) {
     const hasSwitchParam = searchParams.has("switch") || searchParams.has("select");
     const hasLogoutParam = searchParams.has("logout");
 
-    // Se o usuário não estiver executando uma troca de igreja ou login explícito
-    if (!hasAuthParam && !hasSwitchParam && !hasLogoutParam) {
+    const hasHomeParam = searchParams.has("home");
+
+    // Se o usuário não estiver executando uma troca de igreja ou navegando explicitamente
+    if (!hasAuthParam && !hasSwitchParam && !hasLogoutParam && !hasHomeParam) {
       const sessionCookie = request.cookies.get("horeb_auth_session");
       if (sessionCookie?.value) {
         try {
@@ -32,10 +34,12 @@ export function middleware(request: NextRequest) {
           }
 
           if (session && session.tenantSlug) {
+            // Super Admin tem permissão para visualizar e gerenciar a página inicial livremente
             if (session.role === "SUPERADMIN") {
-              return NextResponse.redirect(new URL("/admin", request.url));
+              // Não força redirecionamento para /admin, permitindo visualizar a home
+            } else {
+              return NextResponse.redirect(new URL(`/${session.tenantSlug}`, request.url));
             }
-            return NextResponse.redirect(new URL(`/${session.tenantSlug}`, request.url));
           }
         } catch {
           // Em caso de falha de decodificação do cookie, segue para a página normalmente

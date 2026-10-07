@@ -32,6 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const manifestUrl = session?.tenantSlug ? `/api/manifest/${session.tenantSlug}` : "/manifest.json";
 
   return {
+    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://horeb.lynxems.com.br"),
     title: "Horeb SaaS • Soluções para Igrejas",
     description: "Plataforma de engajamento e gestão eclesial desenvolvida pela Lynx EMS Sistemas com motor White-Label dinâmico e arquitetura mobile-first.",
     manifest: manifestUrl,

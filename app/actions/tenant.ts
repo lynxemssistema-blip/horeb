@@ -89,7 +89,11 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
     const hashedPassword = await bcrypt.hash(rawPassword, 10);
     const primaryColor = params.primaryColor || "#dc2626";
 
-    // 1. Criar a Igreja Matriz no Banco (Prisma)
+    // 1. Criar a Igreja Matriz no Banco com 30 dias de degustação gratuita (sem custo e sem dados de cobrança)
+    const trialDays = 30;
+    const trialExpiresAt = new Date();
+    trialExpiresAt.setDate(trialExpiresAt.getDate() + trialDays);
+
     const tenant = await prisma.tenant.create({
       data: {
         name: params.churchName,
@@ -100,9 +104,10 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
         phone: params.phone?.trim() || null,
         address: params.address?.trim() || null,
         plan: "GESTAO",
-        status: "ACTIVE",
+        status: "TRIAL", // 30 dias de uso gratuito
         monthlyPrice: 249,
         setupPrice: 790,
+        subscriptionExpiresAt: trialExpiresAt,
       },
     });
 

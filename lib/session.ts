@@ -12,7 +12,17 @@ export interface SessionData {
   tenantSlug: string;
 }
 
-export type AppRole = "SUPERADMIN" | "ADMIN" | "PASTOR" | "FINANCIAL" | "LEADER" | "KIDS" | "MEMBER";
+export type AppRole =
+  | "SUPERADMIN"
+  | "ADMIN"
+  | "PASTOR"
+  | "SECRETARIA"
+  | "FINANCIAL"
+  | "LEADER"
+  | "KIDS"
+  | "PORTEIRO"
+  | "MEMBER"
+  | (string & {});
 
 const SESSION_COOKIE_NAME = "horeb_auth_session";
 
@@ -206,7 +216,8 @@ export async function checkChurchAccess(slug: string): Promise<AccessCheckResult
  */
 export async function requirePermission(
   slug: string,
-  allowedRoles: AppRole[]
+  allowedRoles: AppRole[],
+  requiredMenu?: string
 ): Promise<
   | { authorized: true; user: SessionData; tenantId: string; role: AppRole }
   | { authorized: false; error: string; statusCode: 401 | 403 }
@@ -244,6 +255,26 @@ export async function requirePermission(
       tenantId: access.targetTenantId,
       role,
     };
+  }
+
+  // Validação dinâmica por menu configurado no RBAC
+  if (requiredMenu) {
+    try {
+      const perm = await prisma.rolePermission.findUnique({
+        where: { role: access.effectiveRole },
+      });
+      if (perm) {
+        const allowedMenus = JSON.parse(perm.menuItems || "[]") as string[];
+        if (allowedMenus.includes("ALL") || allowedMenus.includes(requiredMenu)) {
+          return {
+            authorized: true,
+            user: access.user,
+            tenantId: access.targetTenantId,
+            role,
+          };
+        }
+      }
+    } catch {}
   }
 
   return {

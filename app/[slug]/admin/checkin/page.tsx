@@ -13,8 +13,8 @@ interface CheckinPageProps {
 export default async function CheckinPage({ params }: CheckinPageProps) {
   const { slug } = await params;
 
-  // Guarda RBAC estrita: Apenas administradores, pastores, líderes ou voluntários autorizados desta igreja
-  const auth = await requirePermission(slug, ["ADMIN", "PASTOR", "LEADER", "KIDS"]);
+  // Guarda RBAC estrita: Apenas administradores, pastores, líderes, voluntários autorizados ou concedido via RBAC
+  const auth = await requirePermission(slug, ["ADMIN", "PASTOR", "LEADER", "KIDS", "PORTEIRO"], "/admin/checkin");
   if (!auth.authorized) {
     if (auth.statusCode === 401) {
       redirect(`/?auth=admin_required&church=${slug}`);

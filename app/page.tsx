@@ -35,6 +35,7 @@ import {
   Crown,
   LogOut,
   ArrowLeftRight,
+  LogIn,
 } from "lucide-react";
 import { getPromotionConfig } from "@/app/actions/superadmin";
 import { HelpGuideDialog } from "@/components/help-guide-dialog";
@@ -76,12 +77,40 @@ export default async function HomePage(props: {
 
   return (
     <div className="min-h-[100dvh] bg-background text-foreground flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200 relative overflow-x-hidden">
+      {/* Barra de Notificação Fixa para SuperAdmin */}
+      {session?.role === "SUPERADMIN" && (
+        <div className="sticky top-0 z-50 w-full bg-gradient-to-r from-amber-500/20 via-zinc-950/95 to-amber-500/20 backdrop-blur-md border-b border-amber-500/40 px-4 py-2 shadow-xl animate-in slide-in-from-top duration-300">
+          <div className="max-w-5xl mx-auto flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-amber-300 font-bold min-w-0">
+              <span className="w-6 h-6 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+                <Crown className="w-3.5 h-3.5" />
+              </span>
+              <span className="truncate">
+                Modo Super Admin Ativo • Visualizando Página Inicial Pública
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link href="/admin">
+                <Button
+                  size="sm"
+                  className="h-7 px-3 text-xs bg-amber-500 hover:bg-amber-400 text-black font-black gap-1.5 shadow-md shadow-amber-500/20"
+                >
+                  <Crown className="w-3.5 h-3.5" />
+                  <span>Painel Executivo /admin</span>
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Ferramentas Nativas para Celular (PWA Banner & Instalação) */}
       <NativeMobileTools />
 
       {/* Botão Flutuante de Ajuda & Guia Completo */}
       <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] right-[calc(1.25rem+env(safe-area-inset-right,0px))] z-50 shadow-2xl">
         <HelpGuideDialog
+          hideWhenOpen
           triggerButton={
             <Button
               className="h-11 sm:h-12 px-3.5 sm:px-4 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-black font-black text-xs shadow-[0_10px_30px_rgba(245,158,11,0.4)] gap-2 transition-all hover:scale-105 active:scale-95 cursor-pointer border border-amber-400/40"
@@ -125,7 +154,15 @@ export default async function HomePage(props: {
                     Conectado como <strong className="text-amber-400">{session.name}</strong>
                   </p>
                   <p className="text-[11px] text-zinc-400 truncate">
-                    Sua Congregação: <strong className="text-zinc-200">{userChurch?.name || session.tenantSlug}</strong>
+                    {session.role === "SUPERADMIN" ? (
+                      <>
+                        Perfil: <strong className="text-amber-400 font-bold">Super Administrador Global</strong>
+                      </>
+                    ) : (
+                      <>
+                        Sua Congregação: <strong className="text-zinc-200">{userChurch?.name || session.tenantSlug}</strong>
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -135,8 +172,17 @@ export default async function HomePage(props: {
                   size="sm"
                   className="h-8 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black text-xs gap-1.5 shadow-md shadow-amber-500/30 shrink-0"
                 >
-                  <span>Ir para minha igreja</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  {session.role === "SUPERADMIN" ? (
+                    <>
+                      <Crown className="w-3.5 h-3.5" />
+                      <span>Painel Super Admin</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Ir para minha igreja</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </>
+                  )}
                 </Button>
               </Link>
             </div>
@@ -172,10 +218,17 @@ export default async function HomePage(props: {
             </div>
           )}
 
-          <a href="#origem-horeb" className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-xs font-bold tracking-widest uppercase shadow-sm backdrop-blur-md hover:bg-amber-500/20 transition-colors">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Mais que tecnologia, é sobre propósito • Conheça a Origem</span>
-          </a>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-emerald-500/20 via-amber-500/15 to-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black tracking-wider uppercase shadow-lg shadow-emerald-500/10 backdrop-blur-md">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>⭐ 30 Dias de Degustação 100% Gratuita • Sem Cartão de Crédito</span>
+            </div>
+
+            <a href="#origem-horeb" className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-xs font-bold tracking-widest uppercase shadow-sm backdrop-blur-md hover:bg-amber-500/20 transition-colors">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Mais que tecnologia, é sobre propósito</span>
+            </a>
+          </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white max-w-3xl leading-[1.1] pt-1">
             TODA A SUA IGREJA CONECTADA EM UM{" "}
@@ -212,14 +265,14 @@ export default async function HomePage(props: {
                         {session.role === "SUPERADMIN" ? "Acesso Master Global" : "Você já está conectado"}
                       </span>
                       <span className="block text-xl sm:text-2xl font-black text-black leading-tight tracking-tight">
-                        Ir para Minha Igreja
+                        {session.role === "SUPERADMIN" ? "Acessar Painel Executivo /admin" : "Ir para Minha Igreja"}
                       </span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 bg-black/15 px-3.5 py-2 rounded-xl border border-black/15 group-hover:translate-x-1.5 transition-transform shrink-0 relative z-10">
                     <span className="text-xs font-black text-black hidden sm:inline truncate max-w-[140px]">
-                      {userChurch?.name || session.tenantSlug}
+                      {session.role === "SUPERADMIN" ? "Lynx EMS Sistemas" : (userChurch?.name || session.tenantSlug)}
                     </span>
                     <ArrowRight className="w-5 h-5 text-black" />
                   </div>
@@ -282,62 +335,71 @@ export default async function HomePage(props: {
               </div>
             </div>
           ) : (
-            <div className="flex flex-wrap items-center justify-center gap-3.5 pt-3">
-              <CreateChurchDialog
-                existingTenants={tenants.map((t) => ({
-                  id: t.id,
-                  name: t.name,
-                  slug: t.slug,
-                  primaryColor: t.primaryColor,
-                }))}
-                defaultTab="master"
-                triggerButton={
-                  <Button className="h-12 px-6 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:brightness-110 text-black font-black text-sm rounded-xl shadow-xl shadow-amber-500/25 gap-2 transition-all hover:scale-105 active:scale-95 cursor-pointer">
-                    <Sparkles className="w-4 h-4" />
-                    <span>Cadastrar Minha Igreja (Master)</span>
-                  </Button>
-                }
-              />
+            <div className="flex flex-col items-center gap-3 pt-3">
+              <div className="flex flex-wrap items-center justify-center gap-3.5">
+                <CreateChurchDialog
+                  existingTenants={tenants.map((t) => ({
+                    id: t.id,
+                    name: t.name,
+                    slug: t.slug,
+                    primaryColor: t.primaryColor,
+                  }))}
+                  defaultTab="master"
+                  triggerButton={
+                    <Button className="h-14 px-8 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:brightness-110 text-black font-black text-sm sm:text-base rounded-2xl shadow-xl shadow-amber-500/30 gap-2.5 transition-all hover:scale-105 active:scale-95 cursor-pointer border-2 border-amber-300">
+                      <Sparkles className="w-5 h-5 text-black" />
+                      <span>Cadastrar Minha Igreja (30 Dias Grátis)</span>
+                    </Button>
+                  }
+                />
 
-              <CreateChurchDialog
-                existingTenants={tenants.map((t) => ({
-                  id: t.id,
-                  name: t.name,
-                  slug: t.slug,
-                  primaryColor: t.primaryColor,
-                }))}
-                defaultTab="login"
-                triggerButton={
+                <CreateChurchDialog
+                  existingTenants={tenants.map((t) => ({
+                    id: t.id,
+                    name: t.name,
+                    slug: t.slug,
+                    primaryColor: t.primaryColor,
+                  }))}
+                  defaultTab="login"
+                  triggerButton={
+                    <Button
+                      variant="outline"
+                      className="h-14 px-6 border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] hover:text-white text-zinc-200 font-bold text-sm rounded-2xl gap-2 backdrop-blur-md transition-all hover:scale-105 cursor-pointer"
+                    >
+                      <LogIn className="w-4 h-4 text-amber-400" />
+                      <span>Já Sou Líder • Fazer Login</span>
+                    </Button>
+                  }
+                />
+
+                <HelpGuideDialog
+                  triggerButton={
+                    <Button
+                      variant="outline"
+                      className="h-14 px-5 border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-sm rounded-2xl gap-2 backdrop-blur-md transition-all hover:scale-105 cursor-pointer"
+                    >
+                      <HelpCircle className="w-4 h-4 text-amber-400" />
+                      <span>Como Funciona</span>
+                    </Button>
+                  }
+                />
+
+                <a href="#planos">
                   <Button
-                    variant="outline"
-                    className="h-12 px-5 border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] hover:text-white text-zinc-200 font-bold text-sm rounded-xl gap-2 backdrop-blur-md transition-all hover:scale-105 cursor-pointer"
+                    variant="ghost"
+                    className="h-14 px-5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 font-bold text-sm rounded-2xl gap-2 transition-all hover:scale-105 cursor-pointer"
                   >
-                    <span>Já Sou Líder • Fazer Login</span>
+                    <CreditCard className="w-4 h-4" />
+                    <span>Ver Planos</span>
                   </Button>
-                }
-              />
+                </a>
+              </div>
 
-              <HelpGuideDialog
-                triggerButton={
-                  <Button
-                    variant="outline"
-                    className="h-12 px-5 border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-sm rounded-xl gap-2 backdrop-blur-md transition-all hover:scale-105 cursor-pointer"
-                  >
-                    <HelpCircle className="w-4 h-4 text-amber-400" />
-                    <span>Como Funciona • Guia</span>
-                  </Button>
-                }
-              />
-
-              <a href="#planos">
-                <Button
-                  variant="ghost"
-                  className="h-12 px-5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 font-bold text-sm rounded-xl gap-2 transition-all hover:scale-105 cursor-pointer"
-                >
-                  <CreditCard className="w-4 h-4" />
-                  <span>Ver Planos & Valores</span>
-                </Button>
-              </a>
+              {/* Destaque informativo dos 30 dias gratuitos no Plano de Gestão */}
+              <p className="text-xs text-zinc-400 font-medium flex items-center gap-2 text-center max-w-xl">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                <span>Cadastro imediato sem cartão: sua congregação entra automaticamente no <strong className="text-amber-400 font-bold">Plano de Gestão</strong> com 30 dias de uso 100% gratuito.</span>
+              </p>
             </div>
           )}
         </div>

@@ -39,8 +39,8 @@ export default async function AdminEbdPage({ params }: EbdPageProps) {
 
   if (!tenant) notFound();
 
-  // 2. Permissão de Acesso (ADMIN, PASTOR, LEADER, SUPERADMIN)
-  const auth = await requirePermission(slug, ["ADMIN", "PASTOR", "LEADER"]);
+  // 2. Permissão de Acesso (ADMIN, PASTOR, LEADER, SUPERADMIN ou concedido via RBAC)
+  const auth = await requirePermission(slug, ["ADMIN", "PASTOR", "LEADER"], "/admin/ebd");
   if (!auth.authorized) {
     if (auth.statusCode === 401) {
       redirect(`/?auth=required&church=${slug}`);

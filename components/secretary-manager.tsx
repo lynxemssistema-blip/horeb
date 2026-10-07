@@ -139,7 +139,7 @@ export function SecretaryManager({
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+    <div className="space-y-6 max-w-[1760px] 2xl:max-w-[1920px] w-full mx-auto pb-12">
       {/* Top Banner da Secretaria */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-card border border-border shadow-sm">
         <div>

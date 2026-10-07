@@ -80,7 +80,7 @@ export function AppHeader({
 
   return (
     <header className="sticky top-0 z-40 w-full bg-background/80 backdrop-blur-md border-b border-border/60 transition-colors pt-[env(safe-area-inset-top,0px)] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-2 sm:gap-3">
+      <div className="max-w-[1760px] 2xl:max-w-[1920px] w-full mx-auto px-3 sm:px-6 lg:px-8 xl:px-10 h-14 flex items-center justify-between gap-2 sm:gap-3">
         {/* Left: Church Info */}
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <Avatar className="h-9 w-9 ring-2 ring-primary/20 shrink-0 bg-black/40">

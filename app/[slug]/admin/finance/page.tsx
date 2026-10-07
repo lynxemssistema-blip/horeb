@@ -31,8 +31,8 @@ export default async function AdminFinancePage({
 
   if (!tenant) notFound();
 
-  // 2. Verificar Sessão e RBAC Rigoroso
-  const auth = await requirePermission(slug, ["ADMIN", "FINANCIAL"]);
+  // 2. Verificar Sessão e RBAC Rigoroso (ADMIN, FINANCIAL ou concedido via RBAC)
+  const auth = await requirePermission(slug, ["ADMIN", "FINANCIAL"], "/admin/finance");
   if (!auth.authorized) {
     if (auth.statusCode === 401) {
       redirect(`/?auth=required&church=${slug}`);

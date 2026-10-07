@@ -299,7 +299,7 @@ export function FinanceDashboardView({
   const memberReportList = Object.values(memberReportMap).sort((a, b) => b.total - a.total);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 max-w-[1760px] 2xl:max-w-[1920px] w-full mx-auto pb-12">
       {/* 1. Header Administrativo Executivo (Desktop-First) */}
       <div className="p-6 rounded-3xl bg-gradient-to-br from-card via-card/95 to-muted/40 border border-border shadow-2xl relative overflow-hidden">
         {/* Glow de Iluminação */}

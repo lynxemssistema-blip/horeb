@@ -195,7 +195,7 @@ export function PrayerRequestsManager({
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12">
+    <div className="max-w-[1760px] 2xl:max-w-[1920px] w-full mx-auto space-y-6 pb-12">
       {/* Top Breadcrumb & Retorno */}
       <div className="flex items-center justify-between">
         <Link

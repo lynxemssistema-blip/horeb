@@ -130,7 +130,7 @@ export default function DoarPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto space-y-4 pb-12 pt-2 px-1">
+    <div className="max-w-xl sm:max-w-2xl mx-auto space-y-4 pb-12 pt-2 px-1">
       {/* Top Header com Botão Voltar */}
       <div className="flex items-center justify-between px-1">
         <Link

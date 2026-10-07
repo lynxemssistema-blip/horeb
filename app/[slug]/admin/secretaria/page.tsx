@@ -44,8 +44,8 @@ export default async function AdminSecretariaPage({ params }: SecretariaPageProp
 
   if (!tenant) notFound();
 
-  // 2. Permissão de Acesso (ADMIN, PASTOR, SUPERADMIN)
-  const auth = await requirePermission(slug, ["ADMIN", "PASTOR"]);
+  // 2. Permissão de Acesso (ADMIN, PASTOR, SECRETARIA ou concedido via RBAC)
+  const auth = await requirePermission(slug, ["ADMIN", "PASTOR", "SECRETARIA"], "/admin/secretaria");
   if (!auth.authorized) {
     if (auth.statusCode === 401) {
       redirect(`/?auth=required&church=${slug}`);

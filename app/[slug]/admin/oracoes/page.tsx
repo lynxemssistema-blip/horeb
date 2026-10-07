@@ -38,8 +38,8 @@ export default async function AdminOracoesPage({ params }: OracoesPageProps) {
 
   if (!tenant) notFound();
 
-  // 2. Verificar Sessão e RBAC Rigoroso (ADMIN, PASTOR, SUPERADMIN)
-  const auth = await requirePermission(slug, ["ADMIN", "PASTOR"]);
+  // 2. Verificar Sessão e RBAC Rigoroso (ADMIN, PASTOR, SUPERADMIN ou concedido via RBAC)
+  const auth = await requirePermission(slug, ["ADMIN", "PASTOR"], "/admin/oracoes");
   if (!auth.authorized) {
     if (auth.statusCode === 401) {
       redirect(`/?auth=required&church=${slug}`);

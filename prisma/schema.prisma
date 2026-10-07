@@ -31,13 +31,22 @@ model Tenant {
   status       String        @default("ACTIVE") // ACTIVE, TRIAL, SUSPENDED, CANCELLED
   setupPrice   Float         @default(790)
   monthlyPrice Float         @default(249)
+  billingCycle String        @default("MONTHLY") // MONTHLY, YEARLY
+  couponCode   String?       // Palavra-chave / Cupom promocional aplicado
+  discountPercent Int        @default(0)         // Porcentagem de desconto concedido
   subscriptionExpiresAt DateTime?
+
+  // Vínculos Asaas (Assinaturas SaaS)
+  asaasCustomerId     String?
+  asaasSubscriptionId String?
+  billingType         String?   @default("UNDEFINED") // PIX, BOLETO, CREDIT_CARD, UNDEFINED
   
   // Hierarquia Matriz -> Filiais (Self-relation)
   parentId     String?
   parent       Tenant?       @relation("TenantHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   branches     Tenant[]      @relation("TenantHierarchy")
 
+  invoices     SubscriptionInvoice[]
   users        User[]
   userAccesses UserChurchAccess[]
   cellGroups   CellGroup[]
@@ -103,6 +112,13 @@ model User {
   discipleshipProgress         MemberDiscipleshipProgress[]
   assemblyVotes                AssemblyVote[]
   serviceAttendances           ServiceAttendance[]
+  // Módulo Pessoal B2C: Minhas Ferramentas (Instagram Camera Studio)
+  hasToolsSubscription       Boolean   @default(false)
+  toolsSubscriptionStatus     String    @default("INACTIVE") // INACTIVE, TRIAL, ACTIVE, OVERDUE, CANCELLED
+  toolsSubscriptionExpiresAt  DateTime?
+  toolsAsaasCustomerId       String?
+  toolsAsaasSubscriptionId   String?
+  personalToolInvoices        PersonalToolInvoice[]
 
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -293,6 +309,7 @@ model Plan {
   badge          String?
   setupPrice     Float
   monthlyPrice   Float
+  annualPrice    Float    @default(0)
   targetAudience String?
   features       String   // JSON string de recursos
   highlight      Boolean  @default(false)
@@ -340,6 +357,25 @@ model PromotionConfig {
   ctaText         String   @default("Garantir Minha Vaga (50% OFF)")
 
   updatedAt       DateTime @updatedAt
+}
+
+// ==========================================
+// PALAVRAS-CHAVE / CUPONS DE DESCONTO (SUPER ADMIN)
+// ==========================================
+model DiscountCoupon {
+  id              String    @id @default(cuid())
+  code            String    @unique // ex: "PASTOR50", "LANCAMENTO30", "CONVENCAO"
+  description     String?   // ex: "Desconto especial para congregações parceiras"
+  discountPercent Int       // ex: 10, 20, 30, 50 (%)
+  maxUses         Int?      // Quantidade máxima de usos (null = ilimitado)
+  usedCount       Int       @default(0)
+  validUntil      DateTime? // Data de expiração do cupom
+  active          Boolean   @default(true)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([code])
 }
 
 model MoodCheckIn {
@@ -714,5 +750,67 @@ model ServiceAttendance {
   @@index([userId])
 }
 
+// ==========================================
+// 6. ASSINATURAS & COBRANÇA RECORRENTE (ASAAS)
+// ==========================================
+model SubscriptionInvoice {
+  id             String    @id @default(cuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  asaasPaymentId String    @unique
+  amount         Float
+  status         String    @default("PENDING") // PENDING, RECEIVED, OVERDUE, CANCELLED
+  billingType    String?   // PIX, BOLETO, CREDIT_CARD
+  dueDate        DateTime
+  paymentDate    DateTime?
+  invoiceUrl     String?   // Link público da fatura Asaas
+  bankSlipUrl    String?   // Link do PDF do boleto
+  pixQrCode      String?   // Código PIX Copia-e-Cola
+  pixQrCodeImage String?   // URL ou Base64 da imagem QR Code
+  description    String?
+  
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
+  @@index([tenantId])
+  @@index([status])
+}
 
+// ==========================================
+// 7. MÓDULO B2C: FERRAMENTAS PESSOAIS (INSTAGRAM PRO)
+// ==========================================
+model PersonalToolsConfig {
+  id           String   @id @default("default")
+  title        String   @default("Estúdio de Fotos & Instagram Pro")
+  badge        String   @default("MÓDULO PESSOAL EXCLUSIVO")
+  description  String   @default("Câmera do celular em alta definição com 8 filtros de cinema, ajustes finos de luz e enquadramentos de Feed (1:1), Retrato (4:5) e Stories (9:16) prontos para postagem no Instagram.")
+  monthlyPrice Float    @default(19.90)
+  annualPrice  Float    @default(199.00)
+  trialDays    Int      @default(30) // Dias de degustação gratuita (30 dias padrão)
+  active       Boolean  @default(true)
+  features     String   @default("[\"Câmera Nativa do Celular & Selfie HD\",\"8 Filtros de Cinema (Louvor Vivo, Golden Hour, B&W)\",\"Formatos Oficiais 1:1 Feed, 4:5 Retrato e 9:16 Stories\",\"Ajustes Finos de Luz, Contraste e Vinheta\",\"Selos de Fé e Brasão da Igreja em Alta Definição\",\"Compartilhamento Direto no Instagram em 1 Toque\"]")
+
+  updatedAt    DateTime @updatedAt
+}
+
+model PersonalToolInvoice {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asaasPaymentId String    @unique
+  amount         Float
+  status         String    @default("PENDING") // PENDING, RECEIVED, OVERDUE, CANCELLED
+  billingType    String?   // PIX, CREDIT_CARD
+  dueDate        DateTime
+  paymentDate    DateTime?
+  invoiceUrl     String?
+  pixQrCode      String?
+  pixQrCodeImage String?
+  description    String?
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}

@@ -88,6 +88,18 @@ export function CreateChurchDialog({
     }
   }, [open, defaultTab]);
 
+  useEffect(() => {
+    const handleOpen = (e: Event) => {
+      const customEvent = e as CustomEvent<{ tab?: string }>;
+      setOpen(true);
+      if (customEvent.detail?.tab) {
+        setActiveTab(customEvent.detail.tab);
+      }
+    };
+    window.addEventListener("horeb:open-create-church", handleOpen);
+    return () => window.removeEventListener("horeb:open-create-church", handleOpen);
+  }, []);
+
   // Tab 1: Master
   const [masterName, setMasterName] = useState("");
   const [masterEmail, setMasterEmail] = useState("");
@@ -372,6 +384,21 @@ export function CreateChurchDialog({
               value="master"
               className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-4 space-y-4 touch-pan-y overscroll-contain"
             >
+              {/* Banner de 30 Dias Grátis com Plano Gestão Automático */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-amber-500/10 to-emerald-500/5 border border-emerald-500/30 text-foreground space-y-1 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                    ⭐ 30 Dias 100% Gratuitos
+                  </span>
+                  <span className="text-[11px] font-bold text-amber-400">
+                    Plano Gestão Incluso
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed pt-0.5">
+                  Cadastre sua congregação sem precisar escolher plano ou informar dados de cobrança. Você terá acesso completo imediato a todos os recursos do <strong>Plano de Gestão</strong> sem custo nos primeiros 30 dias.
+                </p>
+              </div>
+
               <form onSubmit={handleRegisterMaster} className="space-y-4">
                 {/* 1. Credenciais Master */}
                 <div className="rounded-2xl bg-muted/30 border border-border p-4 space-y-3">
@@ -599,17 +626,17 @@ export function CreateChurchDialog({
                 <Button
                   type="submit"
                   disabled={isLoading || !emailIsValid}
-                  className="w-full h-11 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:brightness-110 text-black font-black text-xs rounded-xl shadow-lg gap-2 cursor-pointer sticky bottom-0 z-20"
+                  className="w-full h-12 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:brightness-110 text-black font-black text-xs rounded-xl shadow-lg gap-2 cursor-pointer sticky bottom-0 z-20"
                 >
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Cadastrando Master e Igreja...</span>
+                      <span>Ativando 30 Dias Grátis...</span>
                     </>
                   ) : (
                     <>
-                      <Check className="w-4 h-4" />
-                      <span>Concluir Cadastro & Acessar</span>
+                      <Sparkles className="w-4 h-4" />
+                      <span>Ativar 30 Dias Grátis no Plano Gestão</span>
                     </>
                   )}
                 </Button>

@@ -39,6 +39,8 @@ import {
 import { getSession } from "@/lib/session";
 import { getUserAccessRules } from "@/app/actions/permissions";
 import { MemberQuickBadgeModal } from "@/components/member-quick-badge-modal";
+import { UserPersonalToolsSection } from "@/components/user-personal-tools-section";
+import { getPersonalToolsConfig, getUserToolsSubscription } from "@/app/actions/personal-tools";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -86,13 +88,27 @@ export default async function TenantDashboardPage({ params }: PageProps) {
     }
   }
 
+  // Carregar Configurações e Assinatura do Módulo Pessoal B2C (Instagram Studio)
+  const [toolsConfigRes, toolsSub] = await Promise.all([
+    getPersonalToolsConfig(),
+    session?.userId
+      ? getUserToolsSubscription(session.userId)
+      : Promise.resolve({
+          hasActiveSubscription: true,
+          status: "TRIAL" as const,
+          expiresAt: null,
+          isTrial: true,
+          remainingDays: 30,
+        }),
+  ]);
+
   // Helper function to check menu access
   const canSeeMenu = (menu: string) => allowedMenus.includes(menu) || allowedMenus.includes("ALL");
   const canDoAction = (action: string) => allowedActions.includes(action) || allowedActions.includes("ALL");
   const isLeadership = session?.role === "SUPERADMIN" || session?.role === "ADMIN" || session?.role === "PASTOR";
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-6">
+    <div className="space-y-8 w-full pb-8">
       {/* 1. Hero / Welcome Card com Theming Dinâmico */}
       <Card className="relative overflow-hidden border-border/80 shadow-md bg-gradient-to-br from-card via-card to-muted/40">
         <div
@@ -243,7 +259,26 @@ export default async function TenantDashboardPage({ params }: PageProps) {
         </CardFooter>
       </Card>
 
-      {/* 2. Grid de Recursos Principais da Congregação (Rich Visual Media Cards) */}
+      {/* 2. Seção Exclusiva: Minhas Ferramentas (Serviços Pessoais do Usuário / Instagram Camera Studio) */}
+      <UserPersonalToolsSection
+        churchName={tenant.name}
+        churchLogo={tenant.logoUrl}
+        churchSlug={slug}
+        config={toolsConfigRes.config}
+        subscription={toolsSub}
+        user={
+          session
+            ? {
+                id: session.userId,
+                name: session.name,
+                email: session.email,
+                avatarUrl: session.avatarUrl,
+              }
+            : null
+        }
+      />
+
+      {/* 3. Grid de Recursos Principais da Congregação (Rich Visual Media Cards) */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -257,7 +292,7 @@ export default async function TenantDashboardPage({ params }: PageProps) {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-5 sm:gap-6">
           {/* Card 1: Dízimos & Ofertas (PIX) */}
           <div className="group relative rounded-2xl overflow-hidden border border-border/80 hover:border-primary/60 bg-card shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col justify-between">
             <div className="relative h-44 sm:h-48 w-full overflow-hidden shrink-0">
