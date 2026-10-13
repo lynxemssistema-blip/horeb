@@ -185,7 +185,8 @@ export async function getMemberCredentialData(slug: string, targetUserId?: strin
     }
 
     // Código de validação criptográfica legível em QR Code
-    const credentialCode = `HRB-${user.tenant.slug.toUpperCase()}-${user.id.substring(0, 8).toUpperCase()}`;
+    const tenantSlug = user.tenant?.slug ? user.tenant.slug.toUpperCase() : "MATRIZ";
+    const credentialCode = `HRB-${tenantSlug}-${user.id.substring(0, 8).toUpperCase()}`;
 
     return {
       success: true,

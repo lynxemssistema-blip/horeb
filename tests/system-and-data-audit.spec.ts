@@ -62,7 +62,7 @@ test.describe("Auditoria de Sistemas & Engenharia de Dados (Horeb)", () => {
     });
     expect(createdUser).not.toBeNull();
     expect(createdUser?.password?.startsWith("$2")).toBe(true); // Hash bcrypt
-    expect(createdUser?.tenant.slug).toBe("matriz");
+    expect(createdUser?.tenant?.slug).toBe("matriz");
     expect(createdUser?.churchAccesses.some((ca) => ca.tenantId === createdUser!.tenantId)).toBe(true);
 
     // 2.2 Tentativa de cadastro duplicado na mesma igreja
@@ -205,7 +205,7 @@ test.describe("Auditoria de Sistemas & Engenharia de Dados (Horeb)", () => {
 
     // 5.1 Criar Atendimento Pastoral ao Vivo (LIVE)
     const apptRes = await createPastoralAppointment({
-      slug: pastor!.tenant.slug,
+      slug: pastor!.tenant?.slug || "matriz",
       pastorId: pastor!.id,
       type: "LIVE",
       userName: "Irmão Necessitado de Oração",
@@ -232,7 +232,7 @@ test.describe("Auditoria de Sistemas & Engenharia de Dados (Horeb)", () => {
     const conv = await prisma.conversation.create({
       data: {
         userId: pastor!.id,
-        tenantId: pastor!.tenantId,
+        tenantId: pastor!.tenantId || "matriz",
         title: "Sessão de Discipulado QA",
       },
     });

@@ -283,8 +283,8 @@ export async function loginUser(identifier: string, rawPassword: string) {
         email: user.email,
         name: user.name,
         role: "SUPERADMIN",
-        tenantId: user.tenantId,
-        tenantSlug: user.tenant?.slug || "matriz",
+        tenantId: user.tenantId || null,
+        tenantSlug: user.tenant?.slug || "admin",
       });
 
       return {
@@ -294,7 +294,7 @@ export async function loginUser(identifier: string, rawPassword: string) {
           name: user.name,
           email: user.email,
           role: "SUPERADMIN",
-          tenantSlug: user.tenant?.slug || "matriz",
+          tenantSlug: user.tenant?.slug || "admin",
         },
         redirectUrl: "/admin",
       };
@@ -326,8 +326,8 @@ export async function loginUser(identifier: string, rawPassword: string) {
         email: user.email,
         name: user.name,
         role: user.role, // Papel base
-        tenantId: user.tenantId,
-        tenantSlug: user.tenant.slug,
+        tenantId: user.tenantId || null,
+        tenantSlug: user.tenant?.slug || "",
       });
 
       return {
@@ -337,15 +337,15 @@ export async function loginUser(identifier: string, rawPassword: string) {
           name: user.name,
           email: user.email,
           role: user.role,
-          tenantSlug: user.tenant.slug,
+          tenantSlug: user.tenant?.slug || "",
         },
         redirectUrl: `/select-church`,
       };
     }
 
     // Se só tem 1 igreja (ou nenhuma no access, o que é estranho, mas usamos a base)
-    const targetTenantSlug = accesses.length === 1 ? accesses[0].tenant.slug : user.tenant.slug;
-    const targetTenantId = accesses.length === 1 ? accesses[0].tenantId : user.tenantId;
+    const targetTenantSlug = accesses.length === 1 ? accesses[0].tenant.slug : (user.tenant?.slug || "");
+    const targetTenantId = accesses.length === 1 ? accesses[0].tenantId : (user.tenantId || "");
     const targetRole = accesses.length === 1 ? accesses[0].role : user.role;
 
     // Gravar Cookie de Sessão HTTP-Only no Navegador

@@ -122,12 +122,19 @@ export async function getChurchNetworkMembers(churchSlug: string) {
         roleLabel: ROLE_LABELS[u.role] || u.role,
         isEmailVerified: u.isEmailVerified,
         createdAt: u.createdAt.toISOString(),
-        tenant: {
-          id: u.tenant.id,
-          name: u.tenant.name,
-          slug: u.tenant.slug,
-          primaryColor: u.tenant.primaryColor,
-        },
+        tenant: u.tenant
+          ? {
+              id: u.tenant.id,
+              name: u.tenant.name,
+              slug: u.tenant.slug,
+              primaryColor: u.tenant.primaryColor,
+            }
+          : {
+              id: "",
+              name: "Sede Geral",
+              slug: "admin",
+              primaryColor: "#dc2626",
+            },
         churchAccesses: u.churchAccesses.map((ca) => ({
           id: ca.id,
           tenantId: ca.tenantId,
@@ -432,7 +439,9 @@ export async function updateUserRoleAndTenant(params: {
       },
     });
 
-    revalidatePath(`/${user.tenant.slug}/membros`);
+    if (user.tenant?.slug) {
+      revalidatePath(`/${user.tenant.slug}/membros`);
+    }
     return { success: true, user: updated };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -459,7 +468,9 @@ export async function deleteChurchUser(userId: string) {
       where: { id: userId },
     });
 
-    revalidatePath(`/${user.tenant.slug}/membros`);
+    if (user.tenant?.slug) {
+      revalidatePath(`/${user.tenant.slug}/membros`);
+    }
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };

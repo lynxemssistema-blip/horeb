@@ -64,10 +64,29 @@ function decodeSessionCookie(raw: string): SessionData | null {
   }
 }
 
-export async function createSession(data: SessionData) {
+export async function createSession(data: {
+  userId: string;
+  email: string;
+  name: string;
+  avatarUrl?: string | null;
+  role: string;
+  originalRole?: string;
+  tenantId?: string | null;
+  tenantSlug?: string | null;
+}) {
   try {
     const cookieStore = await cookies();
-    const encoded = encodeSessionCookie(data);
+    const sessionData: SessionData = {
+      userId: data.userId,
+      email: data.email,
+      name: data.name,
+      avatarUrl: data.avatarUrl || null,
+      role: data.role,
+      originalRole: data.originalRole,
+      tenantId: data.tenantId || "",
+      tenantSlug: data.tenantSlug || "admin",
+    };
+    const encoded = encodeSessionCookie(sessionData);
 
     cookieStore.set(SESSION_COOKIE_NAME, encoded, {
       httpOnly: true,

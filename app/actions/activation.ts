@@ -33,7 +33,7 @@ export async function verifyActivationCode({ email, code }: VerifyCodeParams) {
       return {
         success: true,
         message: "Sua conta já está ativada!",
-        redirectUrl: user.role === "SUPERADMIN" ? "/admin" : `/${user.tenant.slug}`,
+        redirectUrl: user.role === "SUPERADMIN" ? "/admin" : `/${user.tenant?.slug || "admin"}`,
       };
     }
 
@@ -100,7 +100,7 @@ export async function verifyActivationCode({ email, code }: VerifyCodeParams) {
     const redirectUrl =
       user.role === "SUPERADMIN"
         ? "/admin"
-        : `/${user.tenant.slug}`;
+        : `/${user.tenant?.slug || "admin"}`;
 
     // Iniciar sessão HTTP-Only após validação do código
     await createSession({
@@ -108,8 +108,8 @@ export async function verifyActivationCode({ email, code }: VerifyCodeParams) {
       email: user.email,
       name: user.name,
       role: user.role,
-      tenantId: user.tenantId,
-      tenantSlug: user.tenant.slug,
+      tenantId: user.tenantId || null,
+      tenantSlug: user.tenant?.slug || "admin",
     });
 
     return {
@@ -166,10 +166,10 @@ export async function resendActivationCode(email: string) {
       to: cleanEmail,
       name: user.name,
       code,
-      churchName: user.tenant.name,
-      churchSlug: user.tenant.slug,
-      primaryColor: user.tenant.primaryColor,
-      logoUrl: user.tenant.logoUrl || undefined,
+      churchName: user.tenant?.name || "Horeb",
+      churchSlug: user.tenant?.slug || "admin",
+      primaryColor: user.tenant?.primaryColor || "#dc2626",
+      logoUrl: user.tenant?.logoUrl || undefined,
     });
 
     // Gravar log de saída

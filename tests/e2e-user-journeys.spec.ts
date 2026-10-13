@@ -350,7 +350,7 @@ test.describe.serial("Jornadas do Usuário (E2E) - Criação de Registros Reais"
       include: { tenant: true },
     });
     expect(luanUser).not.toBeNull();
-    expect(luanUser?.tenant.slug).toBe("deker");
+    expect(luanUser?.tenant?.slug).toBe("deker");
 
     // Injeta a sessão autenticada do Pastor Luan
     await context.addCookies([
@@ -359,8 +359,8 @@ test.describe.serial("Jornadas do Usuário (E2E) - Criação de Registros Reais"
         email: luanUser!.email,
         name: luanUser!.name,
         role: luanUser!.role,
-        tenantId: luanUser!.tenantId,
-        tenantSlug: luanUser!.tenant.slug,
+        tenantId: luanUser!.tenantId || "",
+        tenantSlug: luanUser!.tenant?.slug || "deker",
       }),
     ]);
 

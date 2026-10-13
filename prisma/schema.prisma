@@ -81,11 +81,12 @@ model User {
   role             String      @default("MEMBER") // SUPERADMIN, ADMIN, PASTOR, LEADER, MEMBER
   isEmailVerified  Boolean     @default(false)
   verificationCode String?
+  codeExpiresAt    DateTime?
   themePreference  String      @default("dark") // system, light, dark
   themePalette     String      @default("prime") // prime (Horeb Prime), default, vida, next, catedral, etc.
 
-  tenantId         String
-  tenant           Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId         String?
+  tenant           Tenant?     @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
   churchAccesses   UserChurchAccess[]
   ledCells         CellGroup[] @relation("CellLeader")
