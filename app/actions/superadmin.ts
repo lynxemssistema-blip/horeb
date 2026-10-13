@@ -225,6 +225,72 @@ export async function manuallyVerifyUser(userId: string) {
   }
 }
 
+export async function deleteUserBySuperAdminAction(userId: string) {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return { success: false, error: "Usuário não encontrado." };
+    if (user.role === "SUPERADMIN" || user.email === "edsonmanoel2012@gmail.com") {
+      return { success: false, error: "O Super Administrador não pode ser excluído." };
+    }
+
+    await prisma.userChurchAccess.deleteMany({ where: { userId } });
+    await prisma.activationCode.deleteMany({ where: { email: user.email } });
+    await prisma.emailLog.deleteMany({ where: { OR: [{ to: user.email }, { from: user.email }] } });
+    await prisma.personalToolInvoice.deleteMany({ where: { userId } });
+    await prisma.user.delete({ where: { id: userId } });
+
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteTenantBySuperAdminAction(tenantId: string) {
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) return { success: false, error: "Congregação não encontrada." };
+
+    await prisma.userChurchAccess.deleteMany({ where: { tenantId } });
+    await prisma.tenant.delete({ where: { id: tenantId } });
+
+    revalidatePath("/admin");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function purgeAllNonSuperAdminDataAction() {
+  try {
+    await prisma.userChurchAccess.deleteMany({});
+    await prisma.user.deleteMany({
+      where: {
+        NOT: { email: "edsonmanoel2012@gmail.com" },
+      },
+    });
+    await prisma.tenant.deleteMany({});
+    await prisma.activationCode.deleteMany({});
+    await prisma.emailLog.deleteMany({});
+    await prisma.transaction.deleteMany({});
+    await prisma.subscriptionInvoice.deleteMany({});
+    await prisma.personalToolInvoice.deleteMany({});
+    await prisma.prayerRequest.deleteMany({});
+    await prisma.event.deleteMany({});
+    await prisma.cellGroup.deleteMany({});
+    await prisma.ministry.deleteMany({});
+    await prisma.conversation.deleteMany({});
+    await prisma.message.deleteMany({});
+
+    revalidatePath("/admin");
+    revalidatePath("/");
+    return { success: true, message: "Todas as congregações e usuários de teste foram excluídos com sucesso." };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
 // 6. Central de E-mails (Entrada e Saída)
 export async function getEmailCenterData() {
   try {

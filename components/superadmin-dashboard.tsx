@@ -24,6 +24,9 @@ import {
   sendDirectEmail,
   testEmailDiagnostics,
   updatePromotionConfig,
+  deleteUserBySuperAdminAction,
+  deleteTenantBySuperAdminAction,
+  purgeAllNonSuperAdminDataAction,
 } from "@/app/actions/superadmin";
 import { resendActivationCode } from "@/app/actions/activation";
 import {
@@ -320,6 +323,71 @@ export function SuperAdminDashboard({
     } else {
       toast.error(res.error);
     }
+  };
+
+  // Excluir Usuário Individual
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (
+      !confirm(
+        `Tem certeza que deseja excluir permanentemente o usuário "${userName}"? Esta ação removerá seus acessos e dados.`
+      )
+    )
+      return;
+
+    startTransition(async () => {
+      const res = await deleteUserBySuperAdminAction(userId);
+      if (res.success) {
+        toast.success(`Usuário ${userName} excluído com sucesso!`);
+        setUsers((prev) => prev.filter((u) => u.id !== userId));
+      } else {
+        toast.error(res.error || "Falha ao excluir usuário.");
+      }
+    });
+  };
+
+  // Excluir Congregação Individual
+  const handleDeleteTenant = async (tenantId: string, tenantName: string) => {
+    if (
+      !confirm(
+        `Tem certeza que deseja excluir permanentemente a congregação "${tenantName}"? Todos os membros e dados vinculados serão excluídos.`
+      )
+    )
+      return;
+
+    startTransition(async () => {
+      const res = await deleteTenantBySuperAdminAction(tenantId);
+      if (res.success) {
+        toast.success(`Congregação ${tenantName} excluída com sucesso!`);
+        setTenants((prev) => prev.filter((t) => t.id !== tenantId));
+      } else {
+        toast.error(res.error || "Falha ao excluir congregação.");
+      }
+    });
+  };
+
+  // Limpeza Geral (Purge) de Usuários de Teste e Congregações
+  const handlePurgeAllData = async () => {
+    const confirmPrompt = prompt(
+      'ATENÇÃO: Isso excluirá permanentemente TODAS as congregações cadastradas e TODOS os usuários de teste, mantendo apenas você como SuperAdmin oficial (edsonmanoel2012@gmail.com).\n\nPara confirmar, digite "LIMPAR" em maiúsculas:'
+    );
+
+    if (confirmPrompt !== "LIMPAR") {
+      if (confirmPrompt !== null) {
+        toast.error('Confirmação inválida. Digite exatamente "LIMPAR" para confirmar.');
+      }
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await purgeAllNonSuperAdminDataAction();
+      if (res.success) {
+        toast.success(res.message || "Limpeza concluída com sucesso!");
+        setTenants([]);
+        setUsers((prev) => prev.filter((u) => u.email === "edsonmanoel2012@gmail.com"));
+      } else {
+        toast.error(res.error || "Falha ao executar limpeza.");
+      }
+    });
   };
 
   // Enviar E-mail Direto da Central
@@ -718,6 +786,19 @@ export function SuperAdminDashboard({
                   Gerencie o plano, mensalidade e status de funcionamento de cada congregação.
                 </p>
               </div>
+
+              {tenants.length > 0 && (
+                <Button
+                  variant="destructive"
+                  onClick={handlePurgeAllData}
+                  disabled={isPending}
+                  className="bg-rose-600/90 hover:bg-rose-600 text-white font-black text-xs h-9 px-4 rounded-xl gap-2 shadow-lg shadow-rose-600/20 cursor-pointer"
+                  title="Apagar todas as congregações cadastradas e usuários de teste"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Excluir Todas as Congregações de Teste</span>
+                </Button>
+              )}
             </div>
 
             <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-2xl">
@@ -871,6 +952,16 @@ export function SuperAdminDashboard({
                                   <ExternalLink className="w-3 h-3" />
                                 </Button>
                               </Link>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeleteTenant(t.id, t.name)}
+                                disabled={isPending}
+                                className="h-8 px-2 text-rose-400 hover:text-rose-200 hover:bg-rose-500/20 rounded-lg transition-colors cursor-pointer"
+                                title="Excluir congregação permanentemente"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -1030,6 +1121,19 @@ export function SuperAdminDashboard({
                   manualmente contas se necessário.
                 </p>
               </div>
+
+              {users.length > 1 && (
+                <Button
+                  variant="destructive"
+                  onClick={handlePurgeAllData}
+                  disabled={isPending}
+                  className="bg-rose-600/90 hover:bg-rose-600 text-white font-black text-xs h-9 px-4 rounded-xl gap-2 shadow-lg shadow-rose-600/20 cursor-pointer"
+                  title="Apagar todos os usuários de teste e congregações, mantendo apenas o SuperAdmin"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Excluir Todos Usuários de Teste</span>
+                </Button>
+              )}
             </div>
 
             <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-2xl">
@@ -1083,6 +1187,18 @@ export function SuperAdminDashboard({
                           )}
                         </td>
                         <td className="py-3 px-4 text-right space-x-2">
+                          {u.email !== "edsonmanoel2012@gmail.com" && u.role !== "SUPERADMIN" && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteUser(u.id, u.name)}
+                              disabled={isPending}
+                              className="h-7 px-2 text-rose-400 hover:text-rose-200 hover:bg-rose-500/20 rounded-lg transition-colors cursor-pointer inline-flex items-center"
+                              title="Excluir usuário permanentemente"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
                           {!u.isEmailVerified && (
                             <>
                               <Button
