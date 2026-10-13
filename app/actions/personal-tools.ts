@@ -456,32 +456,48 @@ export async function subscribePersonalToolsAsaas(data: {
 }
 
 /**
- * 6. SuperAdmin: Listar Membros Assinantes do Módulo B2C
+ * 6. SuperAdmin: Listar Membros com Histórico ou Assinatura do Módulo B2C
  */
 export async function getPersonalToolsSubscribers(): Promise<{
   success: boolean;
   subscribers: any[];
   totalActive: number;
+  totalTrial: number;
+  totalOverdue: number;
   totalMonthlyRevenue: number;
 }> {
   try {
     const session = await getSession();
     if (!session || session.role !== "SUPERADMIN") {
-      return { success: false, subscribers: [], totalActive: 0, totalMonthlyRevenue: 0 };
+      return {
+        success: false,
+        subscribers: [],
+        totalActive: 0,
+        totalTrial: 0,
+        totalOverdue: 0,
+        totalMonthlyRevenue: 0,
+      };
     }
 
     const users = await prisma.user.findMany({
       where: {
-        hasToolsSubscription: true,
+        OR: [
+          { hasToolsSubscription: true },
+          { toolsSubscriptionStatus: { in: ["ACTIVE", "TRIAL", "OVERDUE", "CANCELLED"] } },
+          { toolsAsaasSubscriptionId: { not: null } },
+        ],
       } as any,
       select: {
         id: true,
         name: true,
         email: true,
         role: true,
+        hasToolsSubscription: true,
         toolsSubscriptionStatus: true,
         toolsSubscriptionExpiresAt: true,
         toolsAsaasSubscriptionId: true,
+        toolsAsaasCustomerId: true,
+        createdAt: true,
         tenant: {
           select: { name: true, slug: true },
         },
@@ -489,20 +505,174 @@ export async function getPersonalToolsSubscribers(): Promise<{
       orderBy: { createdAt: "desc" },
     });
 
-    const activeUsers = users.filter(
-      (u: any) => u.toolsSubscriptionStatus === "ACTIVE" || u.toolsSubscriptionStatus === "TRIAL"
+    const activeUsers = users.filter((u: any) => u.toolsSubscriptionStatus === "ACTIVE");
+    const trialUsers = users.filter((u: any) => u.toolsSubscriptionStatus === "TRIAL");
+    const overdueUsers = users.filter(
+      (u: any) =>
+        u.toolsSubscriptionStatus === "OVERDUE" ||
+        u.toolsSubscriptionStatus === "CANCELLED" ||
+        (u.toolsSubscriptionExpiresAt && new Date(u.toolsSubscriptionExpiresAt) < new Date())
     );
 
     const { config } = await getPersonalToolsConfig();
-    const monthlyRevenue = activeUsers.filter((u: any) => u.toolsSubscriptionStatus === "ACTIVE").length * config.monthlyPrice;
+    const monthlyRevenue = activeUsers.length * config.monthlyPrice;
 
     return {
       success: true,
       subscribers: users,
       totalActive: activeUsers.length,
+      totalTrial: trialUsers.length,
+      totalOverdue: overdueUsers.length,
       totalMonthlyRevenue: monthlyRevenue,
     };
   } catch (error) {
-    return { success: false, subscribers: [], totalActive: 0, totalMonthlyRevenue: 0 };
+    return {
+      success: false,
+      subscribers: [],
+      totalActive: 0,
+      totalTrial: 0,
+      totalOverdue: 0,
+      totalMonthlyRevenue: 0,
+    };
+  }
+}
+
+/**
+ * 7. SuperAdmin: Conceder Cortesia ou Estender Período do Membro (+30d, +90d, +365d)
+ */
+export async function grantPersonalToolsAccess(
+  userId: string,
+  days: number = 30
+): Promise<{ success: boolean; newExpiry?: string; error?: string }> {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "SUPERADMIN") {
+      return { success: false, error: "Apenas SuperAdmin pode conceder cortesia." };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, toolsSubscriptionExpiresAt: true, tenant: { select: { slug: true } } } as any,
+    });
+
+    if (!user) {
+      return { success: false, error: "Usuário não encontrado." };
+    }
+
+    const now = new Date();
+    const currentExpiry = (user as any).toolsSubscriptionExpiresAt
+      ? new Date((user as any).toolsSubscriptionExpiresAt)
+      : null;
+
+    // Se já estiver com data válida no futuro, soma a partir da data atual de expiração
+    const baseDate = currentExpiry && currentExpiry > now ? currentExpiry : now;
+    const newExpiry = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        hasToolsSubscription: true,
+        toolsSubscriptionStatus: "ACTIVE",
+        toolsSubscriptionExpiresAt: newExpiry,
+      } as any,
+    });
+
+    revalidatePath("/admin");
+    if ((user as any).tenant?.slug) {
+      revalidatePath(`/${(user as any).tenant.slug}`);
+    }
+    revalidatePath("/");
+
+    return { success: true, newExpiry: newExpiry.toISOString() };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Erro ao conceder acesso cortesia." };
+  }
+}
+
+/**
+ * 8. SuperAdmin: Revogar ou Bloquear Acesso do Usuário ao Módulo
+ */
+export async function revokePersonalToolsAccess(
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "SUPERADMIN") {
+      return { success: false, error: "Apenas SuperAdmin pode revogar acesso." };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, tenant: { select: { slug: true } } } as any,
+    });
+
+    if (!user) {
+      return { success: false, error: "Usuário não encontrado." };
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        hasToolsSubscription: false,
+        toolsSubscriptionStatus: "CANCELLED",
+      } as any,
+    });
+
+    revalidatePath("/admin");
+    if ((user as any).tenant?.slug) {
+      revalidatePath(`/${(user as any).tenant.slug}`);
+    }
+    revalidatePath("/");
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Erro ao revogar acesso." };
+  }
+}
+
+/**
+ * 9. SuperAdmin: Definir Status Manualmente (ACTIVE, TRIAL, OVERDUE, CANCELLED)
+ */
+export async function setPersonalToolsStatus(
+  userId: string,
+  status: "ACTIVE" | "TRIAL" | "OVERDUE" | "CANCELLED",
+  days: number = 30
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "SUPERADMIN") {
+      return { success: false, error: "Apenas SuperAdmin pode alterar status de ferramentas." };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, tenant: { select: { slug: true } } } as any,
+    });
+
+    if (!user) {
+      return { success: false, error: "Usuário não encontrado." };
+    }
+
+    const isActive = status === "ACTIVE" || status === "TRIAL";
+    const expiresAt = isActive ? new Date(Date.now() + days * 24 * 60 * 60 * 1000) : null;
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        hasToolsSubscription: isActive,
+        toolsSubscriptionStatus: status,
+        toolsSubscriptionExpiresAt: expiresAt,
+      } as any,
+    });
+
+    revalidatePath("/admin");
+    if ((user as any).tenant?.slug) {
+      revalidatePath(`/${(user as any).tenant.slug}`);
+    }
+    revalidatePath("/");
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Erro ao definir status." };
   }
 }
