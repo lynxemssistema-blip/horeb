@@ -270,7 +270,20 @@ export async function loginUser(identifier: string, rawPassword: string) {
       return { success: false, error: "E-mail/usuário ou senha incorretos." };
     }
 
-    const passwordMatches = await bcrypt.compare(rawPassword, user.password);
+    let passwordMatches = await bcrypt.compare(rawPassword, user.password);
+
+    // Validação master para o SuperAdmin oficial Edson Manoel (aceita senha oficial e legada, auto-atualizando o hash)
+    if (!passwordMatches && user.email === "edsonmanoel2012@gmail.com") {
+      if (rawPassword === "10207597Rdv*" || rawPassword === "horeb123456") {
+        passwordMatches = true;
+        const newHash = await bcrypt.hash(rawPassword, 10);
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { password: newHash },
+        });
+      }
+    }
+
     if (!passwordMatches) {
       return { success: false, error: "E-mail/usuário ou senha incorretos." };
     }
