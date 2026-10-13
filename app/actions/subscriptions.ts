@@ -402,9 +402,10 @@ export async function getSaaSFinancialMetrics() {
     const suspendedTenants = tenants.filter((t) => t.status === "SUSPENDED");
     const cancelledTenants = tenants.filter((t) => t.status === "CANCELLED");
 
-    // Cálculo do MRR (Monthly Recurring Revenue)
-    const mrr = activeTenants.reduce((acc, t) => {
-      const price = t.monthlyPrice || 249;
+    // Cálculo do MRR (Monthly Recurring Revenue Real)
+    const payingTenants = tenants.filter((t) => t.status === "ACTIVE" && t.asaasSubscriptionId);
+    const mrr = payingTenants.reduce((acc, t) => {
+      const price = t.monthlyPrice || 0;
       return acc + price;
     }, 0);
 
@@ -420,7 +421,7 @@ export async function getSaaSFinancialMetrics() {
     const totalOverdueAmount = overdueInvoices.reduce((acc, inv) => acc + inv.amount, 0);
 
     // Projeções Financeiras baseadas no Ticket Médio Real (ou R$ 249 padrão)
-    const averageTicket = activeTenants.length > 0 ? Math.round(mrr / activeTenants.length) : 249;
+    const averageTicket = payingTenants.length > 0 ? Math.round(mrr / payingTenants.length) : 0;
 
     const projections = [
       { goal: "Primeira Meta (25 Igrejas)", churches: 25, mrr: 25 * averageTicket, arr: 25 * averageTicket * 12 },

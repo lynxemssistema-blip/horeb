@@ -391,11 +391,11 @@ export function CreateChurchDialog({
                     ⭐ 30 Dias 100% Gratuitos
                   </span>
                   <span className="text-[11px] font-bold text-amber-400">
-                    Plano Gestão Incluso
+                    Plano Horeb Prime Incluso
                   </span>
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-relaxed pt-0.5">
-                  Cadastre sua congregação sem precisar escolher plano ou informar dados de cobrança. Você terá acesso completo imediato a todos os recursos do <strong>Plano de Gestão</strong> sem custo nos primeiros 30 dias.
+                  Cadastre sua congregação sem precisar escolher plano ou informar dados de cobrança. Você terá acesso completo imediato a todos os recursos do <strong>Plano Horeb Prime</strong> (Multisede, Gestão Completa, EBD, Kids Check-in, Financeiro e Suporte VIP) sem custo nos primeiros 30 dias.
                 </p>
               </div>
 

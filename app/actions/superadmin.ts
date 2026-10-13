@@ -21,10 +21,10 @@ export async function getSuperAdminMetrics() {
     const suspendedTenants = tenants.filter((t) => t.status === "SUSPENDED").length;
     const trialTenants = tenants.filter((t) => t.status === "TRIAL").length;
 
-    // Calcular MRR (Receita Recorrente Mensal)
+    // Calcular MRR (Receita Recorrente Mensal Real)
     const mrr = tenants
-      .filter((t) => t.status === "ACTIVE")
-      .reduce((acc, t) => acc + (t.monthlyPrice || 249), 0);
+      .filter((t) => t.status === "ACTIVE" && t.asaasSubscriptionId)
+      .reduce((acc, t) => acc + (t.monthlyPrice || 0), 0);
 
     const totalUsers = await prisma.user.count();
     const verifiedUsers = await prisma.user.count({ where: { isEmailVerified: true } });

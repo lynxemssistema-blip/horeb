@@ -11,6 +11,7 @@ import {
 } from "@/lib/mail";
 import { ROLE_LABELS } from "@/lib/constants";
 import { createSession, getSession } from "@/lib/session";
+import { getOrCreateAsaasCustomer } from "@/lib/asaas";
 
 // 1. Obter membros e toda a rede de igrejas (Matriz + Filiais)
 export async function getChurchNetworkMembers(churchSlug: string) {
@@ -152,6 +153,7 @@ export async function createChurchUser(params: {
   tenantId: string;
   password?: string;
   sendInviteEmail?: boolean;
+  phone?: string;
 }) {
   try {
     const cleanEmail = params.email.trim().toLowerCase();
@@ -230,6 +232,8 @@ export async function createChurchUser(params: {
         isEmailVerified: false,
         verificationCode: activationCode,
         codeExpiresAt,
+        themePreference: "dark",
+        themePalette: "prime",
         tenantId: tenant.id,
         churchAccesses: {
           create: {
@@ -239,6 +243,25 @@ export async function createChurchUser(params: {
         },
       },
     });
+
+    // Sincronizar membro como Cliente no Asaas vinculado ao Grupo da Igreja
+    try {
+      const asaasRes = await getOrCreateAsaasCustomer({
+        name: user.name,
+        email: user.email,
+        phone: params.phone,
+        groupName: tenant.name,
+        externalReference: `USER_${user.id}`,
+      });
+      if (asaasRes.success && asaasRes.customer?.id) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { asaasCustomerId: asaasRes.customer.id },
+        });
+      }
+    } catch (asaasErr) {
+      console.warn("Aviso ao vincular membro no Asaas:", asaasErr);
+    }
 
     // Salvar código na tabela de ativação
     await prisma.activationCode.create({
@@ -503,6 +526,7 @@ export async function registerMemberSelf(params: {
   email: string;
   password: string;
   tenantSlug: string;
+  phone?: string;
 }) {
   try {
     const cleanEmail = params.email.trim().toLowerCase();
@@ -590,6 +614,8 @@ export async function registerMemberSelf(params: {
         isEmailVerified: true,
         verificationCode: null,
         codeExpiresAt: null,
+        themePreference: "dark",
+        themePalette: "prime",
         tenantId: tenant.id,
         churchAccesses: {
           create: {
@@ -600,6 +626,25 @@ export async function registerMemberSelf(params: {
       },
       include: { churchAccesses: true },
     });
+
+    // Sincronizar auto-cadastro no Asaas
+    try {
+      const asaasRes = await getOrCreateAsaasCustomer({
+        name: user.name,
+        email: user.email,
+        phone: params.phone,
+        groupName: tenant.name,
+        externalReference: `USER_${user.id}`,
+      });
+      if (asaasRes.success && asaasRes.customer?.id) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { asaasCustomerId: asaasRes.customer.id },
+        });
+      }
+    } catch (asaasErr) {
+      console.warn("Aviso ao vincular auto-cadastro no Asaas:", asaasErr);
+    }
 
     // Iniciar sessão HTTP-Only automaticamente
     await createSession({

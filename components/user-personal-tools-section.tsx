@@ -31,6 +31,7 @@ interface UserPersonalToolsSectionProps {
   churchLogo?: string | null;
   churchSlug: string;
   config?: PersonalToolsConfigData;
+  tools?: PersonalToolsConfigData[];
   subscription?: {
     hasActiveSubscription: boolean;
     status: "INACTIVE" | "TRIAL" | "ACTIVE" | "OVERDUE" | "CANCELLED";
@@ -51,8 +52,12 @@ interface UserPersonalToolsSectionProps {
 
 const DEFAULT_CONFIG: PersonalToolsConfigData = {
   id: "default",
+  slug: "instagram-studio",
   title: "Estúdio de Fotos & Instagram Pro",
   badge: "MÓDULO PESSOAL EXCLUSIVO",
+  category: "Mídia & Redes",
+  icon: "camera",
+  actionType: "MODAL_INSTAGRAM",
   description:
     "Câmera de alta resolução com filtros de cinema para cultos e palcos de louvor, ajustes de iluminação e formatos prontos para postagem no Instagram.",
   monthlyPrice: 19.9,
@@ -74,6 +79,7 @@ export function UserPersonalToolsSection({
   churchLogo,
   churchSlug,
   config = DEFAULT_CONFIG,
+  tools = [],
   subscription,
   user,
 }: UserPersonalToolsSectionProps) {
@@ -460,25 +466,39 @@ export function UserPersonalToolsSection({
 
             <div className="space-y-2 pt-2 border-t border-border/50 text-xs">
               <div className="p-2.5 rounded-xl bg-muted/50 border border-border/60 flex items-center justify-between">
-                <span className="font-semibold text-foreground">📸 Instagram Studio</span>
+                <span className="font-semibold text-foreground">📸 {config.title || "Instagram Studio Pro"}</span>
                 <span className={`text-[10px] font-bold ${hasSubscribed ? "text-emerald-400" : "text-amber-400"}`}>
-                  {hasSubscribed ? "Liberado" : "Disponível p/ Assinar"}
+                  {hasSubscribed ? "Liberado" : "Disponível"}
                 </span>
               </div>
-              <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center justify-between text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <Lock className="w-3 h-3 text-muted-foreground" />
-                  <span>Gerador de Artes & Versículos IA</span>
-                </span>
-                <span className="text-[10px] font-semibold text-amber-500">Em Breve</span>
-              </div>
-              <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center justify-between text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <Lock className="w-3 h-3 text-muted-foreground" />
-                  <span>Legendas & Hashtags Cristãs</span>
-                </span>
-                <span className="text-[10px] font-semibold text-amber-500">Em Breve</span>
-              </div>
+              {tools && tools.filter(t => t.id !== config.id && t.slug !== config.slug).map((tool) => (
+                <div key={tool.id} className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="font-medium text-foreground truncate">{tool.title}</span>
+                  </div>
+                  <span className={`text-[10px] font-bold shrink-0 ${hasSubscribed ? "text-emerald-400" : "text-amber-400"}`}>
+                    {hasSubscribed ? "Incluso" : `R$ ${tool.monthlyPrice.toFixed(2).replace(".", ",")}/mês`}
+                  </span>
+                </div>
+              ))}
+              {(!tools || tools.length <= 1) && (
+                <>
+                  <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center justify-between text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="w-3 h-3 text-amber-400" />
+                      <span>Gerador de Esboços & Sermões IA</span>
+                    </span>
+                    <span className="text-[10px] font-semibold text-emerald-400">Ativo</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center justify-between text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Palette className="w-3 h-3 text-pink-400" />
+                      <span>Designer de Banners & Cultos</span>
+                    </span>
+                    <span className="text-[10px] font-semibold text-emerald-400">Ativo</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

@@ -26,11 +26,11 @@ model Tenant {
   pixKeyType       String?       @default("CNPJ")
   pixPresetValues  String?       @default("30,50,100,200,500")
 
-  // Assinatura e Planos
-  plan         String        @default("GESTAO") // ESSENCIAL, GESTAO, PREMIUM
+  // Assinatura e Planos (Padrão: Horeb Prime / PREMIUM)
+  plan         String        @default("PREMIUM") // ESSENCIAL, GESTAO, PREMIUM
   status       String        @default("ACTIVE") // ACTIVE, TRIAL, SUSPENDED, CANCELLED
-  setupPrice   Float         @default(790)
-  monthlyPrice Float         @default(249)
+  setupPrice   Float         @default(1290)
+  monthlyPrice Float         @default(399)
   billingCycle String        @default("MONTHLY") // MONTHLY, YEARLY
   couponCode   String?       // Palavra-chave / Cupom promocional aplicado
   discountPercent Int        @default(0)         // Porcentagem de desconto concedido
@@ -39,6 +39,7 @@ model Tenant {
   // Vínculos Asaas (Assinaturas SaaS)
   asaasCustomerId     String?
   asaasSubscriptionId String?
+  asaasGroupId        String?   // Grupo de Clientes desta Igreja no Asaas (/v3/customerGroups)
   billingType         String?   @default("UNDEFINED") // PIX, BOLETO, CREDIT_CARD, UNDEFINED
   
   // Hierarquia Matriz -> Filiais (Self-relation)
@@ -80,9 +81,8 @@ model User {
   role             String      @default("MEMBER") // SUPERADMIN, ADMIN, PASTOR, LEADER, MEMBER
   isEmailVerified  Boolean     @default(false)
   verificationCode String?
-  codeExpiresAt    DateTime?
-  themePreference  String      @default("system") // system, light, dark
-  themePalette     String      @default("default") // default, oled, navy, sepia, cream
+  themePreference  String      @default("dark") // system, light, dark
+  themePalette     String      @default("prime") // prime (Horeb Prime), default, vida, next, catedral, etc.
 
   tenantId         String
   tenant           Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -116,6 +116,7 @@ model User {
   hasToolsSubscription       Boolean   @default(false)
   toolsSubscriptionStatus     String    @default("INACTIVE") // INACTIVE, TRIAL, ACTIVE, OVERDUE, CANCELLED
   toolsSubscriptionExpiresAt  DateTime?
+  asaasCustomerId             String?   // ID do Cliente no Asaas vinculado ao Grupo da Igreja
   toolsAsaasCustomerId       String?
   toolsAsaasSubscriptionId   String?
   personalToolInvoices        PersonalToolInvoice[]
@@ -780,17 +781,25 @@ model SubscriptionInvoice {
 // 7. MÓDULO B2C: FERRAMENTAS PESSOAIS (INSTAGRAM PRO)
 // ==========================================
 model PersonalToolsConfig {
-  id           String   @id @default("default")
+  id           String   @id @default(cuid())
+  slug         String   @unique @default("instagram-studio")
   title        String   @default("Estúdio de Fotos & Instagram Pro")
   badge        String   @default("MÓDULO PESSOAL EXCLUSIVO")
+  icon         String   @default("Camera")
+  category     String   @default("MÍDIA & SOCIAL")
   description  String   @default("Câmera do celular em alta definição com 8 filtros de cinema, ajustes finos de luz e enquadramentos de Feed (1:1), Retrato (4:5) e Stories (9:16) prontos para postagem no Instagram.")
   monthlyPrice Float    @default(19.90)
   annualPrice  Float    @default(199.00)
   trialDays    Int      @default(30) // Dias de degustação gratuita (30 dias padrão)
   active       Boolean  @default(true)
   features     String   @default("[\"Câmera Nativa do Celular & Selfie HD\",\"8 Filtros de Cinema (Louvor Vivo, Golden Hour, B&W)\",\"Formatos Oficiais 1:1 Feed, 4:5 Retrato e 9:16 Stories\",\"Ajustes Finos de Luz, Contraste e Vinheta\",\"Selos de Fé e Brasão da Igreja em Alta Definição\",\"Compartilhamento Direto no Instagram em 1 Toque\"]")
+  actionType   String   @default("MODAL_INSTAGRAM") // MODAL_INSTAGRAM, COMING_SOON, EXTERNAL, LINK
+  routeUrl     String?
 
+  createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([slug])
 }
 
 model PersonalToolInvoice {

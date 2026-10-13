@@ -23,23 +23,53 @@ import {
   Ban,
   RefreshCw,
   SlidersHorizontal,
+  Plus,
+  Palette,
+  Award,
+  FileText,
+  Music,
+  Smartphone,
+  Bot,
+  Video,
+  Wand2,
+  Trash2,
+  Edit3,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
-  getPersonalToolsConfig,
-  updatePersonalToolsConfig,
+  getAllPersonalTools,
+  createOrUpdatePersonalTool,
+  deletePersonalTool,
   getPersonalToolsSubscribers,
   grantPersonalToolsAccess,
   revokePersonalToolsAccess,
-  setPersonalToolsStatus,
   PersonalToolsConfigData,
 } from "@/app/actions/personal-tools";
 
+const ICON_OPTIONS = [
+  { id: "Camera", label: "Câmera / Foto", icon: Camera },
+  { id: "Sparkles", label: "IA / Mágica", icon: Sparkles },
+  { id: "Palette", label: "Design / Artes", icon: Palette },
+  { id: "Award", label: "Certificado / Selo", icon: Award },
+  { id: "FileText", label: "Texto / Sermões", icon: FileText },
+  { id: "Music", label: "Louvor / Cifras", icon: Music },
+  { id: "Bot", label: "Robô / Chatbot", icon: Bot },
+  { id: "Video", label: "Vídeo / Transmissão", icon: Video },
+  { id: "Smartphone", label: "App Celular", icon: Smartphone },
+];
+
+function getToolIcon(iconName: string) {
+  const found = ICON_OPTIONS.find((i) => i.id === iconName);
+  return found ? found.icon : Sparkles;
+}
+
 export function SuperAdminPersonalToolsManager() {
-  const [config, setConfig] = useState<PersonalToolsConfigData | null>(null);
+  const [activeView, setActiveView] = useState<"tools" | "subscribers">("tools");
+  const [tools, setTools] = useState<PersonalToolsConfigData[]>([]);
   const [subscribers, setSubscribers] = useState<any[]>([]);
   const [metrics, setMetrics] = useState({
     totalActive: 0,
@@ -48,39 +78,38 @@ export function SuperAdminPersonalToolsManager() {
     totalMonthlyRevenue: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [isPending, startTransition] = useTransition();
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
 
-  // Filtros de busca e status
+  // Filtros de busca e status para membros
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "TRIAL" | "OVERDUE">("ALL");
 
-  // Estados do Formulário de Edição Comercial
-  const [title, setTitle] = useState("");
-  const [badge, setBadge] = useState("");
-  const [description, setDescription] = useState("");
-  const [monthlyPrice, setMonthlyPrice] = useState("19.90");
-  const [annualPrice, setAnnualPrice] = useState("199.00");
-  const [trialDays, setTrialDays] = useState("30");
-  const [active, setActive] = useState(true);
+  // Modal de Criação / Edição de Ferramenta
+  const [isToolModalOpen, setIsToolModalOpen] = useState(false);
+  const [editingToolId, setEditingToolId] = useState<string | null>(null);
+  const [toolSlug, setToolSlug] = useState("");
+  const [toolTitle, setToolTitle] = useState("");
+  const [toolBadge, setToolBadge] = useState("");
+  const [toolIcon, setToolIcon] = useState("Sparkles");
+  const [toolCategory, setToolCategory] = useState("MÍDIA & SOCIAL");
+  const [toolDescription, setToolDescription] = useState("");
+  const [toolMonthlyPrice, setToolMonthlyPrice] = useState("19.90");
+  const [toolAnnualPrice, setToolAnnualPrice] = useState("199.00");
+  const [toolTrialDays, setToolTrialDays] = useState("30");
+  const [toolActive, setToolActive] = useState(true);
+  const [toolActionType, setToolActionType] = useState<"MODAL_INSTAGRAM" | "COMING_SOON" | "ROUTE" | "EXTERNAL">("COMING_SOON");
+  const [toolFeaturesText, setToolFeaturesText] = useState("");
+  const [isSavingTool, setIsSavingTool] = useState(false);
 
   const loadData = async () => {
     try {
-      const [configRes, subsRes] = await Promise.all([
-        getPersonalToolsConfig(),
+      const [toolsRes, subsRes] = await Promise.all([
+        getAllPersonalTools(),
         getPersonalToolsSubscribers(),
       ]);
 
-      if (configRes.success && configRes.config) {
-        const c = configRes.config;
-        setConfig(c);
-        setTitle(c.title);
-        setBadge(c.badge);
-        setDescription(c.description);
-        setMonthlyPrice(c.monthlyPrice.toString());
-        setAnnualPrice(c.annualPrice.toString());
-        setTrialDays(c.trialDays.toString());
-        setActive(c.active);
+      if (toolsRes.success && toolsRes.tools) {
+        setTools(toolsRes.tools);
       }
 
       if (subsRes.success) {
@@ -93,7 +122,7 @@ export function SuperAdminPersonalToolsManager() {
         });
       }
     } catch (err) {
-      console.error("Erro ao carregar dados do módulo pessoal:", err);
+      console.error("Erro ao carregar ferramentas:", err);
     } finally {
       setLoading(false);
     }
@@ -103,31 +132,108 @@ export function SuperAdminPersonalToolsManager() {
     loadData();
   }, []);
 
-  const handleSaveConfig = async (e: React.FormEvent) => {
+  // Abrir Modal para Criar Nova Ferramenta
+  const handleOpenNewToolModal = () => {
+    setEditingToolId(null);
+    setToolSlug("");
+    setToolTitle("");
+    setToolBadge("NOVO");
+    setToolIcon("Sparkles");
+    setToolCategory("MÍDIA & SOCIAL");
+    setToolDescription("");
+    setToolMonthlyPrice("19.90");
+    setToolAnnualPrice("199.00");
+    setToolTrialDays("30");
+    setToolActive(true);
+    setToolActionType("COMING_SOON");
+    setToolFeaturesText("Recurso Exclusivo em Alta Definição\nIntegração com Celular e PWA\nSem Limites de Uso Diário");
+    setIsToolModalOpen(true);
+  };
+
+  // Abrir Modal para Editar Ferramenta Existente
+  const handleOpenEditToolModal = (t: PersonalToolsConfigData) => {
+    setEditingToolId(t.id);
+    setToolSlug(t.slug);
+    setToolTitle(t.title);
+    setToolBadge(t.badge || "");
+    setToolIcon(t.icon || "Sparkles");
+    setToolCategory(t.category || "GERAL");
+    setToolDescription(t.description || "");
+    setToolMonthlyPrice(t.monthlyPrice.toString());
+    setToolAnnualPrice(t.annualPrice.toString());
+    setToolTrialDays(t.trialDays.toString());
+    setToolActive(t.active);
+    setToolActionType(t.actionType || "COMING_SOON");
+    setToolFeaturesText((t.features || []).join("\n"));
+    setIsToolModalOpen(true);
+  };
+
+  // Salvar Ferramenta (Criar ou Editar)
+  const handleSaveTool = async (e: React.FormEvent) => {
     e.preventDefault();
-    startTransition(async () => {
-      const res = await updatePersonalToolsConfig({
-        title,
-        badge,
-        description,
-        monthlyPrice: parseFloat(monthlyPrice) || 19.9,
-        annualPrice: parseFloat(annualPrice) || 199.0,
-        trialDays: parseInt(trialDays) || 30,
-        active,
+    if (!toolTitle.trim()) {
+      toast.error("Informe o título da ferramenta.");
+      return;
+    }
+
+    const slug = toolSlug.trim() || toolTitle.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-");
+    const features = toolFeaturesText
+      .split("\n")
+      .map((f) => f.trim())
+      .filter(Boolean);
+
+    setIsSavingTool(true);
+    try {
+      const res = await createOrUpdatePersonalTool({
+        id: editingToolId || undefined,
+        slug,
+        title: toolTitle,
+        badge: toolBadge,
+        icon: toolIcon,
+        category: toolCategory,
+        description: toolDescription,
+        monthlyPrice: parseFloat(toolMonthlyPrice) || 19.9,
+        annualPrice: parseFloat(toolAnnualPrice) || 199.0,
+        trialDays: parseInt(toolTrialDays) || 30,
+        active: toolActive,
+        actionType: toolActionType,
+        features,
       });
 
       if (res.success) {
-        toast.success("Preços e configurações do módulo salvos com sucesso!");
-        if (res.config) {
-          setConfig(res.config);
-        }
+        toast.success(editingToolId ? "Ferramenta atualizada com sucesso!" : "Nova ferramenta criada com sucesso!");
+        setIsToolModalOpen(false);
+        await loadData();
       } else {
-        toast.error(res.error || "Erro ao salvar configurações.");
+        toast.error(res.error || "Erro ao salvar ferramenta.");
       }
-    });
+    } catch {
+      toast.error("Erro interno ao salvar.");
+    } finally {
+      setIsSavingTool(false);
+    }
   };
 
-  // Ação 1: Conceder Cortesia (+30d ou +90d)
+  // Excluir Ferramenta
+  const handleDeleteTool = async (toolId: string, toolTitle: string) => {
+    if (!confirm(`Tem certeza que deseja excluir a ferramenta "${toolTitle}"?`)) {
+      return;
+    }
+
+    try {
+      const res = await deletePersonalTool(toolId);
+      if (res.success) {
+        toast.success(`Ferramenta "${toolTitle}" excluída.`);
+        await loadData();
+      } else {
+        toast.error(res.error || "Erro ao excluir.");
+      }
+    } catch {
+      toast.error("Erro ao processar exclusão.");
+    }
+  };
+
+  // Ação de Membro: Conceder Cortesia (+30d ou +90d)
   const handleGrantCourtesy = async (userId: string, userName: string, days: number) => {
     setActionInProgress(userId);
     try {
@@ -145,9 +251,9 @@ export function SuperAdminPersonalToolsManager() {
     }
   };
 
-  // Ação 2: Revogar/Bloquear Acesso
+  // Ação de Membro: Revogar Acesso
   const handleRevokeAccess = async (userId: string, userName: string) => {
-    if (!confirm(`Tem certeza que deseja bloquear o acesso de ${userName} ao módulo de ferramentas?`)) {
+    if (!confirm(`Tem certeza que deseja bloquear o acesso de ${userName}?`)) {
       return;
     }
     setActionInProgress(userId);
@@ -168,7 +274,6 @@ export function SuperAdminPersonalToolsManager() {
 
   // Filtragem dos Membros
   const filteredSubscribers = subscribers.filter((sub) => {
-    // Filtro de Texto (Nome ou E-mail)
     const matchesSearch =
       sub.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sub.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -176,7 +281,6 @@ export function SuperAdminPersonalToolsManager() {
 
     if (!matchesSearch) return false;
 
-    // Filtro de Status
     if (statusFilter === "ALL") return true;
     if (statusFilter === "ACTIVE") return sub.toolsSubscriptionStatus === "ACTIVE";
     if (statusFilter === "TRIAL") return sub.toolsSubscriptionStatus === "TRIAL";
@@ -194,29 +298,66 @@ export function SuperAdminPersonalToolsManager() {
     return (
       <div className="flex items-center justify-center p-12 text-zinc-400 gap-2">
         <Loader2 className="w-5 h-5 animate-spin text-pink-500" />
-        <span>Carregando gestão do módulo B2C...</span>
+        <span>Carregando gestão do módulo de ferramentas...</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header do Módulo */}
+      {/* Header do Módulo com Seletor de Visão */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-gradient-to-r from-pink-500/10 via-purple-500/5 to-transparent border border-pink-500/25">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-400 text-xs font-black uppercase">
-            <Camera className="w-3.5 h-3.5" />
-            <span>Monetização B2C • Assinatura Individual de Membros</span>
+            <Wand2 className="w-3.5 h-3.5" />
+            <span>Ecossistema B2C • Catálogo Extensível de Ferramentas</span>
           </div>
           <h2 className="text-2xl font-black text-white tracking-tight">
-            Gestão do Módulo: Minhas Ferramentas (Instagram Studio)
+            Gestão do Módulo: Minhas Ferramentas
           </h2>
           <p className="text-xs text-zinc-400 max-w-2xl">
-            Painel exclusivo do SuperAdmin para precificação, concessão de cortesias manuais, bloqueios e auditoria de assinantes gerados no Asaas.
+            Crie e gerencie múltiplas ferramentas para os membros (Instagram Studio, Devocionais com IA, Gerador de Banners, etc.), definindo preços, degustações e cortesias.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Alternador de Abas */}
+          <div className="bg-zinc-900 p-1 rounded-2xl border border-white/10 flex items-center gap-1">
+            <button
+              onClick={() => setActiveView("tools")}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeView === "tools"
+                  ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Ferramentas ({tools.length})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveView("subscribers")}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeView === "subscribers"
+                  ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Membros ({subscribers.length})</span>
+            </button>
+          </div>
+
+          {activeView === "tools" && (
+            <Button
+              onClick={handleOpenNewToolModal}
+              className="h-10 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black text-xs hover:brightness-110 shadow-lg cursor-pointer gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Criar Nova Ferramenta</span>
+            </Button>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -225,15 +366,8 @@ export function SuperAdminPersonalToolsManager() {
             className="h-10 rounded-2xl border-white/10 bg-zinc-900 text-xs font-bold text-zinc-300 hover:text-white cursor-pointer gap-1.5"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Atualizar Dados</span>
+            <span>Atualizar</span>
           </Button>
-
-          <div className="px-3.5 py-1.5 rounded-2xl bg-zinc-900 border border-white/10 text-right">
-            <span className="text-[10px] text-zinc-400 uppercase font-bold block">Status do Módulo</span>
-            <span className={`text-xs font-black ${active ? "text-emerald-400" : "text-amber-400"}`}>
-              {active ? "● Ativo no App" : "● Pausado"}
-            </span>
-          </div>
         </div>
       </div>
 
@@ -241,11 +375,20 @@ export function SuperAdminPersonalToolsManager() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-1">
           <div className="flex items-center justify-between text-xs text-zinc-400 font-bold uppercase">
+            <span>Ferramentas no Catálogo</span>
+            <Layers className="w-4 h-4 text-pink-400" />
+          </div>
+          <div className="text-2xl font-black text-white">{tools.length}</div>
+          <p className="text-[11px] text-zinc-400">{tools.filter((t) => t.active).length} ativas para contratação.</p>
+        </div>
+
+        <div className="p-5 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-1">
+          <div className="flex items-center justify-between text-xs text-zinc-400 font-bold uppercase">
             <span>Assinantes Pagantes</span>
             <Users className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="text-2xl font-black text-white">{metrics.totalActive}</div>
-          <p className="text-[11px] text-zinc-400">Membros com assinatura ativa no Asaas.</p>
+          <p className="text-[11px] text-zinc-400">Membros com assinatura ativa.</p>
         </div>
 
         <div className="p-5 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-1">
@@ -255,15 +398,6 @@ export function SuperAdminPersonalToolsManager() {
           </div>
           <div className="text-2xl font-black text-amber-400">{metrics.totalTrial}</div>
           <p className="text-[11px] text-zinc-400">Usuários no período de trial gratuito.</p>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-1">
-          <div className="flex items-center justify-between text-xs text-zinc-400 font-bold uppercase">
-            <span>Expirados / Bloqueados</span>
-            <AlertCircle className="w-4 h-4 text-rose-400" />
-          </div>
-          <div className="text-2xl font-black text-rose-400">{metrics.totalOverdue}</div>
-          <p className="text-[11px] text-zinc-400">Trial encerrado ou fatura pendente.</p>
         </div>
 
         <div className="p-5 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-1">
@@ -278,121 +412,130 @@ export function SuperAdminPersonalToolsManager() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* FORMULÁRIO DE GESTÃO DE PREÇOS (SUPERADMIN) */}
-        <div className="lg:col-span-1 p-6 rounded-3xl bg-zinc-900/70 border border-white/10 space-y-5">
-          <div className="space-y-1 border-b border-white/10 pb-3">
+      {/* ========================================================================= */}
+      {/* VISÃO 1: CATÁLOGO DE FERRAMENTAS (CRIAR E GERENCIAR)                     */}
+      {/* ========================================================================= */}
+      {activeView === "tools" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
             <h3 className="text-base font-black text-white flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-pink-400" />
-              <span>Configuração Comercial</span>
+              <Layers className="w-4 h-4 text-pink-400" />
+              <span>Catálogo Oficial de Ferramentas Horeb</span>
             </h3>
-            <p className="text-xs text-zinc-400">
-              Defina os preços cobrados pelo Asaas ao membro.
-            </p>
+            <span className="text-xs font-bold text-zinc-400">
+              Total cadastradas: {tools.length}
+            </span>
           </div>
 
-          <form onSubmit={handleSaveConfig} className="space-y-4">
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-zinc-300">Título do Módulo</Label>
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-                className="bg-zinc-950 border-white/15 text-white h-10 rounded-xl text-xs"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-zinc-300">Selo Promocional (Badge)</Label>
-              <Input
-                value={badge}
-                onChange={(e) => setBadge(e.target.value)}
-                className="bg-zinc-950 border-white/15 text-white h-10 rounded-xl text-xs"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-zinc-300">Preço Mensal (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={monthlyPrice}
-                  onChange={(e) => setMonthlyPrice(e.target.value)}
-                  required
-                  className="bg-zinc-950 border-white/15 text-white h-10 rounded-xl text-xs"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-zinc-300">Preço Anual (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={annualPrice}
-                  onChange={(e) => setAnnualPrice(e.target.value)}
-                  required
-                  className="bg-zinc-950 border-white/15 text-white h-10 rounded-xl text-xs"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-zinc-300">Degustação Grátis (Dias)</Label>
-                <Input
-                  type="number"
-                  value={trialDays}
-                  onChange={(e) => setTrialDays(e.target.value)}
-                  required
-                  className="bg-zinc-950 border-white/15 text-white h-10 rounded-xl text-xs"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-zinc-300">Disponibilidade</Label>
-                <button
-                  type="button"
-                  onClick={() => setActive(!active)}
-                  className={`w-full h-10 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    active
-                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                      : "bg-zinc-800 text-zinc-400 border-white/10"
-                  }`}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+            {tools.map((t) => {
+              const IconComponent = getToolIcon(t.icon);
+              return (
+                <div
+                  key={t.id}
+                  className="p-5 rounded-3xl bg-zinc-900/80 border border-white/10 hover:border-pink-500/30 transition-all flex flex-col justify-between gap-4 group"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{active ? "Módulo Ativo" : "Pausado"}</span>
-                </button>
-              </div>
-            </div>
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-2xl bg-pink-500/15 border border-pink-500/30 flex items-center justify-center text-pink-400 shrink-0">
+                          <IconComponent className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-black text-white group-hover:text-pink-300 transition-colors">
+                              {t.title}
+                            </h4>
+                          </div>
+                          <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">
+                            {t.category} • /{t.slug}
+                          </span>
+                        </div>
+                      </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-zinc-300">Descrição / Pitch de Vendas</Label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                className="w-full bg-zinc-950 border border-white/15 text-white p-2.5 rounded-xl text-xs resize-none focus:outline-hidden"
-              />
-            </div>
+                      <div className="flex items-center gap-1.5">
+                        {t.badge && (
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            {t.badge}
+                          </span>
+                        )}
+                        <span
+                          className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                            t.active
+                              ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                              : "bg-zinc-800 border-white/10 text-zinc-500"
+                          }`}
+                        >
+                          {t.active ? "Ativo" : "Pausado"}
+                        </span>
+                      </div>
+                    </div>
 
-            <Button
-              type="submit"
-              disabled={isPending}
-              className="w-full h-11 rounded-xl bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 hover:brightness-110 text-white font-black text-xs shadow-lg gap-2 cursor-pointer transition-all"
-            >
-              {isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin text-white" />
-              ) : (
-                <Save className="w-4 h-4 text-white" />
-              )}
-              <span>Salvar Configurações Comerciais</span>
-            </Button>
-          </form>
+                    <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+                      {t.description}
+                    </p>
+
+                    {/* Preços e Ação */}
+                    <div className="flex items-center justify-between p-3 rounded-2xl bg-zinc-950/60 border border-white/5 text-xs">
+                      <div>
+                        <span className="text-[10px] text-zinc-400 uppercase font-bold block">Assinatura</span>
+                        <span className="text-sm font-black text-white">
+                          R$ {t.monthlyPrice.toFixed(2).replace(".", ",")}
+                          <span className="text-[10px] text-zinc-400 font-normal"> /mês</span>
+                        </span>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-[10px] text-zinc-400 uppercase font-bold block">Degustação</span>
+                        <span className="text-xs font-bold text-amber-400">
+                          {t.trialDays} Dias Grátis
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ações da Ferramenta */}
+                  <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      Ação: {t.actionType === "MODAL_INSTAGRAM" ? "Câmera Celular" : "Em Breve"}
+                    </span>
+
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleOpenEditToolModal(t)}
+                        className="h-8 px-2.5 rounded-xl border-white/10 bg-zinc-800 text-zinc-200 hover:text-white text-xs font-bold gap-1 cursor-pointer"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-zinc-400" />
+                        <span>Editar</span>
+                      </Button>
+
+                      {t.slug !== "instagram-studio" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteTool(t.id, t.title)}
+                          className="h-8 px-2 rounded-xl border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 cursor-pointer"
+                          title="Excluir ferramenta"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
+      )}
 
-        {/* LISTAGEM E CONTROLE DE ASSINATURAS DOS MEMBROS */}
-        <div className="lg:col-span-2 p-6 rounded-3xl bg-zinc-900/70 border border-white/10 space-y-4">
+      {/* ========================================================================= */}
+      {/* VISÃO 2: LISTAGEM E CONTROLE DE MEMBROS ASSINANTES                       */}
+      {/* ========================================================================= */}
+      {activeView === "subscribers" && (
+        <div className="p-6 rounded-3xl bg-zinc-900/70 border border-white/10 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
             <div>
               <h3 className="text-base font-black text-white flex items-center gap-2">
@@ -400,7 +543,7 @@ export function SuperAdminPersonalToolsManager() {
                 <span>Gestão de Membros & Assinantes B2C</span>
               </h3>
               <p className="text-xs text-zinc-400">
-                Acompanhe o status de cada membro, conceda cortesias ou bloqueie acessos manualmente.
+                Acompanhe o status de cada membro, conceda cortesias manuais (+30d/+90d) ou bloqueie acessos.
               </p>
             </div>
             <span className="text-xs font-bold text-zinc-400 bg-white/[0.05] px-3 py-1 rounded-full border border-white/10 self-start sm:self-auto">
@@ -508,7 +651,6 @@ export function SuperAdminPersonalToolsManager() {
                       )}
                     </div>
 
-                    {/* BOTÕES DE CONTROLE DO SUPERADMIN */}
                     <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto flex-wrap">
                       {isBusy ? (
                         <div className="flex items-center gap-1 text-xs text-pink-400 py-1.5 px-3">
@@ -517,7 +659,6 @@ export function SuperAdminPersonalToolsManager() {
                         </div>
                       ) : (
                         <>
-                          {/* Conceder Cortesia +30d */}
                           <Button
                             size="sm"
                             variant="outline"
@@ -529,7 +670,6 @@ export function SuperAdminPersonalToolsManager() {
                             <span>+30d Cortesia</span>
                           </Button>
 
-                          {/* Conceder Cortesia +90d */}
                           <Button
                             size="sm"
                             variant="outline"
@@ -541,7 +681,6 @@ export function SuperAdminPersonalToolsManager() {
                             <span>+90d VIP</span>
                           </Button>
 
-                          {/* Bloquear / Revogar se estiver ativo */}
                           {(isActivePaid || isTrial) && (
                             <Button
                               size="sm"
@@ -563,7 +702,211 @@ export function SuperAdminPersonalToolsManager() {
             </div>
           )}
         </div>
-      </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL PARA CRIAR OU EDITAR FERRAMENTA                                     */}
+      {/* ========================================================================= */}
+      {isToolModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-white/15 rounded-3xl p-6 max-w-xl w-full space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <Wand2 className="w-5 h-5 text-pink-400" />
+                <h3 className="text-base font-black text-white">
+                  {editingToolId ? "Editar Ferramenta" : "Criar Nova Ferramenta no Catálogo"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsToolModalOpen(false)}
+                className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTool} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-zinc-300">Nome / Título da Ferramenta</Label>
+                  <Input
+                    placeholder="Ex: Criador de Devocionais com IA"
+                    value={toolTitle}
+                    onChange={(e) => setToolTitle(e.target.value)}
+                    required
+                    className="bg-zinc-950 border-white/15 text-white h-10 rounded-xl text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-zinc-300">Identificador (Slug único)</Label>
+                  <Input
+                    placeholder="Ex: ia-devocional"
+                    value={toolSlug}
+                    onChange={(e) => setToolSlug(e.target.value)}
+                    required
+                    className="bg-zinc-950 border-white/15 text-white h-10 rounded-xl text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-zinc-300">Categoria</Label>
+                  <Input
+                    placeholder="Ex: IA & MINISTÉRIO"
+                    value={toolCategory}
+                    onChange={(e) => setToolCategory(e.target.value)}
+                    className="bg-zinc-950 border-white/15 text-white h-10 rounded-xl text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-zinc-300">Selo (Badge)</Label>
+                  <Input
+                    placeholder="Ex: NOVO, IA, POPULAR"
+                    value={toolBadge}
+                    onChange={(e) => setToolBadge(e.target.value)}
+                    className="bg-zinc-950 border-white/15 text-white h-10 rounded-xl text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-zinc-300">Ícone</Label>
+                  <select
+                    value={toolIcon}
+                    onChange={(e) => setToolIcon(e.target.value)}
+                    className="w-full bg-zinc-950 border border-white/15 text-white h-10 px-2 rounded-xl text-xs focus:outline-hidden"
+                  >
+                    {ICON_OPTIONS.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-zinc-300">Preço Mensal (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={toolMonthlyPrice}
+                    onChange={(e) => setToolMonthlyPrice(e.target.value)}
+                    required
+                    className="bg-zinc-950 border-white/15 text-white h-10 rounded-xl text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-zinc-300">Preço Anual (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={toolAnnualPrice}
+                    onChange={(e) => setToolAnnualPrice(e.target.value)}
+                    required
+                    className="bg-zinc-950 border-white/15 text-white h-10 rounded-xl text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-zinc-300">Degustação (Dias)</Label>
+                  <Input
+                    type="number"
+                    value={toolTrialDays}
+                    onChange={(e) => setToolTrialDays(e.target.value)}
+                    required
+                    className="bg-zinc-950 border-white/15 text-white h-10 rounded-xl text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-zinc-300">Tipo de Ação ao Clicar</Label>
+                  <select
+                    value={toolActionType}
+                    onChange={(e) => setToolActionType(e.target.value as any)}
+                    className="w-full bg-zinc-950 border border-white/15 text-white h-10 px-2 rounded-xl text-xs focus:outline-hidden"
+                  >
+                    <option value="MODAL_INSTAGRAM">Abrir Câmera do Instagram Studio</option>
+                    <option value="COMING_SOON">Em Breve / Lançamento VIP</option>
+                    <option value="ROUTE">Link Interno do App</option>
+                    <option value="EXTERNAL">Link Externo</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-zinc-300">Disponibilidade</Label>
+                  <button
+                    type="button"
+                    onClick={() => setToolActive(!toolActive)}
+                    className={`w-full h-10 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      toolActive
+                        ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                        : "bg-zinc-800 text-zinc-400 border-white/10"
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{toolActive ? "Ferramenta Ativa no App" : "Pausada"}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-zinc-300">Descrição / Pitch de Vendas</Label>
+                <textarea
+                  value={toolDescription}
+                  onChange={(e) => setToolDescription(e.target.value)}
+                  rows={2}
+                  className="w-full bg-zinc-950 border border-white/15 text-white p-2.5 rounded-xl text-xs resize-none focus:outline-hidden"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-zinc-300">
+                  Benefícios / Features (1 por linha)
+                </Label>
+                <textarea
+                  value={toolFeaturesText}
+                  onChange={(e) => setToolFeaturesText(e.target.value)}
+                  rows={3}
+                  placeholder="Ex:&#10;Modelos prontos em alta definição&#10;Inserção automática do brasão da igreja&#10;Exportação direta em 1 toque"
+                  className="w-full bg-zinc-950 border border-white/15 text-white p-2.5 rounded-xl text-xs resize-none focus:outline-hidden"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsToolModalOpen(false)}
+                  className="h-10 rounded-xl border-white/10 bg-zinc-800 text-xs font-bold text-zinc-300 hover:text-white cursor-pointer"
+                >
+                  Cancelar
+                </Button>
+
+                <Button
+                  type="submit"
+                  disabled={isSavingTool}
+                  className="h-10 px-5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black text-xs hover:brightness-110 shadow-lg cursor-pointer gap-2"
+                >
+                  {isSavingTool ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  ) : (
+                    <Save className="w-4 h-4 text-white" />
+                  )}
+                  <span>{editingToolId ? "Salvar Alterações" : "Criar Ferramenta"}</span>
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

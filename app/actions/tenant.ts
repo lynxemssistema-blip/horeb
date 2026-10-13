@@ -8,6 +8,7 @@ import { generateActivationCode, sendActivationCodeEmail } from "@/lib/mail";
 import { isValidEmail, sanitizeSlug } from "@/lib/validators";
 import { createSession, destroySession, getSession, checkChurchAccess } from "@/lib/session";
 import { isFeatureAllowedForPlan } from "@/lib/plans";
+import { getOrCreateAsaasCustomer } from "@/lib/asaas";
 
 export interface RegisterMasterParams {
   masterName: string;
@@ -103,16 +104,16 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
         pastorName: params.pastorName || params.masterName?.trim() || null,
         phone: params.phone?.trim() || null,
         address: params.address?.trim() || null,
-        plan: "GESTAO",
-        status: "TRIAL", // 30 dias de uso gratuito
-        monthlyPrice: 249,
-        setupPrice: 790,
+        plan: "PREMIUM", // Horeb Prime por padrão
+        status: "TRIAL", // 30 dias de uso gratuito com todos os recursos liberados
+        monthlyPrice: 399,
+        setupPrice: 1290,
+        asaasGroupId: params.churchName, // Grupo da Igreja no Asaas
         subscriptionExpiresAt: trialExpiresAt,
       },
     });
 
-    // 2. Gerar Código de Ativação de 6 Dígitos
-    // 2. Criar o Usuário Master da Igreja (já nasce ativo e autenticado como Administrador/Master)
+    // 2. Criar o Usuário Master da Igreja (já nasce ativo e autenticado como Administrador/Master no tema Horeb Prime)
     const isSuperAdmin = cleanEmail === "edsonmanoel2012@gmail.com" || cleanEmail === "lynxemssistema@gmail.com";
 
     const user = await prisma.user.create({
@@ -124,9 +125,39 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
         isEmailVerified: true, // Já nasce ativo para entrar direto na sua igreja
         verificationCode: null,
         codeExpiresAt: null,
+        themePreference: "dark",
+        themePalette: "prime", // Padrão Horeb Prime
         tenantId: tenant.id,
       },
     });
+
+    // 3. Integração Automática com Asaas: Cria/Vincula Grupo da Igreja e Usuário como Cliente
+    try {
+      const asaasRes = await getOrCreateAsaasCustomer({
+        name: user.name,
+        email: user.email,
+        phone: params.phone,
+        groupName: tenant.name,
+        externalReference: `USER_${user.id}`,
+      });
+
+      if (asaasRes.success && asaasRes.customer?.id) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { asaasCustomerId: asaasRes.customer.id },
+        });
+
+        await prisma.tenant.update({
+          where: { id: tenant.id },
+          data: {
+            asaasCustomerId: asaasRes.customer.id,
+            asaasGroupId: tenant.name,
+          },
+        });
+      }
+    } catch (asaasErr) {
+      console.warn("Aviso na integração inicial Asaas da nova igreja:", asaasErr);
+    }
 
     // 3. Criar registro de acesso e controle total em UserChurchAccess
     await prisma.userChurchAccess.create({
@@ -437,12 +468,29 @@ export async function createBranchChurch(params: CreateBranchParams) {
         pastorName: params.pastorName?.trim() || null,
         phone: params.phone?.trim() || null,
         address: params.address?.trim() || null,
-        plan: parentTenant.plan || "GESTAO",
+        plan: parentTenant.plan || "PREMIUM",
         status: "ACTIVE",
-        monthlyPrice: 149,
+        monthlyPrice: 199,
         setupPrice: 490,
+        asaasGroupId: params.branchName,
       },
     });
+
+    // Sincronizar grupo da congregação filial no Asaas
+    try {
+      const session = await getSession();
+      if (session?.email) {
+        await getOrCreateAsaasCustomer({
+          name: session.name,
+          email: session.email,
+          phone: params.phone,
+          groupName: branch.name,
+          externalReference: `USER_${session.userId}`,
+        });
+      }
+    } catch (asaasBranchErr) {
+      console.warn("Aviso na integração Asaas da congregação filial:", asaasBranchErr);
+    }
 
     // Vincular o usuário da sessão como ADMIN também desta filial
     const session = await getSession();

@@ -395,10 +395,10 @@ export default async function HomePage(props: {
                 </a>
               </div>
 
-              {/* Destaque informativo dos 30 dias gratuitos no Plano de Gestão */}
+              {/* Destaque informativo dos 30 dias gratuitos no Plano Horeb Prime */}
               <p className="text-xs text-zinc-400 font-medium flex items-center gap-2 text-center max-w-xl">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                <span>Cadastro imediato sem cartão: sua congregação entra automaticamente no <strong className="text-amber-400 font-bold">Plano de Gestão</strong> com 30 dias de uso 100% gratuito.</span>
+                <span>Cadastro imediato sem cartão: sua congregação entra automaticamente no <strong className="text-amber-400 font-bold">Plano Horeb Prime</strong> com 30 dias de uso 100% gratuito.</span>
               </p>
             </div>
           )}

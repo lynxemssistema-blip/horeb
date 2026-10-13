@@ -216,8 +216,8 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({
   children,
-  initialMode = "system",
-  initialPalette = "default",
+  initialMode = "dark",
+  initialPalette = "prime",
 }: {
   children: React.ReactNode;
   initialMode?: ThemeMode;
@@ -370,8 +370,8 @@ export function ThemeScript() {
   const scriptContent = `
     (function() {
       try {
-        var mode = localStorage.getItem('horeb-theme-mode') || 'system';
-        var palette = localStorage.getItem('horeb-theme-palette') || 'default';
+        var mode = localStorage.getItem('horeb-theme-mode') || 'dark';
+        var palette = localStorage.getItem('horeb-theme-palette') || 'prime';
         var isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         var root = document.documentElement;
         if (isDark) {

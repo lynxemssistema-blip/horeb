@@ -18,7 +18,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#070709",
+  themeColor: "#0B1F3A",
 };
 
 import { Toaster } from "@/components/ui/sonner";

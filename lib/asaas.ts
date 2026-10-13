@@ -12,6 +12,12 @@ export interface AsaasCustomer {
   cpfCnpj?: string;
   externalReference?: string;
   notificationDisabled?: boolean;
+  groups?: Array<{ name: string }>;
+}
+
+export interface AsaasCustomerGroup {
+  id: string;
+  name: string;
 }
 
 export interface AsaasSubscription {
@@ -87,13 +93,14 @@ function getHeaders(apiKey: string) {
 }
 
 /**
- * 1. Busca ou Cria Cliente no Asaas
+ * 1. Busca ou Cria Cliente no Asaas vinculado ao Grupo da Igreja (Church = Group, User = Customer)
  */
 export async function getOrCreateAsaasCustomer(data: {
   name: string;
-  cpfCnpj: string;
   email: string;
+  cpfCnpj?: string;
   phone?: string;
+  groupName?: string;
   externalReference?: string;
 }): Promise<{ success: boolean; customer?: AsaasCustomer; error?: string }> {
   const { apiKey, baseUrl, isConfigured } = getAsaasConfig();
@@ -101,33 +108,82 @@ export async function getOrCreateAsaasCustomer(data: {
     return { success: false, error: "Asaas API Key não configurada no .env" };
   }
 
-  const cleanDoc = data.cpfCnpj.replace(/\D/g, "");
+  const cleanDoc = data.cpfCnpj ? data.cpfCnpj.replace(/\D/g, "") : "";
+  const cleanEmail = data.email ? data.email.trim().toLowerCase() : "";
+  const groupName = data.groupName?.trim();
 
   try {
-    // 1. Tenta buscar cliente já existente pelo CPF/CNPJ
-    const searchUrl = `${baseUrl}/customers?cpfCnpj=${cleanDoc}`;
-    const searchRes = await fetch(searchUrl, {
-      method: "GET",
-      headers: getHeaders(apiKey),
-      cache: "no-store",
-    });
+    let existingCustomer: AsaasCustomer | null = null;
 
-    if (searchRes.ok) {
-      const searchData = await searchRes.json();
-      if (searchData.data && searchData.data.length > 0) {
-        return { success: true, customer: searchData.data[0] };
+    // 1. Tenta buscar cliente já existente: primeiro por CPF/CNPJ (se informado), senão por e-mail
+    if (cleanDoc && cleanDoc.length >= 11) {
+      const searchUrl = `${baseUrl}/customers?cpfCnpj=${cleanDoc}`;
+      const searchRes = await fetch(searchUrl, {
+        method: "GET",
+        headers: getHeaders(apiKey),
+        cache: "no-store",
+      });
+
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        if (searchData.data && searchData.data.length > 0) {
+          existingCustomer = searchData.data[0];
+        }
       }
     }
 
-    // 2. Se não existir, cria um novo
+    if (!existingCustomer && cleanEmail) {
+      const searchEmailUrl = `${baseUrl}/customers?email=${encodeURIComponent(cleanEmail)}`;
+      const searchEmailRes = await fetch(searchEmailUrl, {
+        method: "GET",
+        headers: getHeaders(apiKey),
+        cache: "no-store",
+      });
+
+      if (searchEmailRes.ok) {
+        const searchEmailData = await searchEmailRes.json();
+        if (searchEmailData.data && searchEmailData.data.length > 0) {
+          existingCustomer = searchEmailData.data[0];
+        }
+      }
+    }
+
+    // Se já existe, atualiza o grupo da igreja e referência se necessário
+    if (existingCustomer) {
+      if (groupName || data.externalReference) {
+        try {
+          const updateRes = await fetch(`${baseUrl}/customers/${existingCustomer.id}`, {
+            method: "POST",
+            headers: getHeaders(apiKey),
+            body: JSON.stringify({
+              groupName: groupName || undefined,
+              externalReference: data.externalReference || existingCustomer.externalReference,
+              mobilePhone: data.phone ? data.phone.replace(/\D/g, "") : existingCustomer.mobilePhone,
+              cpfCnpj: cleanDoc && cleanDoc.length >= 11 ? cleanDoc : existingCustomer.cpfCnpj,
+            }),
+            cache: "no-store",
+          });
+          if (updateRes.ok) {
+            const updated = await updateRes.json();
+            return { success: true, customer: updated };
+          }
+        } catch (updErr) {
+          console.warn("Aviso ao atualizar grupo do cliente no Asaas:", updErr);
+        }
+      }
+      return { success: true, customer: existingCustomer };
+    }
+
+    // 2. Se não existir, cria um novo cliente vinculado ao Grupo da Igreja
     const createRes = await fetch(`${baseUrl}/customers`, {
       method: "POST",
       headers: getHeaders(apiKey),
       body: JSON.stringify({
         name: data.name.trim(),
-        cpfCnpj: cleanDoc,
-        email: data.email.trim(),
+        cpfCnpj: cleanDoc && cleanDoc.length >= 11 ? cleanDoc : undefined,
+        email: cleanEmail,
         mobilePhone: data.phone ? data.phone.replace(/\D/g, "") : undefined,
+        groupName: groupName || undefined,
         externalReference: data.externalReference,
         notificationDisabled: false,
       }),

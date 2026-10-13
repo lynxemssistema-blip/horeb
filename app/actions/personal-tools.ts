@@ -12,80 +12,326 @@ import {
 
 export interface PersonalToolsConfigData {
   id: string;
+  slug: string;
   title: string;
   badge: string;
+  icon: string;
+  category: string;
   description: string;
   monthlyPrice: number;
   annualPrice: number;
   trialDays: number;
   active: boolean;
   features: string[];
+  actionType: "MODAL_INSTAGRAM" | "COMING_SOON" | "ROUTE" | "EXTERNAL";
+  routeUrl?: string | null;
 }
 
-const DEFAULT_TOOLS_CONFIG: PersonalToolsConfigData = {
-  id: "default",
-  title: "Estúdio de Fotos & Instagram Pro",
-  badge: "MÓDULO PESSOAL EXCLUSIVO",
-  description:
-    "Câmera de alta resolução com filtros de cinema para cultos e palcos de louvor, ajustes de iluminação e formatos prontos para postagem no Instagram.",
-  monthlyPrice: 19.9,
-  annualPrice: 199.0,
-  trialDays: 30,
-  active: true,
-  features: [
-    "Câmera Nativa do Celular & Selfie em Alta Definição",
-    "8 Filtros de Cinema Exclusivos (Louvor Vivo, Golden Hour, B&W)",
-    "Formatos Oficiais do Instagram: 1:1 Feed, 4:5 Retrato e 9:16 Stories",
-    "Ajustes Finos de Iluminação, Contraste, Calor e Vinheta",
-    "Selos de Fé e Brasão da Igreja em Alta Resolução",
-    "Compartilhamento Direto no Feed ou Stories em 1 Toque",
-  ],
-};
+const INITIAL_DEFAULT_TOOLS: Array<Omit<PersonalToolsConfigData, "id">> = [
+  {
+    slug: "instagram-studio",
+    title: "Estúdio de Fotos & Instagram Pro",
+    badge: "MÓDULO EXCLUSIVO",
+    icon: "Camera",
+    category: "MÍDIA & SOCIAL",
+    description:
+      "Câmera do celular em alta definição com 8 filtros de cinema, ajustes finos de luz e enquadramentos de Feed (1:1), Retrato (4:5) e Stories (9:16) prontos para postagem no Instagram.",
+    monthlyPrice: 19.9,
+    annualPrice: 199.0,
+    trialDays: 30,
+    active: true,
+    actionType: "MODAL_INSTAGRAM",
+    features: [
+      "Câmera Nativa do Celular & Selfie em Alta Definição",
+      "8 Filtros de Cinema Exclusivos (Louvor Vivo, Golden Hour, B&W)",
+      "Formatos Oficiais do Instagram: 1:1 Feed, 4:5 Retrato e 9:16 Stories",
+      "Ajustes Finos de Iluminação, Contraste, Calor e Vinheta",
+      "Selos de Fé e Brasão da Igreja em Alta Resolução",
+      "Compartilhamento Direto no Feed ou Stories em 1 Toque",
+    ],
+  },
+  {
+    slug: "ia-sermoes",
+    title: "Criador de Sermões & Devocionais com IA",
+    badge: "INTELIGÊNCIA ARTIFICIAL",
+    icon: "Sparkles",
+    category: "IA & MINISTÉRIO",
+    description:
+      "Assistente teológico com modelos de IA para estruturar esboços de mensagens bíblicas, ilustrações contextualizadas e devocionais diários.",
+    monthlyPrice: 29.9,
+    annualPrice: 299.0,
+    trialDays: 30,
+    active: true,
+    actionType: "COMING_SOON",
+    features: [
+      "Esboços de Mensagens Temáticas e Expositivas",
+      "Banco de Ilustrações e Aplicações Práticas",
+      "Comentários e Dicionários Bíblicos Integrados",
+      "Exportação Direta em PDF e Apresentação de Slides",
+    ],
+  },
+  {
+    slug: "designer-banners",
+    title: "Gerador de Flyers & Banners de Cultos",
+    badge: "DESIGN FÁCIL",
+    icon: "Palette",
+    category: "DESIGN & COMUNICAÇÃO",
+    description:
+      "Modelos prontos de cartazes, artes de convite e banners para culto da família, vigílias, jovens e santa ceia sem precisar de Photoshop.",
+    monthlyPrice: 24.9,
+    annualPrice: 249.0,
+    trialDays: 30,
+    active: true,
+    actionType: "COMING_SOON",
+    features: [
+      "Mais de 50 Templates Oficiais de Cultos e Eventos",
+      "Inserção Automática de Foto do Preletor e Cantor",
+      "Formatos Prontos para WhatsApp Status e Stories",
+      "Download em Alta Resolução sem marca d'água",
+    ],
+  },
+  {
+    slug: "certificados-digitais",
+    title: "Emissor de Certificados & Credenciais",
+    badge: "SECRETARIA VIP",
+    icon: "Award",
+    category: "SECRETARIA & ENSINO",
+    description:
+      "Gere certificados de batismo, conclusão de curso de noivos, discipulado infantil e credenciais eclesiásticas com QR Code de autenticidade.",
+    monthlyPrice: 14.9,
+    annualPrice: 149.0,
+    trialDays: 30,
+    active: true,
+    actionType: "COMING_SOON",
+    features: [
+      "Certificados Oficiais com Brasão da Igreja",
+      "QR Code de Autenticidade para Consulta Pública",
+      "Disparo Automático no WhatsApp e E-mail do Aluno",
+      "Arquivo Digital Permanente de Formaturas e Cursos",
+    ],
+  },
+];
 
 /**
- * 1. Obter Configurações e Preços do Módulo Pessoal (Gerenciado pelo SuperAdmin)
+ * 1. Obter Catálogo Completo de Ferramentas Pessoais (com auto-seeding se vazio)
  */
-export async function getPersonalToolsConfig(): Promise<{
+export async function getAllPersonalTools(): Promise<{
+  success: boolean;
+  tools: PersonalToolsConfigData[];
+}> {
+  try {
+    const list = await (prisma as any).personalToolsConfig.findMany({
+      orderBy: { createdAt: "asc" },
+    });
+
+    if (!list || list.length === 0) {
+      // Cria as ferramentas iniciais para o SuperAdmin ter o catálogo rico pronto
+      for (const item of INITIAL_DEFAULT_TOOLS) {
+        await (prisma as any).personalToolsConfig.create({
+          data: {
+            slug: item.slug,
+            title: item.title,
+            badge: item.badge,
+            icon: item.icon,
+            category: item.category,
+            description: item.description,
+            monthlyPrice: item.monthlyPrice,
+            annualPrice: item.annualPrice,
+            trialDays: item.trialDays,
+            active: item.active,
+            actionType: item.actionType,
+            features: JSON.stringify(item.features),
+          },
+        });
+      }
+
+      const refreshed = await (prisma as any).personalToolsConfig.findMany({
+        orderBy: { createdAt: "asc" },
+      });
+
+      return {
+        success: true,
+        tools: refreshed.map(formatToolFromDb),
+      };
+    }
+
+    return {
+      success: true,
+      tools: list.map(formatToolFromDb),
+    };
+  } catch (error) {
+    console.error("Erro ao carregar catálogo de ferramentas:", error);
+    return {
+      success: true,
+      tools: INITIAL_DEFAULT_TOOLS.map((t, idx) => ({ ...t, id: `init_${idx}` })),
+    };
+  }
+}
+
+function formatToolFromDb(dbTool: any): PersonalToolsConfigData {
+  let parsedFeatures: string[] = [];
+  try {
+    parsedFeatures = JSON.parse(dbTool.features || "[]");
+  } catch {
+    parsedFeatures = [];
+  }
+
+  return {
+    id: dbTool.id,
+    slug: dbTool.slug || "instagram-studio",
+    title: dbTool.title,
+    badge: dbTool.badge || "MÓDULO PESSOAL",
+    icon: dbTool.icon || "Camera",
+    category: dbTool.category || "MÍDIA & SOCIAL",
+    description: dbTool.description,
+    monthlyPrice: Number(dbTool.monthlyPrice),
+    annualPrice: Number(dbTool.annualPrice),
+    trialDays: Number(dbTool.trialDays),
+    active: Boolean(dbTool.active),
+    features: parsedFeatures,
+    actionType: (dbTool.actionType as any) || "MODAL_INSTAGRAM",
+    routeUrl: dbTool.routeUrl || null,
+  };
+}
+
+/**
+ * 2. Obter Configuração de Ferramenta Principal (Compatibilidade)
+ */
+export async function getPersonalToolsConfig(slug = "instagram-studio"): Promise<{
   success: boolean;
   config: PersonalToolsConfigData;
 }> {
   try {
-    const dbConfig = await (prisma as any).personalToolsConfig?.findUnique({
-      where: { id: "default" },
+    const dbTool = await (prisma as any).personalToolsConfig.findFirst({
+      where: { slug },
     });
 
-    if (dbConfig) {
-      let parsedFeatures = DEFAULT_TOOLS_CONFIG.features;
-      try {
-        parsedFeatures = JSON.parse(dbConfig.features);
-      } catch {
-        // fallback
-      }
+    if (dbTool) {
+      return { success: true, config: formatToolFromDb(dbTool) };
+    }
 
-      return {
-        success: true,
-        config: {
-          id: dbConfig.id,
-          title: dbConfig.title,
-          badge: dbConfig.badge || DEFAULT_TOOLS_CONFIG.badge,
-          description: dbConfig.description,
-          monthlyPrice: Number(dbConfig.monthlyPrice),
-          annualPrice: Number(dbConfig.annualPrice),
-          trialDays: Number(dbConfig.trialDays),
-          active: Boolean(dbConfig.active),
-          features: parsedFeatures,
-        },
-      };
+    // Se não encontrou por slug, tenta o primeiro ou usa o default
+    const firstTool = await (prisma as any).personalToolsConfig.findFirst();
+    if (firstTool) {
+      return { success: true, config: formatToolFromDb(firstTool) };
     }
   } catch (error) {
-    console.warn("PersonalToolsConfig usando fallback padrão:", error);
+    console.warn("PersonalToolsConfig fallback:", error);
   }
 
-  return { success: true, config: DEFAULT_TOOLS_CONFIG };
+  return { success: true, config: { ...INITIAL_DEFAULT_TOOLS[0], id: "default" } };
 }
 
 /**
- * 2. Atualizar Preços e Configurações do Módulo Pessoal (SuperAdmin)
+ * 3. Criar ou Atualizar Ferramenta (SuperAdmin)
+ */
+export async function createOrUpdatePersonalTool(data: {
+  id?: string;
+  slug: string;
+  title: string;
+  badge?: string;
+  icon?: string;
+  category?: string;
+  description: string;
+  monthlyPrice: number;
+  annualPrice: number;
+  trialDays: number;
+  active: boolean;
+  features?: string[];
+  actionType?: "MODAL_INSTAGRAM" | "COMING_SOON" | "ROUTE" | "EXTERNAL";
+  routeUrl?: string;
+}): Promise<{ success: boolean; tool?: PersonalToolsConfigData; error?: string }> {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "SUPERADMIN") {
+      return { success: false, error: "Apenas SuperAdmin pode gerenciar ferramentas." };
+    }
+
+    const cleanSlug = data.slug
+      .trim()
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-");
+
+    const featuresJson = JSON.stringify(data.features || []);
+
+    if (data.id) {
+      const updated = await (prisma as any).personalToolsConfig.update({
+        where: { id: data.id },
+        data: {
+          slug: cleanSlug,
+          title: data.title,
+          badge: data.badge || "EXCLUSIVO",
+          icon: data.icon || "Sparkles",
+          category: data.category || "GERAL",
+          description: data.description,
+          monthlyPrice: data.monthlyPrice,
+          annualPrice: data.annualPrice,
+          trialDays: data.trialDays,
+          active: data.active,
+          features: featuresJson,
+          actionType: data.actionType || "COMING_SOON",
+          routeUrl: data.routeUrl || null,
+        },
+      });
+
+      revalidatePath("/admin");
+      revalidatePath("/");
+      return { success: true, tool: formatToolFromDb(updated) };
+    } else {
+      const created = await (prisma as any).personalToolsConfig.create({
+        data: {
+          slug: cleanSlug,
+          title: data.title,
+          badge: data.badge || "NOVO",
+          icon: data.icon || "Sparkles",
+          category: data.category || "GERAL",
+          description: data.description,
+          monthlyPrice: data.monthlyPrice,
+          annualPrice: data.annualPrice,
+          trialDays: data.trialDays,
+          active: data.active,
+          features: featuresJson,
+          actionType: data.actionType || "COMING_SOON",
+          routeUrl: data.routeUrl || null,
+        },
+      });
+
+      revalidatePath("/admin");
+      revalidatePath("/");
+      return { success: true, tool: formatToolFromDb(created) };
+    }
+  } catch (error: any) {
+    return { success: false, error: error.message || "Erro ao salvar ferramenta." };
+  }
+}
+
+/**
+ * 4. Excluir Ferramenta (SuperAdmin)
+ */
+export async function deletePersonalTool(
+  toolId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "SUPERADMIN") {
+      return { success: false, error: "Apenas SuperAdmin pode excluir ferramentas." };
+    }
+
+    await (prisma as any).personalToolsConfig.delete({
+      where: { id: toolId },
+    });
+
+    revalidatePath("/admin");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Erro ao excluir ferramenta." };
+  }
+}
+
+/**
+ * Compatibilidade: Atualizar Preços e Configurações (legado)
  */
 export async function updatePersonalToolsConfig(data: {
   title: string;
@@ -97,45 +343,18 @@ export async function updatePersonalToolsConfig(data: {
   active: boolean;
   features?: string[];
 }): Promise<{ success: boolean; config?: any; error?: string }> {
-  try {
-    const session = await getSession();
-    if (!session || session.role !== "SUPERADMIN") {
-      return { success: false, error: "Apenas SuperAdmin pode alterar os preços deste módulo." };
-    }
-
-    const featuresJson = JSON.stringify(data.features || DEFAULT_TOOLS_CONFIG.features);
-
-    const updated = await (prisma as any).personalToolsConfig.upsert({
-      where: { id: "default" },
-      update: {
-        title: data.title,
-        badge: data.badge || DEFAULT_TOOLS_CONFIG.badge,
-        description: data.description,
-        monthlyPrice: data.monthlyPrice,
-        annualPrice: data.annualPrice,
-        trialDays: data.trialDays,
-        active: data.active,
-        features: featuresJson,
-      },
-      create: {
-        id: "default",
-        title: data.title,
-        badge: data.badge || DEFAULT_TOOLS_CONFIG.badge,
-        description: data.description,
-        monthlyPrice: data.monthlyPrice,
-        annualPrice: data.annualPrice,
-        trialDays: data.trialDays,
-        active: data.active,
-        features: featuresJson,
-      },
-    });
-
-    revalidatePath("/admin");
-    revalidatePath("/");
-    return { success: true, config: updated };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
+  return createOrUpdatePersonalTool({
+    slug: "instagram-studio",
+    title: data.title,
+    badge: data.badge,
+    description: data.description,
+    monthlyPrice: data.monthlyPrice,
+    annualPrice: data.annualPrice,
+    trialDays: data.trialDays,
+    active: data.active,
+    features: data.features,
+    actionType: "MODAL_INSTAGRAM",
+  });
 }
 
 /**

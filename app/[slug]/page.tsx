@@ -40,7 +40,7 @@ import { getSession } from "@/lib/session";
 import { getUserAccessRules } from "@/app/actions/permissions";
 import { MemberQuickBadgeModal } from "@/components/member-quick-badge-modal";
 import { UserPersonalToolsSection } from "@/components/user-personal-tools-section";
-import { getPersonalToolsConfig, getUserToolsSubscription } from "@/app/actions/personal-tools";
+import { getPersonalToolsConfig, getAllPersonalTools, getUserToolsSubscription } from "@/app/actions/personal-tools";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -88,9 +88,10 @@ export default async function TenantDashboardPage({ params }: PageProps) {
     }
   }
 
-  // Carregar Configurações e Assinatura do Módulo Pessoal B2C (Instagram Studio)
-  const [toolsConfigRes, toolsSub] = await Promise.all([
+  // Carregar Configurações e Assinatura do Módulo Pessoal B2C (Instagram Studio e Ferramentas)
+  const [toolsConfigRes, allToolsRes, toolsSub] = await Promise.all([
     getPersonalToolsConfig(),
+    getAllPersonalTools(),
     session?.userId
       ? getUserToolsSubscription(session.userId)
       : Promise.resolve({
@@ -265,6 +266,7 @@ export default async function TenantDashboardPage({ params }: PageProps) {
         churchLogo={tenant.logoUrl}
         churchSlug={slug}
         config={toolsConfigRes.config}
+        tools={allToolsRes.tools}
         subscription={toolsSub}
         user={
           session
