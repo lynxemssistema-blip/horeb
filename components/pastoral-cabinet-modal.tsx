@@ -73,7 +73,7 @@ export function PastoralCabinetModal({
       if (res.success) {
         setData(res);
         if (res.pastor) {
-          setPastoralTitle(res.pastor.pastoralTitle || "Pastor Titular");
+          setPastoralTitle((res.pastor.pastoralTitle || "Pr. Titular").replace(/Pastor/g, "Pr."));
           setPastoralBio(res.pastor.pastoralBio || "");
           setPastoralPhone(res.pastor.pastoralPhone || "");
         }
@@ -455,7 +455,7 @@ export function PastoralCabinetModal({
                           <Input
                             value={pastoralTitle}
                             onChange={(e) => setPastoralTitle(e.target.value)}
-                            placeholder="Ex: Pastor Titular, Pastora de Casais"
+                            placeholder="Ex: Pr. Titular, Pra. de Casais"
                             className="h-10 text-xs rounded-xl"
                           />
                         </div>

@@ -424,7 +424,7 @@ async function buildMinutesText(assemblyId: string): Promise<string> {
   minutes += `ENTIDADE RELIGIOSA: ${churchName}\n`;
   minutes += `DATA DE REALIZAÇÃO: ${dateFormatted}\n\n`;
 
-  minutes += `Aos ${dateFormatted}, reuniu-se a membresia da ${churchName} em sua sede, sob a presidência do pastor ${assembly.tenant.pastorName || "Presidente"}, a fim de deliberar sobre a seguinte ordem do dia: "${assembly.title}".\n\n`;
+  minutes += `Aos ${dateFormatted}, reuniu-se a membresia da ${churchName} em sua sede, sob a presidência do Pr. ${assembly.tenant.pastorName || "Presidente"}, a fim de deliberar sobre a seguinte ordem do dia: "${assembly.title}".\n\n`;
 
   minutes += `VERIFICAÇÃO DE QUÓRUM ESTATUTÁRIO:\n`;
   minutes += `Constatou-se a presença de ${presentCount} membros ativos dentre o rol de ${assembly.totalEligibleMembers} membros cadastrados, perfazendo um quórum atingido de ${quorumPercent}%, em estrito cumprimento ao quórum estatutário mínimo exigido de ${assembly.requiredQuorumPercent}%.\n\n`;
@@ -455,7 +455,7 @@ async function buildMinutesText(assemblyId: string): Promise<string> {
   minutes += `Nada mais havendo a tratar, o Senhor Presidente declarou encerrada a presente assembleia, da qual lavrou-se esta ata para que surta todos os efeitos estatutários e legais perante o Cartório de Registro Civil das Pessoas Jurídicas competente.\n\n`;
 
   minutes += `_____________________________________________\n`;
-  minutes += `${assembly.tenant.pastorName || "Pastor Presidente"}\n`;
+  minutes += `${assembly.tenant.pastorName || "Pr. Presidente"}\n`;
   minutes += `Presidente da Assembleia\n\n`;
 
   minutes += `_____________________________________________\n`;

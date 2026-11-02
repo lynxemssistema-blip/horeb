@@ -145,12 +145,12 @@ export function PastoralLiveChatModal({
 
             <div className="min-w-0">
               <h3 className="text-sm font-bold text-foreground truncate">
-                {pastor?.name || "Pastor Responsável"}
+                {(pastor?.name || "Pr. Responsável").replace(/Pastor/g, "Pr.")}
               </h3>
               <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 truncate">
                 <span className="text-emerald-500 font-semibold">● Ao Vivo</span>
                 <span>•</span>
-                <span>{pastor?.pastoralTitle || "Atendimento Pastoral"}</span>
+                <span>{(pastor?.pastoralTitle || "Atendimento Pastoral").replace(/Pastor/g, "Pr.")}</span>
               </p>
             </div>
           </div>
@@ -186,7 +186,7 @@ export function PastoralLiveChatModal({
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <p className="text-xs">Conectando ao pastor...</p>
+              <p className="text-xs">Conectando ao Pr....</p>
             </div>
           ) : messages.length === 0 ? (
             <div className="text-center py-10 px-4 space-y-3">
@@ -195,7 +195,7 @@ export function PastoralLiveChatModal({
               </div>
               <h4 className="text-sm font-bold text-foreground">Conexão Pastoral Estabelecida</h4>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-                Você está em uma sala privada com o {pastor?.name || "Pastor"}. Envie sua mensagem, dúvida ou pedido de oração abaixo para começar.
+                Você está em uma sala privada com o {(pastor?.name || "Pr.").replace(/Pastor/g, "Pr.")}. Envie sua mensagem, dúvida ou pedido de oração abaixo para começar.
               </p>
             </div>
           ) : (
@@ -239,7 +239,7 @@ export function PastoralLiveChatModal({
               <Input
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Escreva sua mensagem para o pastor..."
+                placeholder="Escreva sua mensagem para o Pr...."
                 disabled={isSending}
                 className="h-10 text-xs sm:text-sm rounded-xl bg-muted/50 border-border focus-visible:ring-1 focus-visible:ring-primary"
               />

@@ -870,10 +870,10 @@ export default async function TenantDashboardPage({ params }: PageProps) {
               </Avatar>
               <div>
                 <p className="text-sm font-semibold text-foreground">
-                  {pastor ? pastor.name : "Pr. Responsável"}
+                  {pastor ? pastor.name.replace(/Pastor/g, "Pr.") : "Pr. Responsável"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Pastor Titular da {tenant.name}
+                  Pr. Titular da {tenant.name}
                 </p>
               </div>
             </div>

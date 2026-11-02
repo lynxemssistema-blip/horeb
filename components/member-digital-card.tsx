@@ -205,7 +205,7 @@ export function MemberDigitalCard({ user, credentialCode }: MemberDigitalCardPro
             </div>
 
             <div className="text-[10px] text-zinc-500 space-y-1 pt-2 border-t border-white/10">
-              <p>Pastor Responsável: {user.tenant.pastorName || "Liderança Eclesial"}</p>
+              <p>Pr. Responsável: {(user.tenant.pastorName || "Liderança Eclesial").replace(/Pastor/g, "Pr.")}</p>
               <p>Horeb SaaS • Tecnologia e Gestão Eclesial</p>
             </div>
           </div>

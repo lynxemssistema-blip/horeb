@@ -377,7 +377,7 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-foreground">Pastor Titular / Presidente</label>
+                  <label className="text-xs font-bold text-foreground">Pr. Titular / Presidente</label>
                   <Input
                     value={pastorName}
                     onChange={(e) => setPastorName(e.target.value)}

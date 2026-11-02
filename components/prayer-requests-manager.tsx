@@ -419,7 +419,7 @@ export function PrayerRequestsManager({
                       <div className="flex items-center justify-between text-[11px] font-bold text-amber-500">
                         <span className="flex items-center gap-1">
                           <MessageSquare className="w-3.5 h-3.5" />
-                          Resposta de {req.respondedBy || "Pastor"}
+                          Resposta de {(req.respondedBy || "Pr.").replace(/Pastor/g, "Pr.")}
                         </span>
                         {req.respondedAt && (
                           <span className="text-[10px] text-muted-foreground font-normal">

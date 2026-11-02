@@ -603,7 +603,7 @@ export function SuperAdminDashboard({
                   </span>
                 </div>
                 <p className="text-[11px] text-zinc-400">
-                  Pastores, líderes e membros com login no app.
+                  Prs., líderes e membros com login no app.
                 </p>
               </div>
 

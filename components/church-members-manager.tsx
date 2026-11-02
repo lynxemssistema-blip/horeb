@@ -333,7 +333,7 @@ export function ChurchMembersManager({
               <span>Membros, Líderes & Convites</span>
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
-              Cadastre novos usuários, defina níveis de acesso personalizados (Pastores, Líderes de Célula, Ministério Infantil, Tesouraria) e envie links diretos de convite para a Matriz ou filiais.
+              Cadastre novos usuários, defina níveis de acesso personalizados (Prs., Líderes de Célula, Ministério Infantil, Tesouraria) e envie links diretos de convite para a Matriz ou filiais.
             </p>
           </div>
 
@@ -374,7 +374,7 @@ export function ChurchMembersManager({
           </div>
 
           <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 space-y-1">
-            <span className="text-[11px] text-amber-400 font-medium block">Pastores & Líderes</span>
+            <span className="text-[11px] text-amber-400 font-medium block">Prs. & Líderes</span>
             <span className="text-2xl font-black text-amber-400">{leaderCount}</span>
           </div>
 
@@ -485,10 +485,10 @@ export function ChurchMembersManager({
                         )} bg-transparent focus:outline-none`}
                       >
                         <option value="ADMIN" className="bg-zinc-900 text-zinc-100">
-                          Administrador / Pastor Local
+                          Administrador / Pr. Local
                         </option>
                         <option value="PASTOR" className="bg-zinc-900 text-zinc-100">
-                          Pastor Auxiliar
+                          Pr. Auxiliar
                         </option>
                         <option value="LEADER" className="bg-zinc-900 text-zinc-100">
                           Líder de Célula / Grupo
@@ -613,10 +613,10 @@ export function ChurchMembersManager({
                 className="w-full bg-muted/70 border border-border text-foreground rounded-xl h-11 px-3 text-xs font-medium focus:outline-none focus:border-primary"
               >
                 <option value="ADMIN" className="bg-card text-foreground">
-                  Administrador / Pastor Local (Gestão completa)
+                  Administrador / Pr. Local (Gestão completa)
                 </option>
                 <option value="PASTOR" className="bg-card text-foreground">
-                  Pastor Auxiliar
+                  Pr. Auxiliar
                 </option>
                 <option value="LEADER" className="bg-card text-foreground">
                   Líder de Célula / Grupo

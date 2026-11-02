@@ -66,7 +66,7 @@ export function OfficialDocumentViewer({ document: doc, church }: OfficialDocume
               Tendo confessado publicamente a sua fé no Senhor Jesus Cristo, desceu às águas batismais
               em obediência à Palavra de Deus, no dia{" "}
               <strong>{parsedDetails.baptismDate || issuedDate}</strong>, sendo ministrado pelo{" "}
-              <strong>{parsedDetails.officiantPastor || church.pastorName || "Pastor da Igreja"}</strong>.
+              <strong>{(parsedDetails.officiantPastor || church.pastorName || "Pr. da Igreja").replace(/Pastor/g, "Pr.")}</strong>.
             </p>
             <p className="text-sm italic text-zinc-500 max-w-md mx-auto pt-4">
               &ldquo;Portanto ide, fazei discípulos de todas as nações, batizando-os em nome do Pai, e do Filho, e do Espírito Santo.&rdquo; — Mateus 28:19
@@ -218,9 +218,9 @@ export function OfficialDocumentViewer({ document: doc, church }: OfficialDocume
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-4 max-w-lg mx-auto">
               <div className="border-t border-zinc-400 pt-2 text-center">
                 <p className="font-bold text-sm text-zinc-900 leading-tight">
-                  {church.pastorName || "Pastor Presidente"}
+                  {(church.pastorName || "Pr. Presidente").replace(/Pastor/g, "Pr.")}
                 </p>
-                <p className="text-[11px] text-zinc-500 uppercase tracking-wider">Pastor da Igreja</p>
+                <p className="text-[11px] text-zinc-500 uppercase tracking-wider">Pr. da Igreja</p>
               </div>
 
               <div className="border-t border-zinc-400 pt-2 text-center">

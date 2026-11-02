@@ -551,7 +551,7 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
                                   {progress.user.name}
                                 </h5>
                                 <p className="text-xs text-zinc-400">
-                                  Mentor: <strong className="text-zinc-300">{progress.mentorName || "Pastor/Líder"}</strong>
+                                  Mentor: <strong className="text-zinc-300">{(progress.mentorName || "Pr./Líder").replace(/Pastor/g, "Pr.")}</strong>
                                 </p>
                               </div>
                             </div>
@@ -900,7 +900,7 @@ export function SundaySchoolManager({ slug, initialData }: SundaySchoolManagerPr
               <Label className="text-xs font-bold text-foreground">Líder / Mentor Responsável</Label>
               <Input
                 type="text"
-                placeholder="Ex: Pastor Paulo, Líder Mateus"
+                placeholder="Ex: Pr. Paulo, Líder Mateus"
                 value={mentorName}
                 onChange={(e) => setMentorName(e.target.value)}
                 className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-purple-500 text-xs rounded-xl h-11 font-medium"

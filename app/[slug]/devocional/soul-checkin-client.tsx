@@ -110,11 +110,14 @@ function getGreetingPhrase(): string {
 // Formatação acolhedora do nome do usuário
 function formatGreetingName(fullName?: string | null): string {
   if (!fullName || !fullName.trim()) return "abençoado(a)";
-  const clean = fullName.trim();
+  const clean = fullName
+    .trim()
+    .replace(/\bPastor\b/gi, "Pr.")
+    .replace(/\bde Matos\b|\bDe Matos\b|\bDematos\b|\bde Mattos\b/gi, "Demattos");
   const parts = clean.split(/\s+/);
 
   const firstLower = parts[0].toLowerCase();
-  // Se contiver título pastoral ou ministerial (ex: "Pastor Luan de Mattos")
+  // Se contiver título pastoral ou ministerial (ex: "Pr. Luan Demattos")
   if (
     firstLower.startsWith("pastor") ||
     firstLower.startsWith("pra") ||

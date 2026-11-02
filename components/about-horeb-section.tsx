@@ -51,7 +51,7 @@ export function AboutHorebSection() {
       description:
         "Esgotado física e emocionalmente, o profeta Elias caminhou 40 dias até o Horebe. Ali, não no terremoto ou no fogo destruidor, mas em uma brisa suave, Deus curou sua alma e restaurou suas forças com ternura e direção.",
       application:
-        "Pastores e líderes carregam pesos imensos. A tecnologia Horeb organiza a rotina da igreja para que o pastor tenha descanso mental, paz no ministério e tempo para ouvir a voz suave do Espírito Santo.",
+        "Prs. e líderes carregam pesos imensos. A tecnologia Horeb organiza a rotina da igreja para que o Pr. tenha descanso mental, paz no ministério e tempo para ouvir a voz suave do Espírito Santo.",
     },
   ];
 

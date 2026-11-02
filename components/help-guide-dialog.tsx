@@ -63,9 +63,9 @@ const GUIDE_STEPS: GuideStep[] = [
     shortTitle: "1. Cadastro da Igreja Sede",
     icon: Church,
     color: "text-amber-400 bg-amber-500/10 border-amber-500/25",
-    summary: "Cadastre o Pastor Presidente, e-mail oficial e a identidade visual da igreja.",
+    summary: "Cadastre o Pr. Presidente, e-mail oficial e a identidade visual da igreja.",
     details:
-      "Na página inicial, clique em 'Cadastrar Minha Igreja'. Informe o nome do Pastor Presidente, e-mail oficial de login, senha segura, o nome da congregação e selecione a cor primária da sua marca (White-Label). O Horeb já inicia no plano com 30 dias de degustação gratuita.",
+      "Na página inicial, clique em 'Cadastrar Minha Igreja'. Informe o nome do Pr. Presidente, e-mail oficial de login, senha segura, o nome da congregação e selecione a cor primária da sua marca (White-Label). O Horeb já inicia no plano com 30 dias de degustação gratuita.",
     goldenTip:
       "💡 Dica de Ouro: Você pode preencher os campos do formulário na tela agora mesmo enquanto mantém este guia visível!",
     actionText: "Abrir Formulário de Cadastro",
@@ -80,7 +80,7 @@ const GUIDE_STEPS: GuideStep[] = [
     color: "text-blue-400 bg-blue-500/10 border-blue-500/25",
     summary: "Validação instantânea por e-mail com servidor seguro Hostinger SMTP.",
     details:
-      "Por segurança contra acessos indevidos, nosso servidor Hostinger dispara um código numérico de 6 dígitos para o e-mail do pastor master. Digite o código no modal para ativar sua conta instantaneamente sem fricção.",
+      "Por segurança contra acessos indevidos, nosso servidor Hostinger dispara um código numérico de 6 dígitos para o e-mail do Pr. Master. Digite o código no modal para ativar sua conta instantaneamente sem fricção.",
     goldenTip:
       "💡 Dica: O código chega em menos de 10 segundos. Se demorar, confira a pasta de Spam ou Lixeira.",
     actionText: "Já Tenho Conta • Fazer Login",
@@ -125,7 +125,7 @@ const GUIDE_STEPS: GuideStep[] = [
     color: "text-purple-400 bg-purple-500/10 border-purple-500/25",
     summary: "Distribua permissões para louvor, diaconia, células e ministério kids.",
     details:
-      "No menu 'Membros & Convites', cadastre os pastores auxiliares, líderes de louvor, diaconia e células, ou gere um link de convite direto para que eles completem o cadastro com seus próprios acessos protegidos.",
+      "No menu 'Membros & Convites', cadastre os Prs. auxiliares, líderes de louvor, diaconia e células, ou gere um link de convite direto para que eles completem o cadastro com seus próprios acessos protegidos.",
     goldenTip:
       "💡 Dica: Cada líder só enxerga os dados do seu departamento, garantindo privacidade e organização.",
     actionText: "Avançar para o Passo 6",
@@ -885,7 +885,7 @@ export function HelpGuideDialog({ triggerButton, hideWhenOpen = false }: HelpGui
                               Regra Rigorosa de Isolamento & Segurança:
                             </h4>
                             <p className="text-xs text-zinc-300 leading-relaxed">
-                              Por política rigorosa de isolamento multi-tenant, <strong>usuários não logados não acessam nenhuma página interna</strong>. Usuários logados <strong>só têm acesso às congregações às quais pertencem</strong> ou para as quais o Pastor Master concedeu autorização formal no painel de membros.
+                              Por política rigorosa de isolamento multi-tenant, <strong>usuários não logados não acessam nenhuma página interna</strong>. Usuários logados <strong>só têm acesso às congregações às quais pertencem</strong> ou para as quais o Pr. Master concedeu autorização formal no painel de membros.
                             </p>
                           </div>
                         </div>
@@ -903,14 +903,14 @@ export function HelpGuideDialog({ triggerButton, hideWhenOpen = false }: HelpGui
                               badge: "Acesso Total",
                             },
                             {
-                              role: "Pastor Presidente / Master da Igreja",
+                              role: "Pr. Presidente / Master da Igreja",
                               user: "O titular que realizou o cadastro inicial da congregação",
                               desc: "Administra todos os dados da Matriz e de suas filiais. Define a cor da marca, chave PIX, cadastra e remove usuários, cria ministérios ilimitados e altera níveis de acesso para qualquer pessoa da igreja.",
                               color: "text-purple-400 border-purple-500/30 bg-purple-500/10",
                               badge: "Gestor Master",
                             },
                             {
-                              role: "Pastores Auxiliares & Líderes de Ministérios",
+                              role: "Prs. Auxiliares & Líderes de Ministérios",
                               user: "Líderes de Louvor, Diaconia, Família, Jovens, Missões",
                               desc: "Acessam os painéis de seus ministérios, organizam escalas de serviço nos cultos, gerenciam voluntários e comunicados oficiais aos membros do grupo.",
                               color: "text-blue-400 border-blue-500/30 bg-blue-500/10",
@@ -1035,7 +1035,7 @@ export function HelpGuideDialog({ triggerButton, hideWhenOpen = false }: HelpGui
                                 <div className="pt-2 border-t border-white/5 space-y-1.5 text-[11px] text-zinc-300">
                                   <p className="font-bold text-purple-400">Tudo do Gestão, mais:</p>
                                   <p>👑 Múltiplas congregações (Matriz e Filiais)</p>
-                                  <p>👑 Gestão avançada de pastores e rede</p>
+                                  <p>👑 Gestão avançada de Prs. e rede</p>
                                   <p>👑 EBD (Escola Bíblica) e cursos</p>
                                   <p>👑 Check-in Kids seguro com etiquetas</p>
                                   <p>👑 Relatórios analíticos e auditoria</p>

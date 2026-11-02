@@ -68,7 +68,7 @@ async function ensureInitialEbooksSeeded() {
           title: "Libertação Espiritual — Restaurando a Ordem e o Equilíbrio",
           subtitle:
             "A verdadeira vitória não está nos gritos, mas no alinhamento do espírito, alma e corpo com a soberania de Cristo",
-          author: "Pastor Luan de Matos",
+          author: "Pr. Luan Demattos",
           description:
             "Um guia profundo e prático para vencer a guerra na mente e guardar o coração. Compreenda a verdadeira natureza da prisão espiritual, o engano na mente e a compressão da alma, o alinhamento em Cristo, os 5 passos práticos para a verdadeira liberdade e como permanecer livre através do domínio próprio.",
           price: 9.9,
@@ -86,7 +86,7 @@ async function ensureInitialEbooksSeeded() {
           matchTitle: "Os Seis Instintos da Alma",
           title: "Os Seis Instintos da Alma",
           subtitle: "O que é pecado e o que não é: estudo bíblico sobre santidade e equilíbrio",
-          author: "Pastor Luan de Matos",
+          author: "Pr. Luan Demattos",
           description:
             "Estudo bíblico profundo sobre corpo, alma e espírito e os seis instintos naturais criados por Deus (Aquisição, Alimentação, Reprodução, Autoproteção, Domínio Próprio e Comunhão). Descubra onde termina o que é natural e onde começa o pecado e aprenda a quebrar os ciclos de desequilíbrio.",
           price: 9.9,
@@ -104,7 +104,7 @@ async function ensureInitialEbooksSeeded() {
           matchTitle: "Batalha Invisível",
           title: "Batalha Invisível — Batalha Espiritual",
           subtitle: "A verdade que o inimigo não quer que você saiba sobre autoridade em Cristo",
-          author: "Pastor Luan de Matos",
+          author: "Pr. Luan Demattos",
           description:
             "Conheça à luz das Escrituras as estratégias do inimigo, o papel das regiões celestiais, as ferramentas espirituais do cristão e como permanecer firme e vitorioso debaixo da autoridade de Cristo sem transformar pessoas em inimigas.",
           price: 9.9,
@@ -130,6 +130,7 @@ async function ensureInitialEbooksSeeded() {
           select: {
             id: true,
             title: true,
+            author: true,
             coverUrl: true,
             pdfUrl: true,
             _count: {
@@ -176,15 +177,20 @@ async function ensureInitialEbooksSeeded() {
             },
           });
         } else {
-          // Atualiza apenas se a capa ainda for do Unsplash ou vazia (preserva edições manuais do SuperAdmin!)
+          // Atualiza apenas se a capa ainda for do Unsplash ou vazia, ou se o autor ainda usar grafia antiga
           const needsCoverUpdate =
             !found.coverUrl || found.coverUrl.includes("images.unsplash.com");
           const needsPdfUpdate = !found.pdfUrl || !found.pdfUrl.startsWith("data:");
+          const needsAuthorUpdate =
+            !found.author ||
+            found.author.includes("Pastor") ||
+            found.author.toLowerCase().includes("matos");
 
-          if (needsCoverUpdate || needsPdfUpdate) {
+          if (needsCoverUpdate || needsPdfUpdate || needsAuthorUpdate) {
             await prisma.ebookProduct.update({
               where: { id: found.id },
               data: {
+                author: needsAuthorUpdate ? item.author : found.author,
                 coverUrl: needsCoverUpdate ? item.coverUrl : found.coverUrl,
                 pdfUrl: needsPdfUpdate ? pdfDataUri : found.pdfUrl,
                 pdfFileName: item.fileName,
@@ -395,7 +401,7 @@ export async function saveEbookProduct(data: {
         data: {
           title: data.title.trim(),
           subtitle: data.subtitle?.trim() || null,
-          author: data.author?.trim() || "Edson Manoel",
+          author: data.author?.trim() || "Pr. Luan Demattos",
           description: data.description.trim(),
           price: Number(data.price),
           originalPrice: data.originalPrice ? Number(data.originalPrice) : null,
@@ -444,7 +450,7 @@ export async function saveEbookProduct(data: {
         data: {
           title: data.title.trim(),
           subtitle: data.subtitle?.trim() || null,
-          author: data.author?.trim() || "Edson Manoel",
+          author: data.author?.trim() || "Pr. Luan Demattos",
           description: data.description.trim(),
           price: Number(data.price),
           originalPrice: data.originalPrice ? Number(data.originalPrice) : null,

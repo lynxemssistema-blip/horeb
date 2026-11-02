@@ -342,11 +342,11 @@ export function SecretaryManager({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-foreground">Pastor Oficiante</label>
+                  <label className="text-xs font-bold text-foreground">Pr. Oficiante</label>
                   <Input
                     value={detailsInput.officiantPastor || ""}
                     onChange={(e) => setDetailsInput({ ...detailsInput, officiantPastor: e.target.value })}
-                    placeholder="Pastor Responsável"
+                    placeholder="Pr. Responsável"
                     className="h-10 text-xs rounded-xl bg-background border-border"
                   />
                 </div>

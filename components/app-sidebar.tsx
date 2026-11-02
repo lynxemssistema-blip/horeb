@@ -457,7 +457,7 @@ export function AppSidebar({
 
               <div className="min-w-0">
                 <p className="text-xs font-bold text-foreground truncate" title={currentUser.name}>
-                  {currentUser.name}
+                  {currentUser.name.replace(/\bPastor\b/gi, "Pr.")}
                 </p>
                 <p className="text-[10px] text-muted-foreground truncate" title={currentUser.email}>
                   {currentUser.email}
@@ -467,7 +467,7 @@ export function AppSidebar({
                     {currentUser.role === "ADMIN" || currentUser.role === "SUPERADMIN"
                       ? "Master / Admin"
                       : currentUser.role === "PASTOR"
-                      ? "Pastor"
+                      ? "Pr."
                       : currentUser.role === "LEADER"
                       ? "Líder"
                       : "Membro"}

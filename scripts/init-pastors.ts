@@ -49,15 +49,15 @@ async function main() {
         isPastoralCounselor: true,
         isLiveAvailable: true, // Disponível ao vivo para teste inicial
         pastoralTitle: p.name.includes("Luan")
-          ? "Pastor Titular & Conselheiro"
-          : "Pastor Titular",
+          ? "Pr. Titular & Conselheiro"
+          : "Pr. Titular",
         pastoralBio:
           "Disponível para oração, direcionamento bíblico e acolhimento pastoral sigiloso.",
         pastoralPhone: "(31) 99876-5432",
         pastoralScheduleConfig: defaultSchedule,
       },
     });
-    console.log(`Pastor ${p.name} (${p.email}) configurado com sucesso!`);
+    console.log(`Pr. ${p.name} (${p.email}) configurado com sucesso!`);
   }
 }
 

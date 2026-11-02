@@ -54,10 +54,14 @@ export function AppHeader({
   const [isCabinetOpen, setIsCabinetOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  // Formata o nome para exibição elegante (ex: "Pastor Luan" ao invés de apenas "Pastor")
+  // Formata o nome para exibição elegante (ex: "Pr. Luan" ao invés de apenas "Pr.")
   const getDisplayUserName = (fullName?: string) => {
     if (!fullName) return "Usuário";
-    const parts = fullName.trim().split(/\s+/);
+    const clean = fullName
+      .trim()
+      .replace(/\bPastor\b/gi, "Pr.")
+      .replace(/\bde Matos\b|\bDe Matos\b|\bDematos\b|\bde Mattos\b/gi, "Demattos");
+    const parts = clean.split(/\s+/);
     if (parts.length === 1) return parts[0];
     if (
       parts[0].toLowerCase().startsWith("pastor") ||
@@ -136,7 +140,7 @@ export function AppHeader({
               <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
                 <span>{getDisplayUserName(userName)}</span>
                 <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded-md bg-primary/10 text-primary border border-primary/20">
-                  {userRole === "ADMIN" || userRole === "SUPERADMIN" ? "Master" : userRole === "PASTOR" ? "Pastor" : "Membro"}
+                  {userRole === "ADMIN" || userRole === "SUPERADMIN" ? "Master" : userRole === "PASTOR" ? "Pr." : "Membro"}
                 </span>
               </div>
             </button>

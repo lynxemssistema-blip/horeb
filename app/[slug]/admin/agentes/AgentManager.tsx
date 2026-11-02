@@ -134,7 +134,7 @@ export function AgentManager({
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nome do Agente</label>
                   <Input 
-                    placeholder="Ex: Pastor Conselheiro" 
+                    placeholder="Ex: Pr. Conselheiro" 
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                     disabled={isLoading}

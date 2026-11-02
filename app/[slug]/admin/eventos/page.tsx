@@ -364,7 +364,7 @@ function AdminEventosContent() {
                 </Button>
               )}
               <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                Acesso Master / Pastor
+                Acesso Master / Pr.
               </span>
             </div>
           </CardTitle>

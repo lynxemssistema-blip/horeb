@@ -132,18 +132,18 @@ export function PastoralCounselingDialog({
         type: "LIVE",
         userName: liveUserName || "Membro",
         subject: liveSubject || "Conversa Pastoral Ao Vivo",
-        initialMessage: liveSubject ? `Olá Pastor ${pastor.name}, gostaria de conversar: ${liveSubject}` : undefined,
+        initialMessage: liveSubject ? `Olá Pr. ${pastor.name}, gostaria de conversar: ${liveSubject}` : undefined,
       });
 
       if (res.success && res.appointment) {
         toast.success(`Chamando ${pastor.name}...`, {
-          description: "Conexão aberta! Aguardando o pastor entrar na sala.",
+          description: "Conexão aberta! Aguardando o Pr. entrar na sala.",
         });
         setActiveAppointmentId(res.appointment.id);
         setIsLiveChatOpen(true);
         onClose();
       } else {
-        toast.error(res.error || "Não foi possível iniciar a chamada com o pastor.");
+        toast.error(res.error || "Não foi possível iniciar a chamada com o Pr.");
       }
     } catch {
       toast.error("Erro ao conectar ao atendimento pastoral.");
@@ -156,7 +156,7 @@ export function PastoralCounselingDialog({
   const handleBookSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPastorForSchedule) {
-      toast.warning("Selecione um pastor para o agendamento.");
+      toast.warning("Selecione um Pr. para o agendamento.");
       return;
     }
     if (!scheduleDate || !scheduleTime) {
@@ -226,7 +226,7 @@ export function PastoralCounselingDialog({
               {onlineCount > 0 ? (
                 <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  {onlineCount} {onlineCount === 1 ? "Pastor Ao Vivo" : "Pastores Ao Vivo"}
+                  {onlineCount} {onlineCount === 1 ? "Pr. Ao Vivo" : "Prs. Ao Vivo"}
                 </span>
               ) : (
                 <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-muted text-muted-foreground border border-border">
@@ -282,7 +282,7 @@ export function PastoralCounselingDialog({
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
                   <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                  <p className="text-xs">Consultando disponibilidade dos pastores...</p>
+                  <p className="text-xs">Consultando disponibilidade dos Prs....</p>
                 </div>
               ) : (
                 <>
@@ -298,10 +298,10 @@ export function PastoralCounselingDialog({
                           </div>
                           <div>
                             <h4 className="text-xs font-bold text-foreground">
-                              Pastores disponíveis para atendimento agora
+                              Prs. disponíveis para atendimento agora
                             </h4>
                             <p className="text-[11px] text-muted-foreground leading-relaxed">
-                              Selecione um pastor abaixo para chamar e abrir um diálogo em tempo real com sigilo e acolhimento.
+                              Selecione um Pr. abaixo para chamar e abrir um diálogo em tempo real com sigilo e acolhimento.
                             </p>
                           </div>
                         </div>
@@ -366,10 +366,10 @@ export function PastoralCounselingDialog({
                         </div>
                         <div className="space-y-1">
                           <h4 className="text-sm font-bold text-foreground">
-                            Nenhum pastor está com atendimento ao vivo no momento
+                            Nenhum Pr. está com atendimento ao vivo no momento
                           </h4>
                           <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
-                            Nossos pastores têm dias e horários fixos de atendimento no gabinete pastoral. Você pode agendar um horário na aba de Agenda ou continuar conversando com o Mentor de IA.
+                            Nossos Prs. têm dias e horários fixos de atendimento no gabinete pastoral. Você pode agendar um horário na aba de Agenda ou continuar conversando com o Mentor de IA.
                           </p>
                         </div>
                         <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
@@ -438,7 +438,7 @@ export function PastoralCounselingDialog({
                         {/* Seletor do Pastor */}
                         <div className="space-y-1.5">
                           <label className="text-xs font-semibold text-foreground block">
-                            Selecione o Pastor:
+                            Selecione o Pr.:
                           </label>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {pastors.map((p) => {
@@ -640,7 +640,7 @@ export function PastoralCounselingDialog({
                                   {s.type === "LIVE" ? "Conversa Ao Vivo" : `Agendado para ${s.scheduledDate || "Data a confirmar"}`}
                                 </p>
                                 <span className="inline-block mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                                  {s.status === "WAITING" ? "Aguardando Pastor" : "Em Andamento"}
+                                  {s.status === "WAITING" ? "Aguardando Pr." : "Em Andamento"}
                                 </span>
                               </div>
                             </div>

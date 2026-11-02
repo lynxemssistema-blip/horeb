@@ -654,7 +654,7 @@ export async function sendPrayerResponseEmail({
                     <td style="padding: 0 32px 24px 32px;">
                       <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 18px 20px;">
                         <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #b45309; margin-bottom: 8px;">
-                          Palavra & Oração do Pastor:
+                          Palavra & Oração do Pr.:
                         </div>
                         <p style="margin: 0; font-size: 14px; color: #78350f; line-height: 1.6; white-space: pre-wrap;">
                           ${responseMessage}

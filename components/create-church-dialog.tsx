@@ -404,13 +404,13 @@ export function CreateChurchDialog({
                 <div className="rounded-2xl bg-muted/30 border border-border p-4 space-y-3">
                   <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-500">
                     <User className="w-3.5 h-3.5" />
-                    <span>1. Credenciais do Pastor Presidente</span>
+                    <span>1. Credenciais do Pr. Presidente</span>
                   </div>
 
                   <div className="space-y-2.5">
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-foreground">
-                        Nome do Pastor Presidente / Líder *
+                        Nome do Pr. Presidente / Líder *
                       </label>
                       <Input
                         required
@@ -808,7 +808,7 @@ export function CreateChurchDialog({
                         autoCapitalize="none"
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
-                        placeholder="pastor@igreja.org ou Pastor Luan"
+                        placeholder="pastor@igreja.org ou Pr. Luan Demattos"
                         className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl font-medium"
                       />
                     </div>

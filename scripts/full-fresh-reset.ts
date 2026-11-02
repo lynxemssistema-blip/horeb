@@ -107,7 +107,7 @@ async function fullReset() {
       {
         slug: "ia-sermoes",
         title: "Copiloto IA para Sermões & Esboços",
-        badge: "PASTORES & LÍDERES",
+        badge: "PRS. & LÍDERES",
         category: "Teologia & Ensino",
         icon: "sparkles",
         description: "Inteligência Artificial bíblica para estruturação de esboços temáticos, referências cruzadas em hebraico/grego e ilustrações para mensagens.",
@@ -115,7 +115,7 @@ async function fullReset() {
         annualPrice: 299.0,
         trialDays: 30,
         active: true,
-        actionType: "ROUTE",
+        actionType: "MODAL_SERMON_AI",
         routeUrl: "/copiloto",
         features: JSON.stringify([
           "Geração de esboços homiléticos em 3 pontos",
@@ -135,7 +135,7 @@ async function fullReset() {
         annualPrice: 249.0,
         trialDays: 30,
         active: true,
-        actionType: "COMING_SOON",
+        actionType: "MODAL_BANNER_DESIGNER",
         features: JSON.stringify([
           "Mais de 100 templates de cultos semanais",
           "Ajuste automático de fotos dos preletores",
@@ -154,12 +154,12 @@ async function fullReset() {
         annualPrice: 199.0,
         trialDays: 30,
         active: true,
-        actionType: "COMING_SOON",
+        actionType: "MODAL_CERTIFICATES",
         features: JSON.stringify([
           "Carteirinha digital no celular (Apple Wallet / PWA)",
           "QR Code de validação de membros em convenções",
           "Certificados de Batismo e Apresentação de Crianças",
-          "Assinatura digital do Pastor Presidente"
+          "Assinatura digital do Pr. Presidente"
         ]),
       }
     ];

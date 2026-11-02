@@ -35,6 +35,8 @@ import {
   Trash2,
   Edit3,
   X,
+  Play,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +51,13 @@ import {
   revokePersonalToolsAccess,
   PersonalToolsConfigData,
 } from "@/app/actions/personal-tools";
+import { InstagramCameraStudio } from "@/components/instagram-camera-studio";
+import {
+  SermonAiCopilotModal,
+  BannerDesignerStudioModal,
+  CertificatesAndCardsStudioModal,
+} from "@/components/personal-tools-studios";
+import { PersonalToolsCheckoutDialog } from "@/components/personal-tools-checkout-dialog";
 
 const ICON_OPTIONS = [
   { id: "Camera", label: "Câmera / Foto", icon: Camera },
@@ -97,7 +106,15 @@ export function SuperAdminPersonalToolsManager() {
   const [toolAnnualPrice, setToolAnnualPrice] = useState("199.00");
   const [toolTrialDays, setToolTrialDays] = useState("30");
   const [toolActive, setToolActive] = useState(true);
-  const [toolActionType, setToolActionType] = useState<"MODAL_INSTAGRAM" | "COMING_SOON" | "ROUTE" | "EXTERNAL">("COMING_SOON");
+  const [toolActionType, setToolActionType] = useState<
+    | "MODAL_INSTAGRAM"
+    | "MODAL_SERMON_AI"
+    | "MODAL_BANNER_DESIGNER"
+    | "MODAL_CERTIFICATES"
+    | "COMING_SOON"
+    | "ROUTE"
+    | "EXTERNAL"
+  >("MODAL_INSTAGRAM");
   const [toolFeaturesText, setToolFeaturesText] = useState("");
   const [isSavingTool, setIsSavingTool] = useState(false);
 
@@ -495,12 +512,109 @@ export function SuperAdminPersonalToolsManager() {
                   </div>
 
                   {/* Ações da Ferramenta */}
-                  <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
-                    <span className="text-[10px] font-mono text-zinc-500">
-                      Ação: {t.actionType === "MODAL_INSTAGRAM" ? "Câmera Celular" : "Em Breve"}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/10 text-xs">
+                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
+                      Ação:{" "}
+                      {t.actionType === "MODAL_INSTAGRAM" || t.slug === "instagram-studio"
+                        ? "Estúdio Câmera HD"
+                        : t.actionType === "MODAL_SERMON_AI" || t.slug.includes("sermoes")
+                        ? "Copiloto IA de Sermões"
+                        : t.actionType === "MODAL_BANNER_DESIGNER" || t.slug.includes("banner")
+                        ? "Designer de Banners HD"
+                        : t.actionType === "MODAL_CERTIFICATES" || t.slug.includes("certificado")
+                        ? "Certificados & Carteirinha 3D"
+                        : "Módulo Interativo"}
                     </span>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {/* Botão 1: Testar Ferramenta Interativa Agora */}
+                      {(t.actionType === "MODAL_INSTAGRAM" || t.slug === "instagram-studio") && (
+                        <InstagramCameraStudio
+                          churchName="Igreja Sede Horeb"
+                          userName="Pr. Luan Demattos"
+                          triggerButton={
+                            <Button
+                              size="sm"
+                              className="h-8 px-3 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:brightness-110 text-white text-xs font-black gap-1.5 cursor-pointer shadow-md"
+                            >
+                              <Play className="w-3.5 h-3.5 fill-current" />
+                              <span>Testar Ferramenta</span>
+                            </Button>
+                          }
+                        />
+                      )}
+
+                      {(t.actionType === "MODAL_SERMON_AI" || t.slug.includes("sermoes")) && (
+                        <SermonAiCopilotModal
+                          churchName="Igreja Sede Horeb"
+                          preacherDefaultName="Pr. Luan Demattos"
+                          triggerButton={
+                            <Button
+                              size="sm"
+                              className="h-8 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-black text-xs font-black gap-1.5 cursor-pointer shadow-md"
+                            >
+                              <Play className="w-3.5 h-3.5 fill-current" />
+                              <span>Testar Ferramenta</span>
+                            </Button>
+                          }
+                        />
+                      )}
+
+                      {(t.actionType === "MODAL_BANNER_DESIGNER" || t.slug.includes("banner")) && (
+                        <BannerDesignerStudioModal
+                          churchName="Igreja Sede Horeb"
+                          preacherDefaultName="Pr. Luan Demattos"
+                          triggerButton={
+                            <Button
+                              size="sm"
+                              className="h-8 px-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:brightness-110 text-white text-xs font-black gap-1.5 cursor-pointer shadow-md"
+                            >
+                              <Play className="w-3.5 h-3.5 fill-current" />
+                              <span>Testar Ferramenta</span>
+                            </Button>
+                          }
+                        />
+                      )}
+
+                      {(t.actionType === "MODAL_CERTIFICATES" || t.slug.includes("certificado")) && (
+                        <CertificatesAndCardsStudioModal
+                          churchName="Igreja Sede Horeb"
+                          pastorDefaultName="Pr. Luan Demattos"
+                          userName="Pr. Luan Demattos"
+                          triggerButton={
+                            <Button
+                              size="sm"
+                              className="h-8 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-black text-xs font-black gap-1.5 cursor-pointer shadow-md"
+                            >
+                              <Play className="w-3.5 h-3.5 fill-current" />
+                              <span>Testar Ferramenta</span>
+                            </Button>
+                          }
+                        />
+                      )}
+
+                      {/* Botão 2: Testar Checkout Asaas (PIX / Cartão) desta Ferramenta */}
+                      <PersonalToolsCheckoutDialog
+                        config={t}
+                        user={{
+                          id: "superadmin",
+                          name: "Pr. Luan Demattos",
+                          email: "contato@horeb.lynxems.com.br",
+                        }}
+                        churchSlug="sede"
+                        triggerButton={
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 px-2.5 rounded-xl border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 text-xs font-bold gap-1 cursor-pointer"
+                            title="Testar cobrança Asaas (PIX / Cartão) desta ferramenta"
+                          >
+                            <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Testar Asaas</span>
+                          </Button>
+                        }
+                      />
+
                       <Button
                         size="sm"
                         variant="outline"
@@ -834,9 +948,12 @@ export function SuperAdminPersonalToolsManager() {
                     className="w-full bg-zinc-950 border border-white/15 text-white h-10 px-2 rounded-xl text-xs focus:outline-hidden"
                   >
                     <option value="MODAL_INSTAGRAM">Abrir Câmera do Instagram Studio</option>
-                    <option value="COMING_SOON">Em Breve / Lançamento VIP</option>
+                    <option value="MODAL_SERMON_AI">Abrir Copiloto IA para Sermões & Esboços</option>
+                    <option value="MODAL_BANNER_DESIGNER">Abrir Designer de Banners & Cultos</option>
+                    <option value="MODAL_CERTIFICATES">Abrir Certificados & Carteirinhas Digitais</option>
                     <option value="ROUTE">Link Interno do App</option>
                     <option value="EXTERNAL">Link Externo</option>
+                    <option value="COMING_SOON">Em Breve / Lançamento VIP</option>
                   </select>
                 </div>
 

@@ -113,6 +113,7 @@ export function PersonalToolsCheckoutDialog({
         cycle,
         billingType,
         churchSlug,
+        toolSlug: config.slug,
       });
 
       if (res.success) {

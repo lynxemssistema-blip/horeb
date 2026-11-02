@@ -341,7 +341,7 @@ export function SaasBillingManager({ initialTenants = [] }: SaasBillingManagerPr
           <div className="relative w-full sm:w-64">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar por igreja ou pastor..."
+              placeholder="Buscar por igreja ou Pr...."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-8 h-8 text-xs bg-card"
@@ -651,7 +651,7 @@ export function SaasBillingManager({ initialTenants = [] }: SaasBillingManagerPr
                                   {t.name}
                                 </span>
                                 <span className="font-mono text-[11px] text-muted-foreground">
-                                  /{t.slug} • {t.pastorName || "Pastor"}
+                                  /{t.slug} • {(t.pastorName || "Pr.").replace(/Pastor/g, "Pr.")}
                                 </span>
                               </div>
                             </div>

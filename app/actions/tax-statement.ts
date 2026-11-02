@@ -154,7 +154,7 @@ export async function getMemberAnnualTaxStatement(
         cnpj: tenant.pixKey || "00.000.000/0001-00",
         address: tenant.address || "Sede da Igreja",
         cityState: [tenant.city, tenant.state].filter(Boolean).join(" - ") || "Brasil",
-        pastorName: tenant.pastorName || "Pastor Presidente",
+        pastorName: tenant.pastorName || "Pr. Presidente",
         logoUrl: tenant.logoUrl,
       },
       member: {

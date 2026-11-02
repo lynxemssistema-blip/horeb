@@ -312,7 +312,7 @@ export function OrchestratorChat({
                 id: m.id,
                 role: m.role,
                 content: m.content,
-                agentName: m.agentName || res.agentName || "Pastor Conselheiro",
+                agentName: (m.agentName || res.agentName || "Pr. Conselheiro").replace(/Pastor/g, "Pr."),
                 timestamp: new Date(m.timestamp),
                 isVoice: m.content.startsWith("🎤") || m.content.includes("🎤"),
               }))
@@ -427,7 +427,7 @@ export function OrchestratorChat({
           id: assistantMsgId,
           role: "assistant",
           content: res.textResponse,
-          agentName: res.agentName || "Pastor Conselheiro",
+          agentName: (res.agentName || "Pr. Conselheiro").replace(/Pastor/g, "Pr."),
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, assistantMsg]);
@@ -515,7 +515,7 @@ export function OrchestratorChat({
               id: assistantMsgId,
               role: "assistant",
               content: res.textResponse!,
-              agentName: res.agentName || "Pastor Conselheiro",
+              agentName: (res.agentName || "Pr. Conselheiro").replace(/Pastor/g, "Pr."),
               timestamp: new Date(),
             },
           ]);
@@ -582,11 +582,11 @@ export function OrchestratorChat({
                 ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 ring-1 ring-emerald-500/30"
                 : "border-border text-foreground hover:bg-muted"
             }`}
-            title="Conversar diretamente com um pastor da congregação"
+            title="Conversar diretamente com um Pr. da congregação"
           >
             <PhoneCall className={`w-3.5 h-3.5 ${onlinePastorsCount > 0 ? "text-emerald-500 animate-pulse" : "text-primary"}`} />
-            <span className="hidden xs:inline">Falar com Pastor</span>
-            <span className="xs:hidden">Pastor</span>
+            <span className="hidden xs:inline">Falar com Pr.</span>
+            <span className="xs:hidden">Pr.</span>
             {onlinePastorsCount > 0 && (
               <span className="flex h-2 w-2 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -808,7 +808,7 @@ export function OrchestratorChat({
       <div className="px-4 py-2 bg-muted/20 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <HeartHandshake className="w-3.5 h-3.5 text-primary" />
-          <span>Deseja conversar diretamente com um pastor da igreja?</span>
+          <span>Deseja conversar diretamente com um Pr. da igreja?</span>
         </span>
         <button
           type="button"
@@ -818,7 +818,7 @@ export function OrchestratorChat({
           }}
           className="text-primary hover:underline font-bold flex items-center gap-1 cursor-pointer"
         >
-          <span>{onlinePastorsCount > 0 ? "Chamar Pastor Online" : "Ver Agenda de Atendimento"}</span>
+          <span>{onlinePastorsCount > 0 ? "Chamar Pr. Online" : "Ver Agenda de Atendimento"}</span>
           <span className="text-[10px]">→</span>
         </button>
       </div>

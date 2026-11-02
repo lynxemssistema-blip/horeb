@@ -99,7 +99,7 @@ interface UserProfilePanelProps {
 
 // Avatares predefinidos com temas elegantes e cristãos
 const PRESET_AVATARS = [
-  { id: "pr1", name: "Pastor", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=face" },
+  { id: "pr1", name: "Pr.", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=face" },
   { id: "pr2", name: "Líder", url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face" },
   { id: "pr3", name: "Serva", url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face" },
   { id: "pr4", name: "Jovem", url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face" },
@@ -303,7 +303,7 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
                   : user.role === "ADMIN"
                   ? "ADMINISTRADOR MASTER"
                   : user.role === "PASTOR"
-                  ? "PASTOR"
+                  ? "PR."
                   : user.role === "LEADER"
                   ? "LÍDER"
                   : "MEMBRO"}
@@ -524,7 +524,7 @@ export function UserProfilePanel({ slug, initialUser }: UserProfilePanelProps) {
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Ex: Pastor Titular, Líder de Jovens, Diácono, Membro"
+                      placeholder="Ex: Pr. Titular, Líder de Jovens, Diácono, Membro"
                       className="bg-background border-border rounded-xl text-xs text-foreground focus:border-primary"
                     />
                   </div>

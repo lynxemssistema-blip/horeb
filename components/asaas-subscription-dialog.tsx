@@ -554,7 +554,7 @@ export function AsaasSubscriptionDialog({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-foreground">
-                    CNPJ da Igreja ou CPF do Pastor *
+                    CNPJ da Igreja ou CPF do Pr. *
                   </label>
                   <Input
                     required
@@ -686,7 +686,7 @@ export function AsaasSubscriptionDialog({
                     <option value="CREDIT_CARD">Cartão de Crédito</option>
                   </select>
                   <span className="text-[10px] text-muted-foreground">
-                    O pastor poderá escolher a forma desejada na fatura do Asaas.
+                    O Pr. poderá escolher a forma desejada na fatura do Asaas.
                   </span>
                 </div>
               </div>

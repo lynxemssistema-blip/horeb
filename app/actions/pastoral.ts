@@ -126,7 +126,7 @@ export async function getChurchPastors(slug: string) {
         avatarUrl: u.avatarUrl,
         role: u.role,
         isLiveAvailable: !!u.isLiveAvailable,
-        pastoralTitle: u.pastoralTitle || (u.role === "PASTOR" ? "Pastor Titular" : "Liderança Pastoral"),
+        pastoralTitle: (u.pastoralTitle || (u.role === "PASTOR" ? "Pr. Titular" : "Liderança Pastoral")).replace(/Pastor/g, "Pr."),
         pastoralBio: u.pastoralBio || "Disponível para acolhimento espiritual, aconselhamento e oração.",
         pastoralPhone: u.pastoralPhone,
         pastoralScheduleConfig: scheduleConfig,
@@ -164,14 +164,14 @@ export async function togglePastorLiveAvailability(slug: string, isAvailable: bo
     });
 
     if (!user) {
-      return { success: false, error: "Pastor não encontrado." };
+      return { success: false, error: "Pr. não encontrado." };
     }
 
     // Apenas o próprio pastor, administradores ou superadmin podem alterar
     const isOwner = session.userId === pastorIdToUpdate;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPERADMIN";
     if (!isOwner && !isAdmin) {
-      return { success: false, error: "Permissão negada para alterar o status do pastor." };
+      return { success: false, error: "Permissão negada para alterar o status do Pr." };
     }
 
     const updated = await prisma.user.update({
@@ -275,7 +275,7 @@ export async function createPastoralAppointment(params: {
       select: { id: true, name: true, isLiveAvailable: true, pastoralTitle: true },
     });
 
-    if (!pastor) return { success: false, error: "Pastor selecionado não encontrado." };
+    if (!pastor) return { success: false, error: "Pr. selecionado não encontrado." };
 
     const session = await getSession();
 

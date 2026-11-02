@@ -81,7 +81,7 @@ export async function submitPrayerRequest(params: SubmitPrayerParams) {
 
     return {
       success: true,
-      message: "Seu pedido de oração foi enviado com sucesso! Nossos pastores e intercessores estarão orando por você.",
+      message: "Seu pedido de oração foi enviado com sucesso! Nossos Prs. e intercessores estarão orando por você.",
     };
   } catch (error) {
     console.error("Erro ao registrar pedido de oração:", error);
@@ -139,7 +139,7 @@ export async function getChurchPrayerRequests(slug: string) {
       requests,
       counts,
       currentUserRole: session?.role || "MEMBER",
-      currentUserName: session?.name || "Pastor",
+      currentUserName: session?.name || "Pr.",
     };
   } catch (error: any) {
     console.error("Erro ao buscar pedidos de oração:", error);
@@ -168,7 +168,7 @@ export async function respondToPrayerRequest(params: {
       access.effectiveRole === "SUPERADMIN";
 
     if (!isLeadership) {
-      return { success: false, error: "Apenas pastores e administradores podem enviar respostas pastorais." };
+      return { success: false, error: "Apenas Prs. e administradores podem enviar respostas pastorais." };
     }
 
     if (!params.responseMessage || params.responseMessage.trim().length < 5) {
@@ -184,7 +184,7 @@ export async function respondToPrayerRequest(params: {
       return { success: false, error: "Pedido de oração não encontrado nesta congregação." };
     }
 
-    const pastorName = session?.name || "Pastor da Igreja";
+    const pastorName = session?.name || "Pr. da Igreja";
     const cleanResponse = params.responseMessage.trim();
 
     // 1. Atualizar o pedido no banco

@@ -40,10 +40,10 @@ async function getOrSeedAgents(tenantId?: string | null) {
     // Seed automático de especialistas essenciais
     const defaultAgents = [
       {
-        name: "Pastor Conselheiro",
+        name: "Pr. Conselheiro",
         type: "EXPERT",
         systemPrompt:
-          "Você é um amoroso e sábio pastor conselheiro cristão. Fale de forma acolhedora, bíblica, empática e esperançosa. Ouça com o coração, dê palavras de encorajamento, consolo, sabedoria e faça uma breve oração pelo usuário no final.",
+          "Você é um amoroso e sábio Pr. conselheiro cristão. Fale de forma acolhedora, bíblica, empática e esperançosa. Ouça com o coração, dê palavras de encorajamento, consolo, sabedoria e faça uma breve oração pelo usuário no final.",
         model: "gemini-3.6-flash",
         temperature: 0.7,
         isActive: true,
@@ -148,14 +148,14 @@ export async function getUserConversation(tenantSlug: string) {
       id: m.id,
       role: m.role.toLowerCase() === "user" ? ("user" as const) : ("assistant" as const),
       content: m.content,
-      agentName: conversation?.agentProfile?.name || "Pastor Conselheiro",
+      agentName: (conversation?.agentProfile?.name || "Pr. Conselheiro").replace(/Pastor/g, "Pr."),
       timestamp: m.createdAt,
     }));
 
     return {
       success: true,
       conversationId: conversation.id,
-      agentName: conversation.agentProfile?.name || "Pastor Conselheiro",
+      agentName: (conversation.agentProfile?.name || "Pr. Conselheiro").replace(/Pastor/g, "Pr."),
       messages: formattedMessages,
       hasHistory: formattedMessages.length > 0,
       userName,

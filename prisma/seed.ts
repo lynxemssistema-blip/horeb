@@ -65,7 +65,7 @@ async function main() {
       features: JSON.stringify([
         "TUDO do Plano Gestão, mais:",
         "Múltiplas congregações (Matriz e Filiais integradas)",
-        "Gestão avançada de pastores e liderança geral",
+        "Gestão avançada de Prs. e liderança geral",
         "EBD (Escola Bíblica Dominical) e cursos",
         "Check-in Kids com etiquetas e código de segurança",
         "Relatórios analíticos e auditoria avançada",

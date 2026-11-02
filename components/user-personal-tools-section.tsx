@@ -23,6 +23,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InstagramCameraStudio } from "@/components/instagram-camera-studio";
+import {
+  SermonAiCopilotModal,
+  BannerDesignerStudioModal,
+  CertificatesAndCardsStudioModal,
+} from "@/components/personal-tools-studios";
 import { PersonalToolsCheckoutDialog } from "@/components/personal-tools-checkout-dialog";
 import { PersonalToolsConfigData } from "@/app/actions/personal-tools";
 
@@ -465,40 +470,73 @@ export function UserPersonalToolsSection({
             </div>
 
             <div className="space-y-2 pt-2 border-t border-border/50 text-xs">
-              <div className="p-2.5 rounded-xl bg-muted/50 border border-border/60 flex items-center justify-between">
-                <span className="font-semibold text-foreground">📸 {config.title || "Instagram Studio Pro"}</span>
-                <span className={`text-[10px] font-bold ${hasSubscribed ? "text-emerald-400" : "text-amber-400"}`}>
-                  {hasSubscribed ? "Liberado" : "Disponível"}
-                </span>
+              <div className="p-2.5 rounded-xl bg-muted/50 border border-border/60 flex items-center justify-between gap-2">
+                <span className="font-semibold text-foreground truncate">📸 {config.title || "Instagram Studio Pro"}</span>
+                <InstagramCameraStudio
+                  churchName={churchName}
+                  churchLogo={churchLogo}
+                  userName={user?.name || undefined}
+                  triggerButton={
+                    <button
+                      type="button"
+                      className="text-[11px] font-black text-pink-400 hover:text-pink-300 cursor-pointer shrink-0"
+                    >
+                      Abrir ➔
+                    </button>
+                  }
+                />
               </div>
-              {tools && tools.filter(t => t.id !== config.id && t.slug !== config.slug).map((tool) => (
-                <div key={tool.id} className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="font-medium text-foreground truncate">{tool.title}</span>
-                  </div>
-                  <span className={`text-[10px] font-bold shrink-0 ${hasSubscribed ? "text-emerald-400" : "text-amber-400"}`}>
-                    {hasSubscribed ? "Incluso" : `R$ ${tool.monthlyPrice.toFixed(2).replace(".", ",")}/mês`}
-                  </span>
-                </div>
-              ))}
-              {(!tools || tools.length <= 1) && (
-                <>
-                  <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center justify-between text-muted-foreground">
-                    <span className="flex items-center gap-1.5">
-                      <Sparkles className="w-3 h-3 text-amber-400" />
-                      <span>Gerador de Esboços & Sermões IA</span>
-                    </span>
-                    <span className="text-[10px] font-semibold text-emerald-400">Ativo</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center justify-between text-muted-foreground">
-                    <span className="flex items-center gap-1.5">
-                      <Palette className="w-3 h-3 text-pink-400" />
-                      <span>Designer de Banners & Cultos</span>
-                    </span>
-                    <span className="text-[10px] font-semibold text-emerald-400">Ativo</span>
-                  </div>
-                </>
-              )}
+
+              <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center justify-between gap-2">
+                <span className="font-medium text-foreground truncate">✨ Copiloto IA para Sermões & Esboços</span>
+                <SermonAiCopilotModal
+                  churchName={churchName}
+                  preacherDefaultName={user?.name || "Pr. Luan Demattos"}
+                  triggerButton={
+                    <button
+                      type="button"
+                      className="text-[11px] font-black text-amber-400 hover:text-amber-300 cursor-pointer shrink-0"
+                    >
+                      Abrir ➔
+                    </button>
+                  }
+                />
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center justify-between gap-2">
+                <span className="font-medium text-foreground truncate">🎨 Designer de Banners & Cultos</span>
+                <BannerDesignerStudioModal
+                  churchName={churchName}
+                  preacherDefaultName={user?.name || "Pr. Luan Demattos"}
+                  triggerButton={
+                    <button
+                      type="button"
+                      className="text-[11px] font-black text-pink-400 hover:text-pink-300 cursor-pointer shrink-0"
+                    >
+                      Abrir ➔
+                    </button>
+                  }
+                />
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center justify-between gap-2">
+                <span className="font-medium text-foreground truncate">🪪 Certificados & Carteirinhas 3D</span>
+                <CertificatesAndCardsStudioModal
+                  churchName={churchName}
+                  churchSlug={churchSlug}
+                  pastorDefaultName="Pr. Luan Demattos"
+                  userName={user?.name || "Pr. Luan Demattos"}
+                  userEmail={user?.email || undefined}
+                  triggerButton={
+                    <button
+                      type="button"
+                      className="text-[11px] font-black text-emerald-400 hover:text-emerald-300 cursor-pointer shrink-0"
+                    >
+                      Abrir ➔
+                    </button>
+                  }
+                />
+              </div>
             </div>
           </div>
 

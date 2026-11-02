@@ -63,7 +63,7 @@ export function AccessDeniedScreen({
         <div className="p-4 rounded-2xl bg-muted/80 border border-border text-xs text-foreground text-left space-y-1">
           <p className="font-semibold text-foreground">Regra de Segurança do Horeb:</p>
           <p className="text-muted-foreground text-[11px] leading-relaxed">
-            Usuários logados só acessam as congregações às quais pertencem. Para acessar a congregação <strong>/{requestedChurchSlug}</strong>, solicite autorização ao Pastor Master ou faça login com a conta correspondente.
+            Usuários logados só acessam as congregações às quais pertencem. Para acessar a congregação <strong>/{requestedChurchSlug}</strong>, solicite autorização ao Pr. Master ou faça login com a conta correspondente.
           </p>
         </div>
 

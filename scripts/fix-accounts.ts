@@ -26,16 +26,17 @@ async function main() {
   // 2. Senha padrão segura para quem não tem senha e para o Pastor Luan
   const defaultHash = await bcrypt.hash("horeb123456", 10);
 
-  // Define senha para Pastor Luan explicitamente
+  // Define senha para Pr. Luan Demattos explicitamente
   await prisma.user.updateMany({
     where: { email: "luandemattos102030@gmail.com" },
     data: {
+      name: "Pr. Luan Demattos",
       password: defaultHash,
       isEmailVerified: true,
       role: "ADMIN",
     },
   });
-  console.log("✅ Conta de Pastor Luan atualizada (senha: horeb123456, verificada: true)");
+  console.log("✅ Conta de Pr. Luan Demattos atualizada (senha: horeb123456, verificada: true)");
 
   // 3. Atualizar todos os usuários sem senha
   const usersWithoutPass = await prisma.user.findMany({
