@@ -12,6 +12,7 @@ import {
   uploadAsaasPaymentDocument,
   getAsaasPayment,
 } from "@/lib/asaas";
+import { sendEbookOfferEmail } from "@/lib/mail";
 
 async function requireSuperAdmin() {
   const session = await getSession();
@@ -155,6 +156,65 @@ export async function getPublicEbooks() {
   } catch (error: any) {
     console.error("Erro ao carregar vitrine de e-books:", error);
     return { success: false, ebooks: [], error: error.message };
+  }
+}
+
+/**
+ * 1.1 Busca um E-book específico para sua Página Exclusiva de Venda (/ebooks/[id])
+ */
+export async function getPublicEbookById(ebookId: string, orderId?: string) {
+  try {
+    await ensureInitialEbooksSeeded();
+    const ebook = await prisma.ebookProduct.findUnique({
+      where: { id: ebookId },
+      select: {
+        id: true,
+        title: true,
+        subtitle: true,
+        author: true,
+        description: true,
+        price: true,
+        originalPrice: true,
+        coverUrl: true,
+        pdfFileName: true,
+        badge: true,
+        pagesCount: true,
+        category: true,
+        active: true,
+        featured: true,
+        salesCount: true,
+        createdAt: true,
+      },
+    });
+
+    if (!ebook) {
+      return { success: false, error: "E-book não encontrado." };
+    }
+
+    let initialOrder: any = null;
+    if (orderId) {
+      const ord = await prisma.ebookOrder.findUnique({
+        where: { id: orderId },
+      });
+      if (ord && ord.ebookId === ebook.id) {
+        initialOrder = {
+          id: ord.id,
+          buyerName: ord.buyerName,
+          buyerEmail: ord.buyerEmail,
+          status: ord.status,
+          amount: ord.amount,
+          invoiceUrl: ord.invoiceUrl,
+          pixQrCode: ord.pixQrCode,
+          pixQrCodeImage: ord.pixQrCodeImage,
+          asaasPaymentId: ord.asaasPaymentId,
+          asaasDocumentAttached: Boolean(ord.asaasDocumentId),
+        };
+      }
+    }
+
+    return { success: true, ebook, initialOrder };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 }
 
@@ -570,6 +630,173 @@ export async function checkEbookOrderStatusAction(orderId: string) {
       pdfUrl: isPaid ? order.ebook.pdfUrl : null,
     };
   } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * 7. Disparo Direto do Super Admin (WhatsApp e/ou E-mail) com Página Exclusiva do Produto + Link de Pagamento do Asaas
+ * - Se o Super Admin informar Nome + CPF/CNPJ + E-mail do cliente, gera imediatamente a cobrança no Asaas (no grupo "Horeb"),
+ *   anexa o PDF do E-book na cobrança (`availableAfterPayment = true`), obtém o Link de Pagamento Oficial do Asaas (`invoiceUrl`)
+ *   e o PIX Copia-e-Cola, dispara por E-mail (se solicitado) e retorna o link pronto para disparo no WhatsApp!
+ * - Se o Super Admin quiser apenas disparar a Página Exclusiva de Venda (`/ebooks/[id]`) sem CPF ainda, envia o convite/oferta por E-mail e/ou gera o link do WhatsApp!
+ */
+export async function dispatchEbookOfferByAdminAction(params: {
+  ebookId: string;
+  recipientName?: string;
+  recipientEmail?: string;
+  recipientPhone?: string;
+  recipientCpf?: string;
+  generateAsaasPayment: boolean;
+  billingType?: "PIX" | "UNDEFINED";
+  sendEmail: boolean;
+  customMessage?: string;
+}) {
+  try {
+    await requireSuperAdmin();
+
+    const ebook = await prisma.ebookProduct.findUnique({
+      where: { id: params.ebookId },
+    });
+    if (!ebook) {
+      return { success: false, error: "E-book não encontrado." };
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://horeb.lynxems.com.br";
+    let productPageUrl = `${baseUrl}/ebooks/${ebook.id}`;
+    let asaasInvoiceUrl: string | null = null;
+    let pixQrCode: string | null = null;
+    let pixQrCodeImage: string | null = null;
+    let createdOrder: any = null;
+
+    // 1. Se o Super Admin escolheu gerar o Link de Pagamento Direto no Asaas agora
+    if (params.generateAsaasPayment) {
+      const cleanCpf = (params.recipientCpf || "").replace(/\D/g, "");
+      if (!params.recipientName?.trim() || cleanCpf.length < 11) {
+        return {
+          success: false,
+          error:
+            "Para gerar o Link de Pagamento direto no Asaas com o PDF anexado, informe o Nome e o CPF/CNPJ do cliente (ou desmarque para enviar apenas o link da Página Exclusiva de Venda).",
+        };
+      }
+
+      const fallbackEmail =
+        params.recipientEmail?.trim().toLowerCase() ||
+        `cliente.${cleanCpf}@lynxems.com.br`;
+
+      const pubRes = await purchaseEbookAction({
+        ebookId: ebook.id,
+        buyerName: params.recipientName.trim(),
+        buyerEmail: fallbackEmail,
+        buyerCpf: cleanCpf,
+        buyerPhone: params.recipientPhone?.trim(),
+        billingType: params.billingType || "UNDEFINED",
+      });
+
+      if (!pubRes.success || !pubRes.order) {
+        return {
+          success: false,
+          error: pubRes.error || "Falha ao gerar cobrança no Asaas.",
+        };
+      }
+
+      createdOrder = pubRes.order;
+      asaasInvoiceUrl = pubRes.order.invoiceUrl || null;
+      pixQrCode = pubRes.order.pixQrCode || null;
+      pixQrCodeImage = pubRes.order.pixQrCodeImage || null;
+      productPageUrl = `${baseUrl}/ebooks/${ebook.id}?orderId=${pubRes.order.id}`;
+    }
+
+    // 2. Se solicitou disparo por E-mail e informou e-mail válido
+    let emailSent = false;
+    let emailError: string | null = null;
+    if (params.sendEmail && params.recipientEmail?.trim()) {
+      const mailRes = await sendEbookOfferEmail({
+        to: params.recipientEmail.trim(),
+        recipientName: params.recipientName?.trim(),
+        ebookTitle: ebook.title,
+        ebookSubtitle: ebook.subtitle,
+        ebookAuthor: ebook.author,
+        ebookDescription: ebook.description,
+        ebookPrice: ebook.price,
+        ebookOriginalPrice: ebook.originalPrice,
+        ebookCoverUrl: ebook.coverUrl,
+        productPageUrl,
+        asaasInvoiceUrl,
+        pixQrCode,
+        customMessage: params.customMessage?.trim() || null,
+      });
+
+      if (mailRes.success) {
+        emailSent = true;
+        await prisma.emailLog
+          .create({
+            data: {
+              type: "OUTGOING",
+              from: "suporte@lynxems.com.br",
+              to: params.recipientEmail.trim().toLowerCase(),
+              subject: `E-book "${ebook.title}" • Link de Pagamento Asaas`,
+              snippet: `Página Exclusiva: ${productPageUrl} ${
+                asaasInvoiceUrl ? `| Fatura Asaas: ${asaasInvoiceUrl}` : ""
+              }`,
+              status: "SENT",
+            },
+          })
+          .catch(() => {});
+      } else {
+        emailError = mailRes.error || "Falha no envio SMTP.";
+      }
+    }
+
+    // 3. Montar texto e URL de disparo direto para o WhatsApp
+    const cleanPhone = (params.recipientPhone || "").replace(/\D/g, "");
+    const formattedPhone = cleanPhone
+      ? cleanPhone.startsWith("55")
+        ? cleanPhone
+        : `55${cleanPhone}`
+      : "";
+
+    const priceFormatted = Number(ebook.price).toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+    });
+
+    const whatsappLines = [
+      params.recipientName?.trim()
+        ? `Olá, *${params.recipientName.trim()}*! A paz do Senhor! 🙏`
+        : `Olá! A paz do Senhor! 🙏`,
+      ``,
+      params.customMessage?.trim() ||
+        `Preparei para você o acesso ao E-book digital *${ebook.title}* (${ebook.author}).`,
+      ``,
+      `📘 *E-book:* ${ebook.title}`,
+      `💰 *Valor Único:* R$ ${priceFormatted}`,
+      `📄 *Entrega Automática:* Assim que o pagamento é confirmado, o próprio Asaas libera e entrega o arquivo PDF automaticamente para você!`,
+      ``,
+      asaasInvoiceUrl
+        ? `💳 *Link Direto de Pagamento no Asaas (PIX / Cartão / Boleto + PDF):*\n${asaasInvoiceUrl}\n`
+        : "",
+      `🔗 *Página Exclusiva do E-book:*\n${productPageUrl}`,
+    ].filter(Boolean);
+
+    const whatsappMessage = whatsappLines.join("\n");
+    const whatsappUrl = formattedPhone
+      ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(whatsappMessage)}`
+      : `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
+
+    return {
+      success: true,
+      productPageUrl,
+      asaasInvoiceUrl,
+      pixQrCode,
+      pixQrCodeImage,
+      order: createdOrder,
+      emailSent,
+      emailError,
+      whatsappMessage,
+      whatsappUrl,
+    };
+  } catch (error: any) {
+    console.error("Erro ao disparar oferta do E-book:", error);
     return { success: false, error: error.message };
   }
 }

@@ -700,4 +700,253 @@ export async function testSmtpConnection() {
   }
 }
 
+export async function sendEbookOfferEmail({
+  to,
+  recipientName,
+  ebookTitle,
+  ebookSubtitle,
+  ebookAuthor,
+  ebookDescription,
+  ebookPrice,
+  ebookOriginalPrice,
+  ebookCoverUrl,
+  productPageUrl,
+  asaasInvoiceUrl,
+  pixQrCode,
+  customMessage,
+}: {
+  to: string;
+  recipientName?: string;
+  ebookTitle: string;
+  ebookSubtitle?: string | null;
+  ebookAuthor?: string | null;
+  ebookDescription: string;
+  ebookPrice: number;
+  ebookOriginalPrice?: number | null;
+  ebookCoverUrl?: string | null;
+  productPageUrl: string;
+  asaasInvoiceUrl?: string | null;
+  pixQrCode?: string | null;
+  customMessage?: string | null;
+}) {
+  try {
+    const cleanTo = to.trim().toLowerCase();
+    const logoSrc = getEmailLogoSrc();
+    const greeting = recipientName ? `Olá, ${recipientName}!` : "A Paz do Senhor!";
+    const priceFormatted = Number(ebookPrice || 0).toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+    });
+    const originalFormatted = ebookOriginalPrice
+      ? Number(ebookOriginalPrice).toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+        })
+      : null;
+
+    const primaryActionUrl = asaasInvoiceUrl || productPageUrl;
+    const primaryActionLabel = asaasInvoiceUrl
+      ? "Pagar no Asaas & Liberar E-book em PDF &rarr;"
+      : "Acessar Página Exclusiva do E-book &rarr;";
+
+    const plainText = [
+      `${greeting}`,
+      ``,
+      customMessage || `Preparamos o acesso exclusivo ao E-book digital "${ebookTitle}" para você!`,
+      ``,
+      `E-book: ${ebookTitle}`,
+      ebookSubtitle ? `${ebookSubtitle}` : "",
+      ebookAuthor ? `Autor: ${ebookAuthor}` : "",
+      `Valor: R$ ${priceFormatted}`,
+      ``,
+      asaasInvoiceUrl
+        ? `Link Direto de Pagamento Oficial Asaas (libera o PDF automaticamente após o pagamento):\n${asaasInvoiceUrl}`
+        : "",
+      ``,
+      `Página Exclusiva do Produto:\n${productPageUrl}`,
+      pixQrCode ? `\nCódigo PIX Copia-e-Cola:\n${pixQrCode}` : "",
+      ``,
+      `Assim que o pagamento é confirmado no Asaas, o próprio Asaas libera e envia o arquivo PDF completo para você!`,
+      ``,
+      `Atenciosamente,`,
+      `Biblioteca Oficial Horeb • Lynx EMS Sistemas`,
+      `suporte@lynxems.com.br`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const sender = getMailSender("Biblioteca Digital • Horeb");
+
+    const info = await mailTransporter.sendMail({
+      from: sender.from,
+      envelope: sender.envelope(cleanTo),
+      to: cleanTo,
+      replyTo: smtpUser,
+      subject: `${ asaasInvoiceUrl ? "Fatura & Acesso" : "Oferta Exclusiva" }: E-book "${ebookTitle}" • Horeb`,
+      text: plainText,
+      html: `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${ebookTitle} • E-book Oficial Horeb</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f4f5f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #18181b;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f5f7; padding: 30px 15px;">
+            <tr>
+              <td align="center">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 540px; background-color: #ffffff; border-radius: 18px; border: 1px solid #e4e4e7; overflow: hidden; box-shadow: 0 8px 28px rgba(0,0,0,0.08);">
+                  
+                  <!-- Top Bar Dourada -->
+                  <tr>
+                    <td height="6" style="background: linear-gradient(90deg, #f59e0b, #eab308, #10b981);"></td>
+                  </tr>
+
+                  <!-- Header -->
+                  <tr>
+                    <td style="padding: 28px 32px 14px 32px; text-align: center;">
+                      <div style="text-align: center; margin-bottom: 12px;">
+                        <img 
+                          src="${logoSrc}" 
+                          alt="Horeb" 
+                          width="56" 
+                          height="56" 
+                          style="width: 56px; height: 56px; border-radius: 14px; object-fit: cover; border: 2px solid #e4e4e7; background-color: #ffffff; display: inline-block;" 
+                        />
+                      </div>
+
+                      <div style="display: inline-block; padding: 4px 14px; border-radius: 9999px; background-color: #fef3c7; color: #b45309; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px;">
+                        E-BOOK DIGITAL OFICIAL • ENTREGA AUTOMÁTICA ASAAS
+                      </div>
+                      <h1 style="margin: 0; font-size: 22px; font-weight: 900; color: #09090b; letter-spacing: -0.3px;">
+                        ${ebookTitle}
+                      </h1>
+                      ${
+                        ebookSubtitle
+                          ? `<p style="margin: 6px 0 0 0; font-size: 13px; color: #52525b; font-weight: 600;">${ebookSubtitle}</p>`
+                          : ""
+                      }
+                    </td>
+                  </tr>
+
+                  ${
+                    ebookCoverUrl && ebookCoverUrl.startsWith("http")
+                      ? `
+                  <tr>
+                    <td style="padding: 8px 32px 16px 32px; text-align: center;">
+                      <img src="${ebookCoverUrl}" alt="${ebookTitle}" style="width: 100%; max-height: 240px; object-fit: cover; border-radius: 14px; border: 1px solid #e4e4e7;" />
+                    </td>
+                  </tr>
+                  `
+                      : ""
+                  }
+
+                  <!-- Saudação & Descrição -->
+                  <tr>
+                    <td style="padding: 6px 32px 18px 32px;">
+                      <p style="margin: 0 0 10px 0; font-size: 14px; color: #27272a; line-height: 1.6;">
+                        <strong>${greeting}</strong>
+                      </p>
+                      ${
+                        customMessage
+                          ? `<p style="margin: 0 0 12px 0; font-size: 14px; color: #18181b; background-color: #fffbeb; border-left: 3px solid #f59e0b; padding: 10px 14px; border-radius: 8px; line-height: 1.5;">${customMessage}</p>`
+                          : ""
+                      }
+                      <p style="margin: 0; font-size: 13px; color: #52525b; line-height: 1.6;">
+                        ${ebookDescription}
+                      </p>
+                      ${
+                        ebookAuthor
+                          ? `<p style="margin: 10px 0 0 0; font-size: 12px; color: #71717a;">Autor: <strong style="color: #18181b;">${ebookAuthor}</strong></p>`
+                          : ""
+                      }
+                    </td>
+                  </tr>
+
+                  <!-- Card de Preço e Entrega Automática Asaas -->
+                  <tr>
+                    <td style="padding: 0 32px 22px 32px;">
+                      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; text-align: center;">
+                        ${
+                          originalFormatted
+                            ? `<span style="display: block; font-size: 12px; color: #94a3b8; text-decoration: line-through;">De R$ ${originalFormatted}</span>`
+                            : ""
+                        }
+                        <span style="display: block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">
+                          Investimento Único
+                        </span>
+                        <span style="font-size: 30px; font-weight: 900; color: #d97706;">
+                          R$ ${priceFormatted}
+                        </span>
+                        <div style="margin-top: 10px; font-size: 12px; color: #047857; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 8px 12px; font-weight: 600;">
+                          📄 O arquivo PDF já está anexado no Asaas e é liberado automaticamente assim que o pagamento for confirmado!
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Botões de Pagamento Asaas e Página Exclusiva -->
+                  <tr>
+                    <td style="padding: 0 32px 24px 32px; text-align: center;">
+                      <a href="${primaryActionUrl}" target="_blank" style="display: inline-block; width: 88%; padding: 14px 20px; background-color: #f59e0b; color: #000000; font-size: 14px; font-weight: 900; text-decoration: none; border-radius: 12px; box-shadow: 0 4px 14px rgba(245,158,11,0.35); text-transform: uppercase; letter-spacing: 0.5px;">
+                        ${primaryActionLabel}
+                      </a>
+
+                      ${
+                        asaasInvoiceUrl && productPageUrl
+                          ? `
+                          <div style="margin-top: 14px;">
+                            <a href="${productPageUrl}" target="_blank" style="display: inline-block; width: 88%; padding: 11px 18px; background-color: #18181b; color: #ffffff; font-size: 12px; font-weight: 800; text-decoration: none; border-radius: 10px;">
+                              Ver Página Exclusiva do E-book &rarr;
+                            </a>
+                          </div>
+                          `
+                          : ""
+                      }
+
+                      ${
+                        pixQrCode
+                          ? `
+                          <div style="margin-top: 18px; text-align: left; background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 12px;">
+                            <div style="font-size: 11px; font-weight: 800; color: #334155; text-transform: uppercase; margin-bottom: 6px;">
+                              Código PIX Copia-e-Cola (Pagamento Imediato):
+                            </div>
+                            <div style="font-family: monospace; font-size: 11px; color: #0f172a; word-break: break-all; background: #ffffff; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                              ${pixQrCode}
+                            </div>
+                          </div>
+                          `
+                          : ""
+                      }
+
+                      <p style="margin: 14px 0 0 0; font-size: 11px; color: #71717a;">
+                        Link direto da página exclusiva:<br>
+                        <a href="${productPageUrl}" style="color: #d97706; word-break: break-all;">${productPageUrl}</a>
+                      </p>
+                    </td>
+                  </tr>
+
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #f8fafc; border-top: 1px solid #e4e4e7; padding: 18px 32px; text-align: center; font-size: 11px; color: #71717a; line-height: 1.6;">
+                      Biblioteca Digital Horeb • Desenvolvido por <strong>Lynx EMS Sistemas</strong>.<br>
+                      Pagamentos processados com segurança via <strong>Asaas</strong> • <a href="mailto:suporte@lynxems.com.br" style="color: #d97706; text-decoration: none;">suporte@lynxems.com.br</a>
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+    });
+
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error("Erro ao enviar oferta de E-book por e-mail:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 

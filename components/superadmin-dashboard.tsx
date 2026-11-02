@@ -73,6 +73,7 @@ import { SuperAdminPersonalToolsManager } from "@/components/superadmin-personal
 import { SuperAdminEbooksManager } from "@/components/superadmin-ebooks-manager";
 
 interface SuperAdminDashboardProps {
+  initialTab?: string;
   metrics: any;
   initialTenants: any[];
   initialPlans: any[];
@@ -90,6 +91,7 @@ interface SuperAdminDashboardProps {
 }
 
 export function SuperAdminDashboard({
+  initialTab = "overview",
   metrics: initialMetrics,
   initialTenants,
   initialPlans,
@@ -114,7 +116,7 @@ export function SuperAdminDashboard({
   const [isPending, startTransition] = useTransition();
 
   // Estados de formulários
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(initialTab || "overview");
 
   // Estado da Promoção de Lançamento (Dezembro/2026 - Primeiras 100 Igrejas)
   const [promoConfig, setPromoConfig] = useState(
@@ -1328,11 +1330,13 @@ export function SuperAdminDashboard({
                           <span className="font-bold text-white truncate max-w-[200px]">
                             {msg.from}
                           </span>
-                          <span className="text-[10px] text-zinc-500 font-mono">
-                            {new Date(msg.date).toLocaleDateString("pt-BR", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                          <span className="text-[10px] text-zinc-500 font-mono" suppressHydrationWarning>
+                            {msg.date
+                              ? new Date(msg.date).toLocaleDateString("pt-BR", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                              : "-"}
                           </span>
                         </div>
                         <p className="text-xs font-semibold text-amber-300 truncate">
@@ -1382,8 +1386,8 @@ export function SuperAdminDashboard({
                             Código Gerado: {log.code}
                           </div>
                         )}
-                        <p className="text-[10px] text-zinc-500">
-                          {new Date(log.createdAt).toLocaleString("pt-BR")}
+                        <p className="text-[10px] text-zinc-500" suppressHydrationWarning>
+                          {log.createdAt ? new Date(log.createdAt).toLocaleString("pt-BR") : "-"}
                         </p>
                       </div>
                     ))

@@ -48,6 +48,7 @@ RUN mkdir -p /app/prisma && chown -R nextjs:nodejs /app/prisma
 
 # Copia arquivos estáticos públicos e standalone gerados pelo Next.js
 COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/Ebooks ./Ebooks
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma

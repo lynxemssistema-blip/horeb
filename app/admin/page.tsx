@@ -19,41 +19,68 @@ export const metadata = {
   description: "Painel executivo master de gestão de assinaturas, congregações, e-mails e promoções.",
 };
 
-export default async function AdminPage() {
+export const dynamic = "force-dynamic";
+
+function safeSerialize<T>(data: T): T {
+  try {
+    return JSON.parse(JSON.stringify(data));
+  } catch {
+    return data;
+  }
+}
+
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ tab?: string }>;
+}) {
   const session = await getSession();
-  if (!session || session.role !== "SUPERADMIN") {
+  const isSuperAdmin =
+    session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN";
+
+  if (!session || !isSuperAdmin) {
     redirect("/?auth=admin_required");
   }
 
+  const resolvedParams = searchParams ? await searchParams : {};
+  const initialTab = resolvedParams?.tab || "overview";
+
   const [metricsRes, tenantsRes, plansRes, usersRes, emailDataRes, promoRes, agentsRes, permissionsRes, ebooksDataRes] =
     await Promise.all([
-      getSuperAdminMetrics(),
-      getAllTenants(),
-      getAllPlans(),
-      getAllUsers(),
-      getEmailCenterData(),
-      getPromotionConfig(),
-      getAgentProfiles(null), // null = agentes globais
-      getRolePermissions(),
-      getAdminEbooksData(),
+      getSuperAdminMetrics().catch(() => ({ success: false, metrics: null })),
+      getAllTenants().catch(() => ({ success: false, tenants: [] })),
+      getAllPlans().catch(() => ({ success: false, plans: [] })),
+      getAllUsers().catch(() => ({ success: false, users: [] })),
+      getEmailCenterData().catch(() => ({
+        success: false,
+        logs: [],
+        inbox: [],
+        inboxTotal: 0,
+        imapConnected: false,
+      })),
+      getPromotionConfig().catch(() => ({ success: false, config: null })),
+      getAgentProfiles(null).catch(() => ({ profiles: [] })), // null = agentes globais
+      getRolePermissions().catch(() => ({ permissions: [] })),
+      getAdminEbooksData().catch(() => ({ success: false, ebooks: [], orders: [] })),
     ]);
 
   return (
     <SuperAdminDashboard
-      metrics={metricsRes.metrics}
-      initialTenants={tenantsRes.tenants || []}
-      initialPlans={plansRes.plans || []}
-      initialUsers={usersRes.users || []}
-      initialEmailLogs={emailDataRes.logs || []}
-      initialInbox={emailDataRes.inbox || []}
+      initialTab={initialTab}
+      metrics={safeSerialize(metricsRes.metrics)}
+      initialTenants={safeSerialize(tenantsRes.tenants || [])}
+      initialPlans={safeSerialize(plansRes.plans || [])}
+      initialUsers={safeSerialize(usersRes.users || [])}
+      initialEmailLogs={safeSerialize(emailDataRes.logs || [])}
+      initialInbox={safeSerialize(emailDataRes.inbox || [])}
       inboxTotal={emailDataRes.inboxTotal || 0}
       imapConnected={emailDataRes.imapConnected || false}
-      initialPromoConfig={promoRes.config}
-      user={session}
-      initialAgents={agentsRes?.profiles || []}
-      initialPermissions={permissionsRes.permissions || []}
-      initialEbooks={ebooksDataRes.ebooks || []}
-      initialEbookOrders={ebooksDataRes.orders || []}
+      initialPromoConfig={safeSerialize(promoRes.config)}
+      user={safeSerialize(session)}
+      initialAgents={safeSerialize(agentsRes?.profiles || [])}
+      initialPermissions={safeSerialize(permissionsRes.permissions || [])}
+      initialEbooks={safeSerialize(ebooksDataRes.ebooks || [])}
+      initialEbookOrders={safeSerialize(ebooksDataRes.orders || [])}
     />
   );
 }

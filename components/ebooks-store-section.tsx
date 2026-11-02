@@ -206,7 +206,10 @@ export function EbooksStoreSection({
             >
               <div>
                 {/* Capa */}
-                <div className="relative h-56 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black flex items-center justify-center overflow-hidden border-b border-white/[0.06]">
+                <Link
+                  href={`/ebooks/${ebook.id}`}
+                  className="relative h-56 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black flex items-center justify-center overflow-hidden border-b border-white/[0.06] block"
+                >
                   {ebook.coverUrl ? (
                     <img
                       src={ebook.coverUrl}
@@ -232,7 +235,7 @@ export function EbooksStoreSection({
                     <FileText className="w-3 h-3" />
                     PDF Digital • Entrega Asaas
                   </span>
-                </div>
+                </Link>
 
                 {/* Conteúdo */}
                 <div className="p-6 space-y-3">
@@ -241,9 +244,11 @@ export function EbooksStoreSection({
                     {ebook.pagesCount && <span>{ebook.pagesCount} páginas</span>}
                   </div>
 
-                  <h3 className="text-lg font-black text-white leading-snug group-hover:text-amber-400 transition-colors">
-                    {ebook.title}
-                  </h3>
+                  <Link href={`/ebooks/${ebook.id}`}>
+                    <h3 className="text-lg font-black text-white leading-snug group-hover:text-amber-400 transition-colors">
+                      {ebook.title}
+                    </h3>
+                  </Link>
 
                   {ebook.subtitle && (
                     <p className="text-xs text-zinc-300 font-medium">{ebook.subtitle}</p>
@@ -280,13 +285,26 @@ export function EbooksStoreSection({
                     </span>
                   </div>
 
-                  <Button
-                    onClick={() => handleOpenCheckout(ebook)}
-                    className="h-11 px-5 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-black font-black text-xs gap-2 shadow-lg shadow-amber-500/20 cursor-pointer"
-                  >
-                    <ShoppingBag className="w-4 h-4" />
-                    <span>Comprar E-book</span>
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/ebooks/${ebook.id}`}>
+                      <Button
+                        variant="outline"
+                        className="h-11 px-3.5 rounded-2xl border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-200 font-bold text-xs gap-1.5 cursor-pointer"
+                        title="Abrir Página Exclusiva do Produto"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Página</span>
+                      </Button>
+                    </Link>
+
+                    <Button
+                      onClick={() => handleOpenCheckout(ebook)}
+                      className="h-11 px-5 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-black font-black text-xs gap-2 shadow-lg shadow-amber-500/20 cursor-pointer"
+                    >
+                      <ShoppingBag className="w-4 h-4" />
+                      <span>Comprar E-book</span>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -564,3 +582,4 @@ export function EbooksStoreSection({
     </section>
   );
 }
+
