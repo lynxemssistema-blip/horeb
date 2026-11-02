@@ -580,7 +580,8 @@ export async function subscribePersonalToolsAsaas(data: {
       value: amount,
       nextDueDate: today,
       description,
-      billingType: data.billingType,
+      // UNDEFINED habilita Cartão de Crédito, PIX e Boleto na fatura oficial do Asaas!
+      billingType: data.billingType === "CREDIT_CARD" ? "CREDIT_CARD" : "UNDEFINED",
       cycle: data.cycle,
     });
 

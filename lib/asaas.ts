@@ -425,6 +425,10 @@ export async function getAsaasPayment(
 
 /**
  * 7. Cria uma Cobrança Avulsa (Pagamento Único) no Asaas — ideal para venda de E-books / Produtos Digitais
+ * Nota importante da API do Asaas:
+ * - Quando `billingType` é `"UNDEFINED"` ("Pergunte ao Cliente"), a fatura oficial do Asaas (`invoiceUrl`)
+ *   habilita TODAS as formas de pagamento para o comprador escolher na tela: Cartão de Crédito, PIX e Boleto!
+ * - Além disso, mesmo com `billingType: "UNDEFINED"`, o endpoint `/pixQrCode` continua gerando o QR Code PIX imediato!
  */
 export async function createAsaasPayment(data: {
   customerId: string;
@@ -445,7 +449,7 @@ export async function createAsaasPayment(data: {
       headers: getHeaders(apiKey),
       body: JSON.stringify({
         customer: data.customerId,
-        billingType: data.billingType || "PIX",
+        billingType: data.billingType || "UNDEFINED",
         value: data.value,
         dueDate: data.dueDate,
         description: data.description,

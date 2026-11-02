@@ -46,7 +46,7 @@ export function EbookProductLanding({
   const [buyerEmail, setBuyerEmail] = useState(initialOrder?.buyerEmail || "");
   const [buyerCpf, setBuyerCpf] = useState("");
   const [buyerPhone, setBuyerPhone] = useState("");
-  const [billingType, setBillingType] = useState<"PIX" | "UNDEFINED">("PIX");
+  const [billingType, setBillingType] = useState<"UNDEFINED" | "CREDIT_CARD" | "PIX">("UNDEFINED");
 
   const [activeOrder, setActiveOrder] = useState<any | null>(initialOrder);
   const [isPaid, setIsPaid] = useState(
@@ -408,11 +408,37 @@ export function EbookProductLanding({
                     <label className="text-xs font-bold text-zinc-300">
                       Escolha Como Pagar no Asaas
                     </label>
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setBillingType("UNDEFINED")}
+                        className={`p-2.5 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
+                          billingType === "UNDEFINED"
+                            ? "bg-amber-500/20 border-amber-500 text-amber-300"
+                            : "bg-zinc-900 border-white/10 text-zinc-400"
+                        }`}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        <span>PIX + Cartão + Boleto</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setBillingType("CREDIT_CARD")}
+                        className={`p-2.5 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
+                          billingType === "CREDIT_CARD"
+                            ? "bg-amber-500/20 border-amber-500 text-amber-300"
+                            : "bg-zinc-900 border-white/10 text-zinc-400"
+                        }`}
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        <span>Cartão de Crédito</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => setBillingType("PIX")}
-                        className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                        className={`p-2.5 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
                           billingType === "PIX"
                             ? "bg-emerald-500/20 border-emerald-500 text-emerald-300"
                             : "bg-zinc-900 border-white/10 text-zinc-400"
@@ -420,19 +446,6 @@ export function EbookProductLanding({
                       >
                         <QrCode className="w-4 h-4" />
                         <span>PIX Instantâneo</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setBillingType("UNDEFINED")}
-                        className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
-                          billingType === "UNDEFINED"
-                            ? "bg-amber-500/20 border-amber-500 text-amber-300"
-                            : "bg-zinc-900 border-white/10 text-zinc-400"
-                        }`}
-                      >
-                        <CreditCard className="w-4 h-4" />
-                        <span>Cartão / Boleto</span>
                       </button>
                     </div>
                   </div>
@@ -512,6 +525,21 @@ export function EbookProductLanding({
                           Cobrança gerada para:{" "}
                           <strong className="text-white">{activeOrder.buyerName}</strong>
                         </div>
+                      )}
+
+                      {activeOrder.invoiceUrl && (
+                        <a
+                          href={activeOrder.invoiceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block"
+                        >
+                          <Button className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-black font-black text-xs gap-2 shadow-xl cursor-pointer">
+                            <CreditCard className="w-4 h-4" />
+                            <span>Pagar com Cartão de Crédito / Boleto / PIX no Asaas</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Button>
+                        </a>
                       )}
 
                       {activeOrder.pixQrCodeImage && (
@@ -612,3 +640,4 @@ export function EbookProductLanding({
     </div>
   );
 }
+

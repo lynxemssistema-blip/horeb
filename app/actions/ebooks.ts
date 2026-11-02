@@ -49,79 +49,159 @@ async function resolvePdfBuffer(pdfUrl: string): Promise<Buffer | null> {
   }
 }
 
+let seedingPromise: Promise<void> | null = null;
+
 /**
- * Inicializa os E-books da pasta Ebooks/ caso a tabela ainda esteja vazia
+ * Inicializa e sincroniza os E-books oficiais da pasta Ebooks/ (incluindo Libertação Espiritual, Os Seis Instintos da Alma e Batalha Invisível)
  */
 async function ensureInitialEbooksSeeded() {
-  try {
-    const count = await prisma.ebookProduct.count();
-    if (count > 0) return;
-
-    const ebooksDir = path.join(process.cwd(), "Ebooks");
-    const defaultItems = [
-      {
-        title: "Os Seis Instintos da Alma",
-        subtitle: "O que é pecado e o que não é: equilíbrio espiritual, alma e corpo",
-        author: "Edson Manoel",
-        description:
-          "Estudo bíblico profundo sobre corpo, alma e espírito e os seis instintos naturais criados por Deus (Aquisição, Alimentação, Reprodução, Autoproteção, Domínio Próprio e Comunhão). Aprenda a identificar onde começa o desequilíbrio e como quebrar ciclos espirituais e emocionais.",
-        price: 29.9,
-        originalPrice: 59.9,
-        coverUrl:
-          "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=900&q=80",
-        fileName: "Os Seis Instintos da Alma.pdf",
-        badge: "MAIS VENDIDO",
-        pagesCount: 35,
-        category: "CURA INTERIOR & DISCIPULADO",
-        featured: true,
-      },
-      {
-        title: "Batalha Invisível — Batalha Espiritual",
-        subtitle: "A verdade que o inimigo não quer que você saiba sobre autoridade em Cristo",
-        author: "Pastor Luan de Matos",
-        description:
-          "Conheça à luz das Escrituras as estratégias do inimigo, o papel das regiões celestiais, as ferramentas espirituais do cristão e como permanecer firme e vitorioso debaixo da autoridade de Cristo sem transformar pessoas em inimigas.",
-        price: 24.9,
-        originalPrice: 49.9,
-        coverUrl:
-          "https://images.unsplash.com/photo-1507434965515-61970f2bd7c6?auto=format&fit=crop&w=900&q=80",
-        fileName: "Batalha Invisível - E-book rev 01.pdf",
-        badge: "LANÇAMENTO",
-        pagesCount: 8,
-        category: "BATALHA ESPIRITUAL",
-        featured: true,
-      },
-    ];
-
-    for (const item of defaultItems) {
-      let pdfDataUri = `Ebooks/${item.fileName}`;
-      try {
-        const fileBuf = await fs.readFile(path.join(ebooksDir, item.fileName));
-        pdfDataUri = `data:application/pdf;base64,${fileBuf.toString("base64")}`;
-      } catch {}
-
-      await prisma.ebookProduct.create({
-        data: {
-          title: item.title,
-          subtitle: item.subtitle,
-          author: item.author,
-          description: item.description,
-          price: item.price,
-          originalPrice: item.originalPrice,
-          coverUrl: item.coverUrl,
-          pdfUrl: pdfDataUri,
-          pdfFileName: item.fileName,
-          badge: item.badge,
-          pagesCount: item.pagesCount,
-          category: item.category,
-          active: true,
-          featured: item.featured,
-        },
-      });
-    }
-  } catch (err) {
-    console.warn("[ensureInitialEbooksSeeded Warning]:", err);
+  if (seedingPromise) {
+    return seedingPromise;
   }
+
+  seedingPromise = (async () => {
+    try {
+      const ebooksDir = path.join(process.cwd(), "Ebooks");
+      const defaultItems = [
+        {
+          matchTitle: "Libertação Espiritual",
+          title: "Libertação Espiritual — Restaurando a Ordem e o Equilíbrio",
+          subtitle:
+            "A verdadeira vitória não está nos gritos, mas no alinhamento do espírito, alma e corpo com a soberania de Cristo",
+          author: "Pastor Luan de Matos",
+          description:
+            "Um guia profundo e prático para vencer a guerra na mente e guardar o coração. Compreenda a verdadeira natureza da prisão espiritual, o engano na mente e a compressão da alma, o alinhamento em Cristo, os 5 passos práticos para a verdadeira liberdade e como permanecer livre através do domínio próprio.",
+          price: 29.9,
+          originalPrice: 59.9,
+          coverUrl: "/ebooks-covers/libertacao-espiritual.jpg",
+          relativePdfPath:
+            "Libertação Espiritual/Libertação Espiritual - Restaurando a Ordem e o Equilíbrio.pdf",
+          fileName: "Libertação Espiritual - Restaurando a Ordem e o Equilíbrio.pdf",
+          badge: "NOVO LANÇAMENTO",
+          pagesCount: 10,
+          category: "LIBERTAÇÃO & CURA INTERIOR",
+          featured: true,
+        },
+        {
+          matchTitle: "Os Seis Instintos da Alma",
+          title: "Os Seis Instintos da Alma",
+          subtitle: "O que é pecado e o que não é: estudo bíblico sobre santidade e equilíbrio",
+          author: "Pastor Luan de Matos",
+          description:
+            "Estudo bíblico profundo sobre corpo, alma e espírito e os seis instintos naturais criados por Deus (Aquisição, Alimentação, Reprodução, Autoproteção, Domínio Próprio e Comunhão). Descubra onde termina o que é natural e onde começa o pecado e aprenda a quebrar os ciclos de desequilíbrio.",
+          price: 29.9,
+          originalPrice: 59.9,
+          coverUrl: "/ebooks-covers/seis-instintos-da-alma.jpg",
+          relativePdfPath:
+            "Os Seis Instintos da Alm/Os Seis Instintos da Alma rev 01.pdf",
+          fileName: "Os Seis Instintos da Alma rev 01.pdf",
+          badge: "MAIS VENDIDO",
+          pagesCount: 12,
+          category: "SANTIDADE & EQUILÍBRIO",
+          featured: true,
+        },
+        {
+          matchTitle: "Batalha Invisível",
+          title: "Batalha Invisível — Batalha Espiritual",
+          subtitle: "A verdade que o inimigo não quer que você saiba sobre autoridade em Cristo",
+          author: "Pastor Luan de Matos",
+          description:
+            "Conheça à luz das Escrituras as estratégias do inimigo, o papel das regiões celestiais, as ferramentas espirituais do cristão e como permanecer firme e vitorioso debaixo da autoridade de Cristo sem transformar pessoas em inimigas.",
+          price: 24.9,
+          originalPrice: 49.9,
+          coverUrl: "/ebooks-covers/batalha-invisivel.jpg",
+          relativePdfPath:
+            "Batalha Invisível - E-book Completo/Batalha Invisível - E-book Completo.pdf",
+          fileName: "Batalha Invisível - E-book Completo.pdf",
+          badge: "DESTAQUE",
+          pagesCount: 9,
+          category: "BATALHA ESPIRITUAL",
+          featured: true,
+        },
+      ];
+
+      for (const item of defaultItems) {
+        const matches = await prisma.ebookProduct.findMany({
+          where: {
+            title: {
+              contains: item.matchTitle,
+            },
+          },
+          select: {
+            id: true,
+            title: true,
+            coverUrl: true,
+            pdfUrl: true,
+            _count: {
+              select: { orders: true },
+            },
+          },
+          orderBy: { createdAt: "asc" },
+        });
+
+        // Remove duplicatas sem pedidos caso existam
+        if (matches.length > 1) {
+          for (let i = 1; i < matches.length; i++) {
+            if (matches[i]._count.orders === 0) {
+              await prisma.ebookProduct.delete({ where: { id: matches[i].id } }).catch(() => {});
+            }
+          }
+        }
+
+        const found = matches[0];
+
+        let pdfDataUri = `Ebooks/${item.relativePdfPath}`;
+        try {
+          const fileBuf = await fs.readFile(path.join(ebooksDir, item.relativePdfPath));
+          pdfDataUri = `data:application/pdf;base64,${fileBuf.toString("base64")}`;
+        } catch {}
+
+        if (!found) {
+          await prisma.ebookProduct.create({
+            data: {
+              title: item.title,
+              subtitle: item.subtitle,
+              author: item.author,
+              description: item.description,
+              price: item.price,
+              originalPrice: item.originalPrice,
+              coverUrl: item.coverUrl,
+              pdfUrl: pdfDataUri,
+              pdfFileName: item.fileName,
+              badge: item.badge,
+              pagesCount: item.pagesCount,
+              category: item.category,
+              active: true,
+              featured: item.featured,
+            },
+          });
+        } else {
+          // Atualiza apenas se a capa ainda for do Unsplash ou vazia (preserva edições manuais do SuperAdmin!)
+          const needsCoverUpdate =
+            !found.coverUrl || found.coverUrl.includes("images.unsplash.com");
+          const needsPdfUpdate = !found.pdfUrl || !found.pdfUrl.startsWith("data:");
+
+          if (needsCoverUpdate || needsPdfUpdate) {
+            await prisma.ebookProduct.update({
+              where: { id: found.id },
+              data: {
+                coverUrl: needsCoverUpdate ? item.coverUrl : found.coverUrl,
+                pdfUrl: needsPdfUpdate ? pdfDataUri : found.pdfUrl,
+                pdfFileName: item.fileName,
+                pagesCount: item.pagesCount,
+              },
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[ensureInitialEbooksSeeded Warning]:", err);
+    } finally {
+      seedingPromise = null;
+    }
+  })();
+
+  return seedingPromise;
 }
 
 /**
@@ -470,15 +550,18 @@ export async function purchaseEbookAction(params: {
       };
     }
 
-    // 2. Criar cobrança avulsa no Asaas
+    // 2. Criar cobrança avulsa no Asaas com billingType "UNDEFINED" por padrão
+    // Isso garante que a Fatura do Asaas (invoiceUrl) exiba Cartão de Crédito, PIX e Boleto para o cliente escolher!
     const todayStr = new Date().toISOString().split("T")[0];
-    const billingType = params.billingType || "PIX";
+    const selectedMethod = params.billingType || "UNDEFINED";
+    // Enviamos "UNDEFINED" ao Asaas exceto se for explicitamente CREDIT_CARD, para nunca bloquear a aba de Cartão de Crédito na fatura!
+    const asaasBillingType = selectedMethod === "CREDIT_CARD" ? "CREDIT_CARD" : "UNDEFINED";
 
     const paymentRes = await createAsaasPayment({
       customerId: customerRes.customer.id,
       value: ebook.price,
       dueDate: todayStr,
-      billingType,
+      billingType: asaasBillingType,
       description: `E-book Digital: ${ebook.title} (Entrega imediata do PDF após confirmação)`,
       externalReference: `EBOOK_${ebook.id}`,
     });
@@ -531,7 +614,7 @@ export async function purchaseEbookAction(params: {
         buyerCpf: cleanCpf,
         buyerPhone: params.buyerPhone?.trim() || null,
         amount: ebook.price,
-        billingType,
+        billingType: selectedMethod,
         status: payment.status || "PENDING",
         asaasCustomerId: customerRes.customer.id,
         asaasPaymentId: payment.id,
