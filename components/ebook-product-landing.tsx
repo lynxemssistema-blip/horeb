@@ -177,10 +177,63 @@ export function EbookProductLanding({
       ? Math.round(((ebook.originalPrice - ebook.price) / ebook.originalPrice) * 100)
       : 0;
 
+  const savingsAmount =
+    ebook.originalPrice && ebook.originalPrice > ebook.price
+      ? Number(ebook.originalPrice) - Number(ebook.price)
+      : 0;
+
+  const handleShareWhatsApp = () => {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    const priceStr = Number(ebook.price || 0).toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+    });
+    const origStr =
+      ebook.originalPrice && ebook.originalPrice > ebook.price
+        ? Number(ebook.originalPrice).toLocaleString("pt-BR", {
+            minimumFractionDigits: 2,
+          })
+        : null;
+
+    const text = [
+      `🔥 *OFERTA ESPECIAL — E-BOOK OFICIAL HOREB*`,
+      ``,
+      `📘 *${ebook.title}*`,
+      ebook.subtitle ? `_${ebook.subtitle}_` : null,
+      `✍️ Autor: *${ebook.author || "Pr. Luan Demattos"}*`,
+      ``,
+      origStr
+        ? `💰 De ~R$ ${origStr}~ por apenas *R$ ${priceStr}* (${discountPercent}% OFF!)`
+        : `💰 Valor exclusivo: *R$ ${priceStr}*`,
+      `📥 *Entrega Imediata:* Receba o PDF completo direto no seu E-mail assim que o pagamento for confirmado!`,
+      ``,
+      `👉 *Garanta o seu agora neste link:*`,
+      url,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
   return (
     <div className="min-h-screen bg-[#070709] text-zinc-100 flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200">
+      {/* Faixa Comercial de Oferta no Topo */}
+      <div className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-black px-4 py-2 text-center text-[11px] sm:text-xs font-black uppercase tracking-wider shadow-md">
+        🔥 Oferta Especial Limitada •{" "}
+        {ebook.originalPrice && ebook.originalPrice > ebook.price ? (
+          <span>
+            Economize R${" "}
+            {savingsAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} (
+            {discountPercent}% de Desconto Hoje)
+          </span>
+        ) : (
+          <span>Acesso Imediato ao E-book Completo em PDF</span>
+        )}{" "}
+        • Envio Automático no Seu E-mail!
+      </div>
+
       {/* Top Navbar */}
-      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-black/80 backdrop-blur-xl px-4 sm:px-8 py-3.5">
+      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-black/85 backdrop-blur-xl px-4 sm:px-8 py-3.5">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
           <Link
             href="/#ebooks"
@@ -195,15 +248,26 @@ export function EbookProductLanding({
               type="button"
               variant="outline"
               size="sm"
+              onClick={handleShareWhatsApp}
+              className="h-9 px-3.5 rounded-xl border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-bold text-emerald-300 gap-1.5 cursor-pointer"
+            >
+              <Share2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Compartilhar no WhatsApp</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={handleCopyPageLink}
               className="h-9 px-3.5 rounded-xl border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-xs font-bold text-zinc-200 gap-1.5 cursor-pointer"
             >
               {copiedPageUrl ? (
                 <Check className="w-3.5 h-3.5 text-emerald-400" />
               ) : (
-                <Share2 className="w-3.5 h-3.5 text-amber-400" />
+                <Copy className="w-3.5 h-3.5 text-amber-400" />
               )}
-              <span>{copiedPageUrl ? "Link Copiado!" : "Copiar Link de Venda"}</span>
+              <span>{copiedPageUrl ? "Link Copiado!" : "Copiar Link"}</span>
             </Button>
 
             {isSuperAdmin && (
@@ -224,7 +288,7 @@ export function EbookProductLanding({
       {/* Main Content */}
       <main className="max-w-6xl mx-auto w-full px-4 sm:px-8 py-8 sm:py-12 flex-1">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
-          {/* Coluna Esquerda (7 cols): Apresentação do Produto */}
+          {/* Coluna Esquerda (7 cols): Apresentação Comercial do Produto */}
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex flex-wrap items-center gap-2">
               <span className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[11px] font-black uppercase tracking-wider">
@@ -232,12 +296,12 @@ export function EbookProductLanding({
               </span>
               {ebook.badge && (
                 <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-black uppercase tracking-wider">
-                  {ebook.badge}
+                  ★ {ebook.badge}
                 </span>
               )}
               {discountPercent > 0 && (
-                <span className="px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[11px] font-black uppercase tracking-wider">
-                  {discountPercent}% OFF HOJE
+                <span className="px-3 py-1 rounded-full bg-rose-500 text-white text-[11px] font-black uppercase tracking-wider shadow-lg shadow-rose-500/25">
+                  🔥 {discountPercent}% DE DESCONTO HOJE
                 </span>
               )}
             </div>
@@ -253,21 +317,21 @@ export function EbookProductLanding({
               )}
             </div>
 
-            {/* Card da Capa + Metadados */}
-            <div className="rounded-3xl bg-zinc-900/70 border border-white/[0.08] overflow-hidden shadow-2xl">
-              <div className="relative h-80 sm:h-96 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black flex items-center justify-center overflow-hidden border-b border-white/[0.06]">
+            {/* Card Comercial Principal: Capa em Destaque + Faixa de Valor & Benefícios */}
+            <div className="rounded-3xl bg-gradient-to-b from-zinc-900/90 to-zinc-950 border border-amber-500/30 overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.75)]">
+              <div className="relative h-80 sm:h-[420px] bg-gradient-to-br from-zinc-800 via-zinc-900 to-black flex items-center justify-center overflow-hidden border-b border-white/[0.08]">
                 {ebook.coverUrl ? (
                   <>
                     <img
                       src={ebook.coverUrl}
                       alt=""
                       aria-hidden="true"
-                      className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-35"
+                      className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-45"
                     />
                     <img
                       src={ebook.coverUrl}
                       alt={ebook.title}
-                      className="relative z-10 max-h-full max-w-full object-contain py-4 px-6 drop-shadow-2xl"
+                      className="relative z-10 max-h-full max-w-full object-contain py-5 px-6 drop-shadow-[0_25px_35px_rgba(0,0,0,0.85)] hover:scale-[1.03] transition-transform duration-500"
                     />
                   </>
                 ) : (
@@ -279,17 +343,56 @@ export function EbookProductLanding({
                   </div>
                 )}
 
+                {/* Selo de Preço Flutuante sobre a Capa */}
+                <div className="absolute top-4 right-4 z-20 rounded-2xl bg-black/85 backdrop-blur-md border-2 border-amber-500/60 px-4 py-2.5 text-right shadow-2xl">
+                  {ebook.originalPrice && ebook.originalPrice > ebook.price && (
+                    <span className="block text-[11px] text-zinc-400 line-through font-bold">
+                      De R${" "}
+                      {Number(ebook.originalPrice).toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </span>
+                  )}
+                  <span className="block text-[10px] uppercase font-black text-emerald-400 tracking-wider">
+                    Por Apenas
+                  </span>
+                  <span className="text-xl sm:text-2xl font-black text-amber-400 leading-none">
+                    R${" "}
+                    {Number(ebook.price).toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+
                 <div className="absolute bottom-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-2">
-                  <span className="px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/15 text-xs font-bold text-white flex items-center gap-1.5">
+                  <span className="px-3 py-1.5 rounded-xl bg-black/85 backdrop-blur-md border border-white/15 text-xs font-bold text-white flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-amber-400" />
                     <span>Autor: {ebook.author}</span>
                   </span>
 
-                  <span className="px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-emerald-500/30 text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                  <span className="px-3 py-1.5 rounded-xl bg-black/85 backdrop-blur-md border border-emerald-500/35 text-xs font-bold text-emerald-300 flex items-center gap-1.5">
                     <FileText className="w-3.5 h-3.5" />
                     <span>
-                      Formato PDF {ebook.pagesCount ? `• ${ebook.pagesCount} páginas` : ""}
+                      E-book em PDF {ebook.pagesCount ? `• ${ebook.pagesCount} páginas` : ""}
                     </span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Barra Comercial de Oferta Abaixo da Capa */}
+              <div className="bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-amber-500/15 border-b border-white/[0.08] px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+                <div className="space-y-0.5">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-emerald-400 block">
+                    ✓ Entrega Digital Imediata (E-mail + Download)
+                  </span>
+                  <p className="text-xs text-zinc-300">
+                    Receba o <strong>arquivo PDF anexado no seu e-mail</strong> e o link de download assim que o pagamento for confirmado.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>PIX • Cartão • Boleto</span>
                   </span>
                 </div>
               </div>

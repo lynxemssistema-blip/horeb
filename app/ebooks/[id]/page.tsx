@@ -22,20 +22,72 @@ export async function generateMetadata({
   }
 
   const ebook = res.ebook;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://horeb.lynxems.com.br";
   const priceStr = Number(ebook.price || 0).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
   });
+  const originalPriceStr =
+    ebook.originalPrice && ebook.originalPrice > ebook.price
+      ? Number(ebook.originalPrice).toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+        })
+      : null;
+
+  const discountPercent =
+    ebook.originalPrice && ebook.originalPrice > ebook.price
+      ? Math.round(((ebook.originalPrice - ebook.price) / ebook.originalPrice) * 100)
+      : 0;
+
+  // Endpoint dedicado de imagem HTTP que serve a capa real do E-book (seja arquivo local ou capa enviada pelo Super Admin)
+  const coverImageUrl = `${baseUrl}/api/ebooks/cover/${ebook.id}.jpg`;
+  const pageUrl = `${baseUrl}/ebooks/${ebook.id}`;
+
+  const commercialTitle = originalPriceStr
+    ? `🔥 ${ebook.title} | De R$ ${originalPriceStr} por R$ ${priceStr}${
+        discountPercent > 0 ? ` (${discountPercent}% OFF)` : ""
+      }`
+    : `📘 ${ebook.title} | Apenas R$ ${priceStr} (E-book Completo em PDF)`;
+
+  const commercialDescription = [
+    originalPriceStr
+      ? `💰 OFERTA ESPECIAL: De R$ ${originalPriceStr} por apenas R$ ${priceStr} (PIX ou Cartão)!`
+      : `💰 Valor Único: R$ ${priceStr} (PIX ou Cartão)!`,
+    ebook.author ? `✍️ Autor: ${ebook.author}` : null,
+    `📥 Receba o PDF Completo no seu E-mail + Download Imediato após confirmação!`,
+    ebook.subtitle || ebook.description,
+  ]
+    .filter(Boolean)
+    .join(" • ");
 
   return {
-    title: `${ebook.title} • E-book Oficial (R$ ${priceStr}) | Horeb`,
-    description: `${ebook.description} — Pagamento via Asaas com entrega automática do PDF após confirmação!`,
+    title: commercialTitle,
+    description: commercialDescription,
+    alternates: {
+      canonical: pageUrl,
+    },
     openGraph: {
-      title: `${ebook.title} • E-book Digital Oficial`,
-      description: ebook.subtitle || ebook.description,
-      images:
-        ebook.coverUrl && ebook.coverUrl.startsWith("http")
-          ? [{ url: ebook.coverUrl }]
-          : [],
+      type: "website",
+      url: pageUrl,
+      siteName: "Biblioteca Digital Horeb • Oferta Oficial",
+      title: commercialTitle,
+      description: commercialDescription,
+      locale: "pt_BR",
+      images: [
+        {
+          url: coverImageUrl,
+          secureUrl: coverImageUrl,
+          width: 900,
+          height: 1200,
+          alt: `${ebook.title} - Por R$ ${priceStr}`,
+          type: "image/jpeg",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: commercialTitle,
+      description: commercialDescription,
+      images: [coverImageUrl],
     },
   };
 }

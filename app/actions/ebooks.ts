@@ -1153,8 +1153,19 @@ export async function dispatchEbookOfferByAdminAction(params: {
     const priceFormatted = Number(ebook.price).toLocaleString("pt-BR", {
       minimumFractionDigits: 2,
     });
+    const origFormatted =
+      ebook.originalPrice && ebook.originalPrice > ebook.price
+        ? Number(ebook.originalPrice).toLocaleString("pt-BR", {
+            minimumFractionDigits: 2,
+          })
+        : null;
+    const discountPct =
+      ebook.originalPrice && ebook.originalPrice > ebook.price
+        ? Math.round(((ebook.originalPrice - ebook.price) / ebook.originalPrice) * 100)
+        : 0;
 
     const whatsappLines = [
+      `🔥 *OFERTA ESPECIAL — E-BOOK OFICIAL HOREB*`,
       params.recipientName?.trim()
         ? `Olá, *${params.recipientName.trim()}*! A paz do Senhor! 🙏`
         : `Olá! A paz do Senhor! 🙏`,
@@ -1163,13 +1174,16 @@ export async function dispatchEbookOfferByAdminAction(params: {
         `Preparei para você o acesso ao E-book digital *${ebook.title}* (${ebook.author}).`,
       ``,
       `📘 *E-book:* ${ebook.title}`,
-      `💰 *Valor Único:* R$ ${priceFormatted}`,
-      `📄 *Entrega Automática:* Assim que o pagamento é confirmado, o próprio Asaas libera e entrega o arquivo PDF automaticamente para você!`,
+      ebook.subtitle ? `_${ebook.subtitle}_` : "",
+      origFormatted
+        ? `💰 *Oferta Especial:* De ~R$ ${origFormatted}~ por apenas *R$ ${priceFormatted}* (${discountPct}% OFF!)`
+        : `💰 *Valor Único:* R$ ${priceFormatted} (PIX ou Cartão)`,
+      `📥 *Entrega Automática:* Assim que o pagamento é confirmado, você recebe o arquivo PDF anexado no seu E-mail + Link de Download Imediato!`,
       ``,
       asaasInvoiceUrl
         ? `💳 *Link Direto de Pagamento no Asaas (PIX / Cartão / Boleto + PDF):*\n${asaasInvoiceUrl}\n`
         : "",
-      `🔗 *Página Exclusiva do E-book:*\n${productPageUrl}`,
+      `👉 *Página Oficial do E-book:*\n${productPageUrl}`,
     ].filter(Boolean);
 
     const whatsappMessage = whatsappLines.join("\n");

@@ -201,16 +201,34 @@ export function SuperAdminEbooksManager({
     const priceStr = Number(ebook.price || 0).toLocaleString("pt-BR", {
       minimumFractionDigits: 2,
     });
+    const origStr =
+      ebook.originalPrice && ebook.originalPrice > ebook.price
+        ? Number(ebook.originalPrice).toLocaleString("pt-BR", {
+            minimumFractionDigits: 2,
+          })
+        : null;
+    const discountPct =
+      ebook.originalPrice && ebook.originalPrice > ebook.price
+        ? Math.round(((ebook.originalPrice - ebook.price) / ebook.originalPrice) * 100)
+        : 0;
+
     const text = [
-      `Olá! A paz do Senhor! 🙏`,
+      `🔥 *OFERTA ESPECIAL — E-BOOK OFICIAL HOREB*`,
       ``,
-      `Confira o E-book digital oficial *${ebook.title}* (${ebook.author}):`,
-      `💰 Valor único: *R$ ${priceStr}*`,
-      `📄 *Entrega automática pelo Asaas:* Assim que o pagamento é confirmado, o próprio Asaas libera e entrega o PDF completo para você!`,
+      `📘 *${ebook.title}*`,
+      ebook.subtitle ? `_${ebook.subtitle}_` : null,
+      `✍️ Autor: *${ebook.author || "Pr. Luan Demattos"}*`,
       ``,
-      `🔗 *Acesse a página exclusiva e garanta o seu:*`,
+      origStr
+        ? `💰 De ~R$ ${origStr}~ por apenas *R$ ${priceStr}* (${discountPct}% OFF Hoje!)`
+        : `💰 Valor único: *R$ ${priceStr}* (PIX ou Cartão)`,
+      `📥 *Entrega Imediata:* Receba o arquivo PDF completo diretamente no seu E-mail + Download Imediato após a confirmação do pagamento!`,
+      ``,
+      `👉 *Acesse a página oficial e garanta o seu agora:*`,
       `${pageUrl}`,
-    ].join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };

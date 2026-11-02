@@ -731,7 +731,12 @@ export async function sendEbookOfferEmail({
 }) {
   try {
     const cleanTo = to.trim().toLowerCase();
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://horeb.lynxems.com.br";
     const logoSrc = getEmailLogoSrc();
+    const resolvedOfferCover =
+      ebookCoverUrl && ebookCoverUrl.startsWith("/")
+        ? `${baseUrl}${ebookCoverUrl}`
+        : ebookCoverUrl;
     const greeting = recipientName ? `Olá, ${recipientName}!` : "A Paz do Senhor!";
     const priceFormatted = Number(ebookPrice || 0).toLocaleString("pt-BR", {
       minimumFractionDigits: 2,
@@ -829,11 +834,11 @@ export async function sendEbookOfferEmail({
                   </tr>
 
                   ${
-                    ebookCoverUrl && ebookCoverUrl.startsWith("http")
+                    resolvedOfferCover && resolvedOfferCover.startsWith("http")
                       ? `
                   <tr>
                     <td style="padding: 8px 32px 16px 32px; text-align: center;">
-                      <img src="${ebookCoverUrl}" alt="${ebookTitle}" style="width: 100%; max-height: 240px; object-fit: cover; border-radius: 14px; border: 1px solid #e4e4e7;" />
+                      <img src="${resolvedOfferCover}" alt="${ebookTitle}" style="max-width: 220px; max-height: 260px; object-fit: contain; border-radius: 14px; border: 1px solid #e4e4e7;" />
                     </td>
                   </tr>
                   `
