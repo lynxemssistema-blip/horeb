@@ -172,6 +172,82 @@ export async function getSession(): Promise<SessionData | null> {
         tenantId: dbUser.tenantId || session.tenantId || "",
         tenantSlug: dbUser.tenant?.slug || session.tenantSlug || "admin",
       };
+    } else if (session.tenantSlug && session.tenantSlug !== "admin") {
+      // Auto-recuperação transparente caso o banco SQLite do container tenha sido recriado
+      try {
+        const existingTenant = await prisma.tenant.findUnique({
+          where: { slug: session.tenantSlug },
+          select: { id: true, slug: true },
+        });
+        if (!existingTenant) {
+          const recoveredTenantId = session.tenantId || `tenant-${session.tenantSlug}`;
+          const formattedName =
+            session.tenantSlug.charAt(0).toUpperCase() +
+            session.tenantSlug.slice(1).replace(/-/g, " ");
+          const trialExpiresAt = new Date();
+          trialExpiresAt.setDate(trialExpiresAt.getDate() + 30);
+
+          const createdTenant = await prisma.tenant.create({
+            data: {
+              id: recoveredTenantId,
+              name: formattedName.toLowerCase().startsWith("igreja")
+                ? formattedName
+                : `Igreja ${formattedName}`,
+              slug: session.tenantSlug,
+              primaryColor: "#d97706",
+              pastorName: session.name || `Pr. ${formattedName}`,
+              plan: "PREMIUM",
+              status: "TRIAL",
+              monthlyPrice: 399,
+              setupPrice: 1290,
+              subscriptionExpiresAt: trialExpiresAt,
+            },
+          });
+
+          session.tenantId = createdTenant.id;
+        } else {
+          session.tenantId = existingTenant.id;
+        }
+
+        // Garantir que o usuário da sessão também exista no banco local
+        if (session.email) {
+          const existingUser = await prisma.user.findUnique({
+            where: { email: session.email.toLowerCase() },
+            select: { id: true },
+          });
+          const userIdToUse = existingUser?.id || session.userId;
+          if (!existingUser) {
+            await prisma.user.create({
+              data: {
+                id: session.userId,
+                name: session.name || "Administrador",
+                email: session.email.toLowerCase(),
+                role: session.role || "ADMIN",
+                isEmailVerified: true,
+                themePreference: "dark",
+                themePalette: "prime",
+                tenantId: session.tenantId,
+              },
+            });
+          }
+          await prisma.userChurchAccess.upsert({
+            where: {
+              userId_tenantId: {
+                userId: userIdToUse,
+                tenantId: session.tenantId,
+              },
+            },
+            update: { role: session.role || "ADMIN" },
+            create: {
+              userId: userIdToUse,
+              tenantId: session.tenantId,
+              role: session.role || "ADMIN",
+            },
+          });
+        }
+      } catch (recoverErr) {
+        console.warn("Aviso ao sincronizar sessão com banco local:", recoverErr);
+      }
     }
 
     // Aplica o papel simulado se existir (para testes e superadmin)
@@ -219,13 +295,54 @@ export async function checkChurchAccess(slug: string): Promise<AccessCheckResult
   }
 
   // Buscar congregação de destino para validar existência e metadados
-  const targetTenant = await prisma.tenant.findUnique({
+  let targetTenant = await prisma.tenant.findUnique({
     where: { slug },
     select: { id: true, name: true, slug: true, parentId: true },
   });
 
+  // Se a congregação não existir no banco mas o usuário logado pertence a ela (ou é SUPERADMIN),
+  // recria automaticamente a congregação para evitar perda em rebuilds e loops de redirecionamento
+  if (!targetTenant && (session.tenantSlug === slug || session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN")) {
+    try {
+      const formattedName =
+        slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ");
+      const trialExpiresAt = new Date();
+      trialExpiresAt.setDate(trialExpiresAt.getDate() + 30);
+
+      const created = await prisma.tenant.create({
+        data: {
+          id: session.tenantSlug === slug && session.tenantId ? session.tenantId : undefined,
+          name: formattedName.toLowerCase().startsWith("igreja")
+            ? formattedName
+            : `Igreja ${formattedName}`,
+          slug,
+          primaryColor: "#d97706",
+          pastorName: session.name || `Pr. ${formattedName}`,
+          plan: "PREMIUM",
+          status: "TRIAL",
+          monthlyPrice: 399,
+          setupPrice: 1290,
+          subscriptionExpiresAt: trialExpiresAt,
+        },
+        select: { id: true, name: true, slug: true, parentId: true },
+      });
+      targetTenant = created;
+    } catch {
+      targetTenant = await prisma.tenant.findUnique({
+        where: { slug },
+        select: { id: true, name: true, slug: true, parentId: true },
+      });
+    }
+  }
+
   if (!targetTenant) {
-    return { authorized: false, reason: "NOT_LOGGED_IN" };
+    return {
+      authorized: false,
+      reason: "NOT_MEMBER",
+      user: session,
+      userChurchSlug: session.tenantSlug || "admin",
+      requestedChurchSlug: slug,
+    };
   }
 
   // Super Admin (Lynx EMS) tem acesso irrestrito a todas as congregações

@@ -49,8 +49,8 @@ export function NativeMobileTools({
     setIsIOS(isAppleDevice);
 
     // 3. Capturar evento de instalação nativa do navegador (Android / Chrome)
+    // Sem chamar preventDefault() na abertura automática para não emitir o warning do Chrome
     const handleBeforeInstall = (e: Event) => {
-      e.preventDefault();
       setDeferredPrompt(e);
     };
 

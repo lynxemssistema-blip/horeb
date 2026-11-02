@@ -26,7 +26,8 @@ export function middleware(request: NextRequest) {
             session = JSON.parse(text);
           } else {
             try {
-              const decoded = atob(text);
+              const payloadPart = text.includes(".") ? text.slice(0, text.lastIndexOf(".")) : text;
+              const decoded = atob(payloadPart);
               if (decoded.startsWith("{")) {
                 session = JSON.parse(decoded);
               }

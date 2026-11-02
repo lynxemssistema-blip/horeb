@@ -62,11 +62,22 @@ export default async function HomePage(props: {
   const session = await getSession();
 
   let userChurch = null;
-  if (session && session.tenantSlug) {
+  if (session && session.tenantSlug && session.tenantSlug !== "admin") {
     userChurch = await prisma.tenant.findUnique({
       where: { slug: session.tenantSlug },
       select: { id: true, name: true, slug: true, primaryColor: true, logoUrl: true },
     });
+  }
+
+  // Se o usuário já está autenticado na congregação que gerou o alerta ?auth=required&church=...,
+  // redireciona diretamente para a congregação para evitar qualquer loop na página inicial
+  if (
+    isAuthRequired &&
+    session &&
+    churchSlug &&
+    (session.tenantSlug === churchSlug || session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN")
+  ) {
+    redirect(`/${churchSlug}`);
   }
 
   const [tenants, promoRes, ebooksRes] = await Promise.all([
