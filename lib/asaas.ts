@@ -70,27 +70,28 @@ export interface AsaasPixQrCode {
 }
 
 const DEFAULT_ASAAS_PROD_KEY = [
-  "$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY",
+  "$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6Oj",
   "QzZjczZTNlLTEzZmUtNGM5Yy1iZjcxLWNjMjgxMWI5ZGNkYzo6JGFhY2hfOGU4MjBmY2QtNjBjYi00ZmQ1LThmOGEtODlkMWRlODNjZTUz",
-].join("::");
+].join("");
 
 export function getAsaasConfig() {
   let apiKey = (process.env.ASAAS_API_KEY || "").trim();
-  // Remove barra invertida se o parser manteve '\$aact_...'
+  // Remove aspas extras e barra invertida se o parser manteve '\$aact_...'
+  apiKey = apiKey.replace(/^["']+|["']+$/g, "").trim();
   if (apiKey.startsWith("\\$")) {
     apiKey = apiKey.slice(1);
-  }
-  // Caso o parser de .env ou Docker Compose tenha engolido '$aact_prod' (interpolação de variável) ou esteja vazio no container
-  if (!apiKey || !apiKey.includes("000Mzkw") && apiKey.startsWith("_000Mzkw")) {
-    if (apiKey.startsWith("_000Mzkw")) {
-      apiKey = `$aact_prod${apiKey}`;
-    }
   }
   if (apiKey && !apiKey.startsWith("$") && apiKey.startsWith("aact_")) {
     apiKey = `$${apiKey}`;
   }
-  // Fallback garantido para a chave oficial de produção caso o ambiente do container não tenha injetado ou tenha corrompido o '$'
-  if (!apiKey || apiKey.length < 30 || !apiKey.startsWith("$aact_")) {
+  // Se a chave do ambiente foi truncada ou corrompida pelo interpolador de '$' do Docker/Easypanel
+  // (a chave completa possui 166 caracteres e 2 separadores '::' em base64), usa a chave oficial íntegra
+  if (
+    !apiKey ||
+    apiKey.length < 150 ||
+    !apiKey.startsWith("$aact_") ||
+    !apiKey.includes("JGFhY2hf")
+  ) {
     apiKey = DEFAULT_ASAAS_PROD_KEY;
   }
 
