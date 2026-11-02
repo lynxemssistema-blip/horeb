@@ -19,7 +19,64 @@ export interface ParsedEmailMessage {
   html?: string;
 }
 
-export async function fetchInboxEmails(limit = 15): Promise<{
+/**
+ * Filtra estritamente apenas e-mails relacionados ao ecossistema do aplicativo Horeb
+ * ou de usuários/congregações cadastrados no app.
+ */
+function isAppRelatedEmail(
+  msg: { from: string; to: string; subject: string; snippet: string; text?: string },
+  knownEmailsLower: Set<string>,
+  knownNamesLower: string[]
+): boolean {
+  const combined = `${msg.from} ${msg.to} ${msg.subject} ${msg.snippet} ${msg.text || ""}`.toLowerCase();
+
+  // 1. Menção explícita à plataforma Horeb
+  if (combined.includes("horeb")) {
+    return true;
+  }
+
+  // 2. Palavras-chave transacionais ou de suporte do app
+  const appKeywords = [
+    "congregação",
+    "congregacao",
+    "código de segurança",
+    "codigo de seguranca",
+    "código de verificação",
+    "codigo de verificacao",
+    "código de recuperação",
+    "codigo de recuperacao",
+    "redefinir sua senha",
+    "recuperação de senha",
+    "convite oficial",
+    "biblioteca digital",
+    "e-book digital",
+    "ebook digital",
+  ];
+  if (appKeywords.some((kw) => combined.includes(kw))) {
+    return true;
+  }
+
+  // 3. Remetente ou destinatário é um usuário ou e-mail registrado no app Horeb
+  for (const email of knownEmailsLower) {
+    if (email && email !== imapUser.toLowerCase() && combined.includes(email)) {
+      return true;
+    }
+  }
+
+  // 4. Menção ao nome de alguma congregação cadastrada no Horeb
+  for (const name of knownNamesLower) {
+    if (name && name.length >= 4 && combined.includes(name)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export async function fetchInboxEmails(
+  limit = 40,
+  filterOptions?: { knownEmails?: string[]; knownChurchNames?: string[] }
+): Promise<{
   success: boolean;
   messages: ParsedEmailMessage[];
   total?: number;
@@ -36,6 +93,13 @@ export async function fetchInboxEmails(limit = 15): Promise<{
     logger: false,
   });
 
+  const knownEmailsLower = new Set(
+    (filterOptions?.knownEmails || []).map((e) => e.trim().toLowerCase()).filter(Boolean)
+  );
+  const knownNamesLower = (filterOptions?.knownChurchNames || [])
+    .map((n) => n.trim().toLowerCase())
+    .filter((n) => n.length >= 4);
+
   try {
     await client.connect();
     const lock = await client.getMailboxLock("INBOX");
@@ -47,7 +111,7 @@ export async function fetchInboxEmails(limit = 15): Promise<{
       totalMessages = mailbox ? mailbox.exists : 0;
 
       if (totalMessages > 0) {
-        // Buscar as últimas N mensagens (do fim para o início)
+        // Buscar as últimas N mensagens da caixa para filtrar apenas as relacionadas ao Horeb
         const startSeq = Math.max(1, totalMessages - limit + 1);
         const range = `${startSeq}:${totalMessages}`;
 
@@ -60,7 +124,7 @@ export async function fetchInboxEmails(limit = 15): Promise<{
           try {
             if (!message.source) continue;
             const parsed: any = await simpleParser(message.source as any);
-            messages.push({
+            const candidate: ParsedEmailMessage = {
               id: message.uid.toString(),
               seq: message.seq,
               uid: message.uid,
@@ -71,9 +135,13 @@ export async function fetchInboxEmails(limit = 15): Promise<{
               snippet: (parsed.text || "").slice(0, 160).replace(/\s+/g, " ").trim(),
               text: parsed.text || "",
               html: (parsed.html as string) || "",
-            });
+            };
+
+            if (isAppRelatedEmail(candidate, knownEmailsLower, knownNamesLower)) {
+              messages.push(candidate);
+            }
           } catch (parseErr) {
-            messages.push({
+            const fallbackCandidate: ParsedEmailMessage = {
               id: message.uid.toString(),
               seq: message.seq,
               uid: message.uid,
@@ -82,7 +150,11 @@ export async function fetchInboxEmails(limit = 15): Promise<{
               subject: message.envelope?.subject || "(Sem assunto)",
               date: new Date(message.internalDate || Date.now()).toISOString(),
               snippet: "Conteúdo não pôde ser pré-visualizado.",
-            });
+            };
+
+            if (isAppRelatedEmail(fallbackCandidate, knownEmailsLower, knownNamesLower)) {
+              messages.push(fallbackCandidate);
+            }
           }
         }
       }
@@ -91,8 +163,9 @@ export async function fetchInboxEmails(limit = 15): Promise<{
     }
 
     await client.logout();
-    // Inverter para mostrar os mais recentes primeiro
-    return { success: true, messages: messages.reverse(), total: totalMessages };
+    const reversed = messages.reverse();
+    // Total exibido passa a refletir exclusivamente as mensagens do app Horeb
+    return { success: true, messages: reversed, total: reversed.length };
   } catch (err: any) {
     console.error("Erro ao ler IMAP Hostinger:", err);
     return { success: false, messages: [], error: err.message };

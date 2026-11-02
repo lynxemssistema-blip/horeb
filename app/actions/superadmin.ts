@@ -314,18 +314,35 @@ export async function purgeAllNonSuperAdminDataAction() {
   }
 }
 
-// 6. Central de E-mails (Entrada e Saída)
+// 6. Central de E-mails (Entrada e Saída - Somente E-mails Relacionados ao App Horeb)
 export async function getEmailCenterData() {
   try {
     await requireSuperAdmin();
-    // 1. Logs de E-mails Enviados / Registrados
-    const emailLogs = await prisma.emailLog.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    });
+    // 1. Logs de E-mails Enviados / Registrados pelo App Horeb e Usuários/Congregações conhecidas
+    const [emailLogs, appUsers, appTenants] = await Promise.all([
+      prisma.emailLog.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      }),
+      prisma.user.findMany({ select: { email: true } }),
+      prisma.tenant.findMany({ select: { name: true, slug: true } }),
+    ]);
 
-    // 2. Buscar Mensagens Reais da Caixa de Entrada (IMAP Hostinger)
-    const imapResult = await fetchInboxEmails(15);
+    const knownEmails = Array.from(
+      new Set([
+        ...appUsers.map((u) => u.email),
+        ...emailLogs.map((l) => l.to),
+        ...emailLogs.map((l) => l.from),
+      ])
+    ).filter(Boolean);
+
+    const knownChurchNames = appTenants.flatMap((t) => [t.name, t.slug]).filter(Boolean);
+
+    // 2. Buscar Mensagens Reais da Caixa de Entrada (IMAP Hostinger) filtrando estritamente as do App Horeb
+    const imapResult = await fetchInboxEmails(40, {
+      knownEmails,
+      knownChurchNames,
+    });
 
     return {
       success: true,

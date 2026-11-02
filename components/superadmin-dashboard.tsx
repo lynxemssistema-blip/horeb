@@ -1305,22 +1305,22 @@ export function SuperAdminDashboard({
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Caixa de Entrada (IMAP Hostinger - E-mails Recebidos) */}
+              {/* Caixa de Entrada (IMAP Hostinger - Somente E-mails do App Horeb) */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-black text-white flex items-center gap-2">
                     <Inbox className="w-4 h-4 text-amber-400" />
-                    <span>Caixa de Entrada (INBOX - {inboxTotal} mensagens)</span>
+                    <span>Caixa de Entrada Horeb ({inbox.length} mensagens do app)</span>
                   </h4>
-                  <span className="text-[10px] text-zinc-500 font-mono">
-                    suporte@lynxems.com.br
+                  <span className="text-[10px] text-amber-400/90 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                    Filtro Ativo: Somente App Horeb
                   </span>
                 </div>
 
                 <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
                   {inbox.length === 0 ? (
                     <div className="p-6 rounded-2xl bg-card border border-border text-center text-xs text-muted-foreground">
-                      Nenhuma mensagem encontrada na caixa de entrada.
+                      Nenhum e-mail relacionado ao aplicativo Horeb encontrado na caixa de entrada.
                     </div>
                   ) : (
                     inbox.map((msg: any) => (
