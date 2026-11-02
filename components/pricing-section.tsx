@@ -50,13 +50,13 @@ export function PricingSection({ existingTenants, promoConfig }: PricingSectionP
   const promo = promoConfig || {
     active: true,
     badge: "CONDIÇÃO EXCLUSIVA DE LANÇAMENTO",
-    title: "Programa Especial: Primeiras 100 Igrejas de Outubro/2026",
+    title: "Programa Especial: Primeiras 100 Igrejas de Dezembro/2026",
     description:
-      "Para as primeiras 100 igrejas parceiras do mês de outubro/2026, oferecemos implantação 100% gratuita, acompanhamento presencial na secretaria e treinamento VIP de liderança. Em troca, construiremos juntos seu case de sucesso ministerial.",
+      "Para as primeiras 100 igrejas parceiras do mês de dezembro/2026, oferecemos implantação 100% gratuita, acompanhamento presencial na secretaria e treinamento VIP de liderança. Em troca, construiremos juntos seu case de sucesso ministerial.",
     discountPercent: 50,
     currentCount: 63,
     targetCount: 100,
-    validityText: "Válido até 31 de Outubro de 2026",
+    validityText: "Válido até 31 de Dezembro de 2026",
     ctaText: "Garantir Minha Vaga (Implantação Grátis)",
   };
 
@@ -366,12 +366,12 @@ export function PricingSection({ existingTenants, promoConfig }: PricingSectionP
               </div>
 
               <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                {promo.title || "Programa Especial: Primeiras 100 Igrejas de Outubro/2026"}
+                {promo.title || "Programa Especial: Primeiras 100 Igrejas de Dezembro/2026"}
               </h3>
 
               <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
                 {promo.description ||
-                  "Para as primeiras 100 igrejas parceiras do mês de outubro/2026, oferecemos 50% de desconto na taxa de implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança. Em troca, construiremos juntos seu case de sucesso ministerial."}
+                  "Para as primeiras 100 igrejas parceiras do mês de dezembro/2026, oferecemos 50% de desconto na taxa de implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança. Em troca, construiremos juntos seu case de sucesso ministerial."}
               </p>
 
               {/* Contador Dinâmico de Escassez (ex: 63/100) */}
@@ -379,7 +379,7 @@ export function PricingSection({ existingTenants, promoConfig }: PricingSectionP
                 <div className="flex items-center justify-between text-xs font-bold">
                   <span className="text-amber-300 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    Vagas Preenchidas em Outubro:
+                    Vagas Preenchidas em Dezembro:
                   </span>
                   <span className="font-mono text-white bg-black/60 px-2.5 py-0.5 rounded-lg border border-white/10">
                     <strong className="text-amber-400 font-black">{currentCount}</strong> / {targetCount} vagas ({percentage}%)
@@ -396,7 +396,7 @@ export function PricingSection({ existingTenants, promoConfig }: PricingSectionP
                 <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-0.5">
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3 text-amber-400" />
-                    {promo.validityText || "Válido até 31 de Outubro de 2026"}
+                    {promo.validityText || "Válido até 31 de Dezembro de 2026"}
                   </span>
                   <span className="text-emerald-400 font-bold">
                     {Math.max(0, targetCount - currentCount)} vagas restantes
@@ -429,7 +429,7 @@ export function PricingSection({ existingTenants, promoConfig }: PricingSectionP
                 }
               />
               <span className="text-[11px] text-amber-300/80 font-medium">
-                {promo.validityText || "Válido até 31 de Outubro de 2026"}
+                {promo.validityText || "Válido até 31 de Dezembro de 2026"}
               </span>
             </div>
           </div>

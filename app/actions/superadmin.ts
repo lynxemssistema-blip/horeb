@@ -373,23 +373,39 @@ export async function testEmailDiagnostics() {
 // 9. Buscar e Atualizar Configurações da Promoção
 export async function getPromotionConfig() {
   try {
-    const config = await prisma.promotionConfig.upsert({
+    let config = await prisma.promotionConfig.upsert({
       where: { id: "default" },
       update: {},
       create: {
         id: "default",
         active: true,
         badge: "CONDIÇÃO EXCLUSIVA DE LANÇAMENTO",
-        title: "Programa Especial: Primeiras 100 Igrejas de Outubro/2026",
+        title: "Programa Especial: Primeiras 100 Igrejas de Dezembro/2026",
         description:
-          "Para as primeiras 100 igrejas parceiras do mês de outubro/2026, oferecemos 50% de desconto na taxa de implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança. Em troca, construiremos juntos seu case de sucesso ministerial.",
+          "Para as primeiras 100 igrejas parceiras do mês de dezembro/2026, oferecemos 50% de desconto na taxa de implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança. Em troca, construiremos juntos seu case de sucesso ministerial.",
         discountPercent: 50,
         currentCount: 63,
         targetCount: 100,
-        validityText: "Válido até 31 de Outubro de 2026",
+        validityText: "Válido até 31 de Dezembro de 2026",
         ctaText: "Garantir Minha Vaga (50% OFF)",
       },
     });
+
+    // Se o registro existente no banco ainda contiver referências antigas a "Outubro", atualiza automaticamente para Dezembro/2026
+    if (
+      config.title?.includes("Outubro") ||
+      config.description?.toLowerCase().includes("outubro") ||
+      config.validityText?.includes("Outubro")
+    ) {
+      config = await prisma.promotionConfig.update({
+        where: { id: "default" },
+        data: {
+          title: config.title.replace(/Outubro/gi, "Dezembro"),
+          description: config.description.replace(/outubro/gi, "dezembro"),
+          validityText: config.validityText.replace(/Outubro/gi, "Dezembro"),
+        },
+      });
+    }
 
     return { success: true, config };
   } catch (error: any) {
@@ -399,13 +415,13 @@ export async function getPromotionConfig() {
         id: "default",
         active: true,
         badge: "CONDIÇÃO EXCLUSIVA DE LANÇAMENTO",
-        title: "Programa Especial: Primeiras 100 Igrejas de Outubro/2026",
+        title: "Programa Especial: Primeiras 100 Igrejas de Dezembro/2026",
         description:
-          "Para as primeiras 100 igrejas parceiras do mês de outubro/2026, oferecemos 50% de desconto na taxa de implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança.",
+          "Para as primeiras 100 igrejas parceiras do mês de dezembro/2026, oferecemos 50% de desconto na taxa de implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança.",
         discountPercent: 50,
         currentCount: 63,
         targetCount: 100,
-        validityText: "Válido até 31 de Outubro de 2026",
+        validityText: "Válido até 31 de Dezembro de 2026",
         ctaText: "Garantir Minha Vaga (50% OFF)",
       },
     };

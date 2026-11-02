@@ -110,18 +110,18 @@ export function SuperAdminDashboard({
   // Estados de formulários
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Estado da Promoção de Lançamento (Outubro/2026 - Primeiras 100 Igrejas)
+  // Estado da Promoção de Lançamento (Dezembro/2026 - Primeiras 100 Igrejas)
   const [promoConfig, setPromoConfig] = useState(
     initialPromoConfig || {
       active: true,
       badge: "CONDIÇÃO EXCLUSIVA DE LANÇAMENTO",
-      title: "Programa Especial: Primeiras 100 Igrejas de Outubro/2026",
+      title: "Programa Especial: Primeiras 100 Igrejas de Dezembro/2026",
       description:
-        "Para as primeiras 100 igrejas parceiras do mês de outubro/2026, oferecemos 50% de desconto na taxa de implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança. Em troca, construiremos juntos seu case de sucesso ministerial.",
+        "Para as primeiras 100 igrejas parceiras do mês de dezembro/2026, oferecemos 50% de desconto na taxa de implantação, acompanhamento presencial na secretaria e treinamento VIP de liderança. Em troca, construiremos juntos seu case de sucesso ministerial.",
       discountPercent: 50,
       currentCount: 63,
       targetCount: 100,
-      validityText: "Válido até 31 de Outubro de 2026",
+      validityText: "Válido até 31 de Dezembro de 2026",
       ctaText: "Garantir Minha Vaga (50% OFF)",
     }
   );
@@ -498,7 +498,7 @@ export function SuperAdminDashboard({
                 { id: "emails", label: "Central de E-mails", icon: Mail },
                 { id: "agents", label: "Agentes de IA", icon: Bot, badge: "NOVO" },
                 { id: "permissions", label: "Controle de Acessos", icon: ShieldCheck },
-                { id: "promo", label: "Promoção Especial", icon: Gift, badge: "Outubro" },
+                { id: "promo", label: "Promoção Especial", icon: Gift, badge: "Dezembro" },
                 { id: "personal-tools", label: "Minhas Ferramentas (B2C)", icon: Camera, badge: "VENDAS" },
               ].map((tab) => {
                 const isActive = activeTab === tab.id;
@@ -651,7 +651,7 @@ export function SuperAdminDashboard({
                   className="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-black text-xs h-10 px-4 rounded-xl gap-1.5"
                 >
                   <Gift className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Configurar Promoção (Outubro)</span>
+                  <span>Configurar Promoção (Dezembro)</span>
                 </Button>
 
                 <Button
@@ -1437,14 +1437,14 @@ export function SuperAdminDashboard({
           </TabsContent>
 
           {/* ========================================================================= */}
-          {/* TAB 6: GERENCIADOR DA PROMOÇÃO (OUTUBRO / PRIMEIRAS 100 IGREJAS)         */}
+          {/* TAB 6: GERENCIADOR DA PROMOÇÃO (DEZEMBRO / PRIMEIRAS 100 IGREJAS)        */}
           {/* ========================================================================= */}
           <TabsContent value="promo" className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h3 className="text-xl font-black text-white flex items-center gap-2">
                   <Gift className="w-5 h-5 text-amber-400" />
-                  <span>Gerenciador da Promoção de Lançamento (Outubro/2026)</span>
+                  <span>Gerenciador da Promoção de Lançamento (Dezembro/2026)</span>
                 </h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
                   Ative ou desative a promoção, ajuste o contador de vagas (ex: 63/100), período de
@@ -1496,7 +1496,7 @@ export function SuperAdminDashboard({
                       onChange={(e) =>
                         setPromoConfig({ ...promoConfig, title: e.target.value })
                       }
-                      placeholder="Programa Especial: Primeiras 100 Igrejas de Outubro/2026"
+                      placeholder="Programa Especial: Primeiras 100 Igrejas de Dezembro/2026"
                       className="bg-zinc-900 border-white/10 text-xs h-10 rounded-xl"
                     />
                   </div>
@@ -1572,7 +1572,7 @@ export function SuperAdminDashboard({
                         onChange={(e) =>
                           setPromoConfig({ ...promoConfig, validityText: e.target.value })
                         }
-                        placeholder="Válido até 31 de Outubro de 2026"
+                        placeholder="Válido até 31 de Dezembro de 2026"
                         className="bg-zinc-900 border-white/10 text-xs h-10 rounded-xl"
                       />
                     </div>
