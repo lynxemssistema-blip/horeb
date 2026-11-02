@@ -178,11 +178,10 @@ async function ensureInitialEbooksSeeded() {
             },
           });
         } else {
-          // Atualiza apenas se a capa ainda for do Unsplash, base64 pesado ou vazia, ou se o autor ainda usar grafia antiga
+          // Atualiza apenas se a capa ainda for do Unsplash ou vazia (NUNCA sobrescreve capa customizada enviada pelo Super Admin!)
           const needsCoverUpdate =
             !found.coverUrl ||
-            found.coverUrl.includes("images.unsplash.com") ||
-            found.coverUrl.startsWith("data:");
+            found.coverUrl.includes("images.unsplash.com");
           const needsPdfUpdate = !found.pdfUrl || !found.pdfUrl.startsWith("data:");
           const needsAuthorUpdate =
             !found.author ||
@@ -203,6 +202,11 @@ async function ensureInitialEbooksSeeded() {
           }
         }
       }
+
+      // Sincroniza automaticamente pedidos de E-book recentes pagos no Asaas (garantindo envio do e-mail com PDF em anexo + link de uso único mesmo após deploy ou sem webhook secret)
+      await syncRecentAsaasEbookOrdersInternal().catch((err) => {
+        console.warn("[syncRecentAsaasEbookOrdersInternal Warning]:", err);
+      });
     } catch (err) {
       console.warn("[ensureInitialEbooksSeeded Warning]:", err);
     } finally {
@@ -211,6 +215,132 @@ async function ensureInitialEbooksSeeded() {
   })();
 
   return seedingPromise;
+}
+
+/**
+ * Sincroniza pedidos de E-book do Asaas com o banco local e dispara o e-mail de entrega (PDF em anexo + link de uso único) para pagamentos confirmados.
+ */
+async function syncRecentAsaasEbookOrdersInternal() {
+  const { getAsaasConfig } = await import("@/lib/asaas");
+  const { apiKey, baseUrl, isConfigured } = getAsaasConfig();
+  if (!isConfigured) return;
+
+  const res = await fetch(`${baseUrl}/payments?limit=25`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      access_token: apiKey,
+    },
+    cache: "no-store",
+  });
+  if (!res.ok) return;
+  const data = await res.json();
+  const payments: any[] = data?.data || [];
+
+  const allEbooks = await prisma.ebookProduct.findMany({
+    select: {
+      id: true,
+      title: true,
+      price: true,
+    },
+  });
+  if (allEbooks.length === 0) return;
+
+  for (const p of payments) {
+    const extRef = String(p.externalReference || "");
+    const desc = String(p.description || "");
+    if (!extRef.startsWith("EBOOK_") && !desc.toLowerCase().includes("e-book")) {
+      continue;
+    }
+
+    let order = await prisma.ebookOrder.findUnique({
+      where: { asaasPaymentId: p.id },
+    });
+
+    const isPaid = p.status === "RECEIVED" || p.status === "CONFIRMED";
+
+    if (!order) {
+      // Recupera o E-book correspondente (por ID no externalReference ou pelo título na descrição)
+      const refId = extRef.replace("EBOOK_", "").trim();
+      let matchedEbook = allEbooks.find((e) => e.id === refId);
+      if (!matchedEbook) {
+        matchedEbook = allEbooks.find((e) => {
+          const cleanTitle = e.title.split("—")[0].trim().toLowerCase();
+          return cleanTitle && desc.toLowerCase().includes(cleanTitle);
+        });
+      }
+      if (!matchedEbook) {
+        matchedEbook = allEbooks[0];
+      }
+
+      // Busca dados do comprador no Asaas
+      let buyerName = "Cliente Horeb";
+      let buyerEmail = "";
+      let buyerCpf = "00000000000";
+      let buyerPhone: string | null = null;
+
+      if (p.customer) {
+        try {
+          const custRes = await fetch(`${baseUrl}/customers/${p.customer}`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              access_token: apiKey,
+            },
+            cache: "no-store",
+          });
+          if (custRes.ok) {
+            const cust = await custRes.json();
+            buyerName = cust.name || buyerName;
+            buyerEmail = (cust.email || "").trim().toLowerCase();
+            buyerCpf = cust.cpfCnpj || buyerCpf;
+            buyerPhone = cust.mobilePhone || cust.phone || null;
+          }
+        } catch {}
+      }
+
+      if (!buyerEmail) continue;
+
+      // Usa o próprio ID da cobrança do Asaas (pay_...) como downloadToken determinístico quando sincronizado da API,
+      // garantindo que mesmo se o container reiniciar, o link enviado por e-mail continue funcionando até ser usado 1 única vez!
+      const deterministicToken = String(p.id || crypto.randomBytes(24).toString("hex"));
+
+      order = await prisma.ebookOrder.create({
+        data: {
+          ebookId: matchedEbook.id,
+          buyerName,
+          buyerEmail,
+          buyerCpf,
+          buyerPhone,
+          amount: Number(p.value || matchedEbook.price || 9.9),
+          billingType: p.billingType || "PIX",
+          status: p.status || "PENDING",
+          asaasCustomerId: p.customer || null,
+          asaasPaymentId: p.id,
+          invoiceUrl: p.invoiceUrl || null,
+          paidAt: isPaid ? new Date(p.paymentDate || p.clientPaymentDate || Date.now()) : null,
+          downloadToken: deterministicToken,
+          downloadUsed: false,
+          deliveryEmailSent: false,
+        },
+      });
+    } else if (isPaid && order.status !== "RECEIVED" && order.status !== "CONFIRMED") {
+      order = await prisma.ebookOrder.update({
+        where: { id: order.id },
+        data: {
+          status: p.status,
+          paidAt: order.paidAt || new Date(),
+          invoiceUrl: p.invoiceUrl || order.invoiceUrl,
+        },
+      });
+    }
+
+    if (isPaid && order && !order.deliveryEmailSent) {
+      await triggerSingleUseEbookDeliveryEmail(order.id).catch((err) => {
+        console.warn("[Auto-Delivery Email Error]:", err);
+      });
+    }
+  }
 }
 
 /**
@@ -397,6 +527,26 @@ export async function saveEbookProduct(data: {
       });
       if (!existing) {
         return { success: false, error: "E-book não encontrado." };
+      }
+
+      // Se a capa está sendo trocada ou removida, apaga a imagem anterior antes de gravar a nova
+      const nextCoverUrl = data.coverUrl !== undefined ? data.coverUrl : existing.coverUrl;
+      if (existing.coverUrl && existing.coverUrl !== nextCoverUrl) {
+        // 1. Limpa explicitamente a capa anterior no banco de dados antes de salvar a nova
+        await prisma.ebookProduct.update({
+          where: { id: data.id },
+          data: { coverUrl: null },
+        });
+
+        // 2. Se a capa anterior era um arquivo local customizado em public/uploads/, remove do disco com segurança
+        if (existing.coverUrl.startsWith("/uploads/")) {
+          const oldFilePath = path.join(
+            process.cwd(),
+            "public",
+            existing.coverUrl.replace(/^\/+/, "")
+          );
+          await fs.unlink(oldFilePath).catch(() => {});
+        }
       }
 
       const updated = await prisma.ebookProduct.update({
@@ -664,9 +814,12 @@ export async function purchaseEbookAction(params: {
 }
 
 /**
- * Garante que o token de download de uso único exista e dispara o e-mail com o link único para o comprador (apenas 1 vez por pedido pago).
+ * Garante que o token de download de uso único exista e dispara o e-mail com o PDF em anexo + link único para o comprador.
  */
-export async function triggerSingleUseEbookDeliveryEmail(orderId: string): Promise<{
+export async function triggerSingleUseEbookDeliveryEmail(
+  orderId: string,
+  forceResend = false
+): Promise<{
   downloadToken: string;
   singleUseDownloadUrl: string;
   emailSent: boolean;
@@ -682,17 +835,25 @@ export async function triggerSingleUseEbookDeliveryEmail(orderId: string): Promi
   }
 
   let token = order.downloadToken;
-  if (!token) {
+  if (!token || (forceResend && order.downloadUsed)) {
     token = crypto.randomBytes(24).toString("hex");
     await prisma.ebookOrder.update({
       where: { id: order.id },
-      data: { downloadToken: token },
+      data: {
+        downloadToken: token,
+        downloadUsed: false,
+        downloadUsedAt: null,
+      },
     });
   }
 
   const singleUseDownloadUrl = `${baseUrl}/api/ebooks/download/${token}`;
 
-  if (!order.deliveryEmailSent && order.buyerEmail) {
+  if ((!order.deliveryEmailSent || forceResend) && order.buyerEmail) {
+    // Carrega o binário do PDF para anexar diretamente no e-mail de confirmação (além do link de uso único)
+    const pdfBuffer = await resolvePdfBuffer(order.ebook.pdfUrl);
+    const pdfFileName = order.ebook.pdfFileName || `${order.ebook.title}.pdf`;
+
     const mailRes = await sendEbookSingleUseDownloadEmail({
       to: order.buyerEmail,
       buyerName: order.buyerName,
@@ -702,6 +863,8 @@ export async function triggerSingleUseEbookDeliveryEmail(orderId: string): Promi
       ebookCoverUrl: order.ebook.coverUrl,
       singleUseDownloadUrl,
       asaasInvoiceUrl: order.invoiceUrl,
+      pdfBuffer,
+      pdfFileName,
     });
 
     if (mailRes.success) {
@@ -716,8 +879,8 @@ export async function triggerSingleUseEbookDeliveryEmail(orderId: string): Promi
             type: "OUTGOING",
             from: "suporte@lynxems.com.br",
             to: order.buyerEmail,
-            subject: `✅ Pagamento Confirmado: Baixe seu E-book "${order.ebook.title}" (Link de Uso Único)`,
-            snippet: `Link de download de uso único enviado para ${order.buyerName}: ${singleUseDownloadUrl}`,
+            subject: `✅ Pagamento Confirmado: Seu E-book "${order.ebook.title}" (PDF em Anexo + Link Único)`,
+            snippet: `PDF anexado (${pdfFileName}) + Link de uso único enviado para ${order.buyerName}: ${singleUseDownloadUrl}`,
             status: "SENT",
           },
         })
@@ -732,6 +895,59 @@ export async function triggerSingleUseEbookDeliveryEmail(orderId: string): Promi
     singleUseDownloadUrl,
     emailSent: Boolean(order.deliveryEmailSent),
   };
+}
+
+/**
+ * Permite reenviar o e-mail de confirmação com o PDF em anexo + novo link de uso único (Super Admin ou Comprador na página do pedido pago)
+ */
+export async function resendPaidEbookEmailAction(orderId: string) {
+  try {
+    const order = await prisma.ebookOrder.findUnique({
+      where: { id: orderId },
+      include: { ebook: true },
+    });
+    if (!order) {
+      return { success: false, error: "Pedido não encontrado." };
+    }
+
+    let status = order.status;
+    if (status !== "RECEIVED" && status !== "CONFIRMED" && order.asaasPaymentId) {
+      const check = await getAsaasPayment(order.asaasPaymentId);
+      if (check.success && check.payment) {
+        status = check.payment.status;
+        if (status === "RECEIVED" || status === "CONFIRMED") {
+          await prisma.ebookOrder.update({
+            where: { id: order.id },
+            data: { status, paidAt: new Date() },
+          });
+        }
+      }
+    }
+
+    if (status !== "RECEIVED" && status !== "CONFIRMED") {
+      return {
+        success: false,
+        error: "Este pedido ainda aguarda confirmação de pagamento no Asaas.",
+      };
+    }
+
+    const res = await triggerSingleUseEbookDeliveryEmail(order.id, true);
+    if (!res.emailSent) {
+      return {
+        success: false,
+        error: "Não foi possível enviar o e-mail no momento. Verifique o endereço de e-mail.",
+      };
+    }
+
+    revalidatePath("/admin");
+    return {
+      success: true,
+      singleUseDownloadUrl: res.singleUseDownloadUrl,
+      buyerEmail: order.buyerEmail,
+    };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 }
 
 /**

@@ -514,14 +514,14 @@ export function EbooksStoreSection({
                         Pagamento Confirmado com Sucesso!
                       </h4>
                       <p className="text-xs text-zinc-200 leading-relaxed">
-                        Enviamos o <strong>link exclusivo para baixar o PDF</strong> para o seu e-mail{" "}
+                        Enviamos o <strong>arquivo PDF em anexo</strong> e o <strong>link exclusivo para baixar o PDF</strong> para o seu e-mail{" "}
                         {buyerEmail ? (
                           <strong className="text-amber-300 font-mono">({buyerEmail})</strong>
                         ) : null}
                         .
                       </p>
                       <p className="text-[11px] text-amber-300 font-bold">
-                        🔒 Atenção: O link enviado é válido para 1 único acesso (uso único).
+                        🔒 Atenção: O link enviado é válido para 1 único acesso (uso único) e o PDF também vai anexado diretamente no e-mail.
                       </p>
                     </div>
 

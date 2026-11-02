@@ -36,6 +36,7 @@ import {
   deleteEbookProduct,
   dispatchEbookOfferByAdminAction,
   getAdminEbooksData,
+  resendPaidEbookEmailAction,
 } from "@/app/actions/ebooks";
 
 interface SuperAdminEbooksManagerProps {
@@ -251,26 +252,91 @@ export function SuperAdminEbooksManager({
     setShowModal(true);
   };
 
-  // Upload de Capa (converte imagem para Data URI otimizada)
+  // Upload de Capa (apaga a imagem anterior antes e converte a nova imagem para Data URI otimizada via Canvas)
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
       toast.error(
-        `A imagem selecionada tem ${sizeMb} MB. O tamanho máximo permitido é de 5 MB.`
+        `A imagem selecionada tem ${sizeMb} MB. O tamanho máximo permitido é de 10 MB.`
       );
       e.target.value = "";
       return;
     }
+
+    // 1. Apaga imediatamente a imagem anterior antes de carregar a nova
+    setCoverUrl("");
+
     const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setCoverUrl(reader.result);
-        toast.success("Capa carregada com sucesso!");
-      }
+      if (typeof reader.result !== "string") return;
+      const rawDataUrl = reader.result;
+
+      // 2. Otimiza e redimensiona a imagem no cliente (máx 900x1200 JPEG 88%) para evitar erro 404/413 na Server Action
+      const img = new window.Image();
+      img.onload = () => {
+        try {
+          const maxW = 900;
+          const maxH = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxW || height > maxH) {
+            const ratio = Math.min(maxW / width, maxH / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.fillStyle = "#09090b";
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.88);
+            setCoverUrl(compressedDataUrl);
+            toast.success("Capa anterior removida e nova capa carregada com sucesso!");
+          } else {
+            setCoverUrl(rawDataUrl);
+            toast.success("Capa anterior removida e nova capa carregada!");
+          }
+        } catch {
+          setCoverUrl(rawDataUrl);
+          toast.success("Capa anterior removida e nova capa carregada!");
+        }
+      };
+      img.onerror = () => {
+        setCoverUrl(rawDataUrl);
+        toast.success("Capa anterior removida e nova capa carregada!");
+      };
+      img.src = rawDataUrl;
     };
     reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleRemovePreviousCover = () => {
+    setCoverUrl("");
+    toast.info("Imagem de capa anterior apagada. Agora selecione ou cole a nova capa.");
+  };
+
+  const handleResendOrderEmail = (orderId: string, email: string) => {
+    startTransition(async () => {
+      const res = await resendPaidEbookEmailAction(orderId);
+      if (res.success) {
+        toast.success(`E-mail com PDF em anexo + Link de Uso Único enviado para ${email}!`);
+        const refreshed = await getAdminEbooksData();
+        if (refreshed.success) {
+          setOrders(refreshed.orders);
+          onOrdersChange?.(refreshed.orders);
+        }
+      } else {
+        toast.error(res.error || "Não foi possível reenviar o e-mail.");
+      }
+    });
   };
 
   // Upload do Arquivo PDF do E-book (será enviado automaticamente ao Asaas em cada cobrança com availableAfterPayment=true)
@@ -743,6 +809,25 @@ export function SuperAdminEbooksManager({
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="inline-flex items-center gap-2">
+                          {isPaid && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleResendOrderEmail(order.id, order.buyerEmail)
+                              }
+                              disabled={isPending}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/30 font-bold text-[11px] cursor-pointer"
+                              title="Enviar E-mail com PDF em Anexo + Link de Uso Único"
+                            >
+                              <Mail className="w-3 h-3" />
+                              <span>
+                                {order.deliveryEmailSent
+                                  ? "Reenviar PDF + Link"
+                                  : "Enviar PDF + Link"}
+                              </span>
+                            </button>
+                          )}
+
                           <a
                             href={`https://wa.me/${waPhone}?text=${encodeURIComponent(waText)}`}
                             target="_blank"
@@ -1240,22 +1325,40 @@ export function SuperAdminEbooksManager({
                       <ImageIcon className="w-4 h-4" />
                       Capa do E-book
                     </span>
-                    {coverUrl && (
-                      <span className="text-[10px] text-emerald-400 font-bold">
-                        ✓ Capa definida
+                    {coverUrl ? (
+                      <button
+                        type="button"
+                        onClick={handleRemovePreviousCover}
+                        className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-bold cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Apagar Imagem Anterior</span>
+                      </button>
+                    ) : (
+                      <span className="text-[10px] text-zinc-500 font-bold">
+                        Sem capa definida
                       </span>
                     )}
                   </div>
 
+                  {coverUrl && (
+                    <div className="relative h-28 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden p-1.5">
+                      <img
+                        src={coverUrl}
+                        alt="Prévia da Capa"
+                        className="max-h-full max-w-full object-contain rounded"
+                      />
+                    </div>
+                  )}
+
                   <p className="text-[11px] text-zinc-400 leading-snug">
-                    Envie uma imagem de capa do seu computador ou cole uma URL abaixo.{" "}
-                    <strong className="text-amber-300">(Tamanho máximo: 5 MB)</strong>
+                    Ao enviar uma nova capa, a imagem anterior é apagada automaticamente antes de salvar.
                   </p>
 
                   <div className="flex gap-2">
                     <label className="flex-1 flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-xs cursor-pointer transition-colors">
                       <Upload className="w-3.5 h-3.5" />
-                      <span>Enviar Capa</span>
+                      <span>{coverUrl ? "Trocar Capa (Apaga Anterior)" : "Enviar Nova Capa"}</span>
                       <input
                         type="file"
                         accept="image/*"

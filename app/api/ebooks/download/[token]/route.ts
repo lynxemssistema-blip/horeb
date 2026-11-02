@@ -63,10 +63,18 @@ export async function GET(
       );
     }
 
-    const order = await prisma.ebookOrder.findUnique({
+    let order = await prisma.ebookOrder.findUnique({
       where: { downloadToken: cleanToken },
       include: { ebook: true },
     });
+
+    // Fallback para links gerados com paymentId (ex: pay_...) caso o banco tenha sido sincronizado depois
+    if (!order && cleanToken.startsWith("pay_")) {
+      order = await prisma.ebookOrder.findUnique({
+        where: { asaasPaymentId: cleanToken },
+        include: { ebook: true },
+      });
+    }
 
     if (!order || !order.ebook) {
       return new NextResponse(

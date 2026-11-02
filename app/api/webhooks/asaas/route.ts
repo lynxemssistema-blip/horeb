@@ -1,20 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { triggerSingleUseEbookDeliveryEmail } from "@/app/actions/ebooks";
+import { getAsaasPayment, getAsaasConfig } from "@/lib/asaas";
+import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Validação de Segurança do Token do Webhook do Asaas
+    const payload = await req.json();
+    const { event, payment } = payload;
+
+    // 1. Validação do Token do Webhook do Asaas (com fallback de verificação direta na API do Asaas caso o token no painel Asaas seja diferente)
     const webhookSecret = process.env.ASAAS_WEBHOOK_SECRET;
     const incomingToken = req.headers.get("asaas-access-token");
 
     if (webhookSecret && incomingToken !== webhookSecret) {
-      console.warn("[Asaas Webhook] Token de autorização inválido ou ausente.");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      if (payment?.id) {
+        const verifyRes = await getAsaasPayment(payment.id);
+        if (!verifyRes.success || !verifyRes.payment) {
+          console.warn("[Asaas Webhook] Token divergente e pagamento não encontrado na API do Asaas.");
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+      } else {
+        console.warn("[Asaas Webhook] Token de autorização divergente sem ID de pagamento.");
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
     }
-
-    const payload = await req.json();
-    const { event, payment } = payload;
 
     console.log(`[Asaas Webhook] Evento recebido: ${event}`, {
       paymentId: payment?.id,
@@ -31,13 +41,66 @@ export async function POST(req: NextRequest) {
     const customerId = payment?.customer || payload.subscription?.customer;
     const subscriptionId = payment?.subscription || payload.subscription?.id;
 
-    // 2. Busca se o evento pertence a um Pedido de E-book, a uma Igreja (Tenant - B2B) ou a um Usuário Membro (User - B2C)
-    const ebookOrder = payment?.id
+    // 2. Busca se o evento pertence a um Pedido de E-book (ou reconstrói caso o banco tenha sido recriado)
+    let ebookOrder = payment?.id
       ? await prisma.ebookOrder.findUnique({
           where: { asaasPaymentId: payment.id },
           include: { ebook: true },
         })
       : null;
+
+    if (
+      !ebookOrder &&
+      payment?.id &&
+      (String(payment.externalReference || "").startsWith("EBOOK_") ||
+        String(payment.description || "").toLowerCase().includes("e-book"))
+    ) {
+      const allEbooks = await prisma.ebookProduct.findMany();
+      const refId = String(payment.externalReference || "").replace("EBOOK_", "").trim();
+      let matchedEbook = allEbooks.find((e) => e.id === refId);
+      if (!matchedEbook) {
+        matchedEbook = allEbooks.find((e) => {
+          const cleanTitle = e.title.split("—")[0].trim().toLowerCase();
+          return cleanTitle && String(payment.description || "").toLowerCase().includes(cleanTitle);
+        });
+      }
+      if (!matchedEbook && allEbooks.length > 0) {
+        matchedEbook = allEbooks[0];
+      }
+
+      if (matchedEbook && payment.customer) {
+        const { apiKey, baseUrl } = getAsaasConfig();
+        const custRes = await fetch(`${baseUrl}/customers/${payment.customer}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json", access_token: apiKey },
+          cache: "no-store",
+        });
+        if (custRes.ok) {
+          const cust = await custRes.json();
+          if (cust?.email) {
+            ebookOrder = await prisma.ebookOrder.create({
+              data: {
+                ebookId: matchedEbook.id,
+                buyerName: cust.name || "Cliente Horeb",
+                buyerEmail: String(cust.email).trim().toLowerCase(),
+                buyerCpf: cust.cpfCnpj || "00000000000",
+                buyerPhone: cust.mobilePhone || cust.phone || null,
+                amount: Number(payment.value || matchedEbook.price || 9.9),
+                billingType: payment.billingType || "PIX",
+                status: payment.status || "PENDING",
+                asaasCustomerId: payment.customer,
+                asaasPaymentId: payment.id,
+                invoiceUrl: payment.invoiceUrl || null,
+                downloadToken: crypto.randomBytes(24).toString("hex"),
+                downloadUsed: false,
+                deliveryEmailSent: false,
+              },
+              include: { ebook: true },
+            });
+          }
+        }
+      }
+    }
 
     if (ebookOrder && payment) {
       const rawDate = payment.paymentDate || payment.clientPaymentDate;

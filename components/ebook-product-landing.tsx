@@ -30,6 +30,7 @@ import {
   purchaseEbookAction,
   checkEbookOrderStatusAction,
   getPublicEbookById,
+  resendPaidEbookEmailAction,
 } from "@/app/actions/ebooks";
 
 interface EbookProductLandingProps {
@@ -509,7 +510,7 @@ export function EbookProductLanding({
                           Pagamento Confirmado!
                         </h3>
                         <p className="text-xs text-zinc-200 leading-relaxed">
-                          Enviamos automaticamente o <strong>link exclusivo para baixar o PDF</strong> para o seu e-mail{" "}
+                          Enviamos automaticamente o <strong>arquivo PDF em anexo</strong> e o <strong>link exclusivo para baixar o PDF</strong> para o seu e-mail{" "}
                           {buyerEmail || activeOrder.buyerEmail ? (
                             <strong className="text-amber-300 font-mono">
                               ({buyerEmail || activeOrder.buyerEmail})
@@ -518,7 +519,7 @@ export function EbookProductLanding({
                           .
                         </p>
                         <p className="text-[11px] text-amber-300 font-bold">
-                          🔒 Atenção: O link enviado é válido para 1 único acesso (uso único).
+                          🔒 Atenção: O link enviado é válido para 1 único acesso (uso único) e o PDF também vai anexado diretamente no e-mail.
                         </p>
                       </div>
 
@@ -539,6 +540,32 @@ export function EbookProductLanding({
                             </Button>
                           </a>
                         )}
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={isPending}
+                          onClick={() => {
+                            if (!activeOrder?.id) return;
+                            startTransition(async () => {
+                              const res = await resendPaidEbookEmailAction(activeOrder.id);
+                              if (res.success) {
+                                if (res.singleUseDownloadUrl) {
+                                  setUnlockedPdfUrl(res.singleUseDownloadUrl);
+                                }
+                                toast.success(
+                                  `E-mail reenviado com o PDF em anexo + novo link único para ${res.buyerEmail}!`
+                                );
+                              } else {
+                                toast.error(res.error || "Não foi possível reenviar o e-mail.");
+                              }
+                            });
+                          }}
+                          className="w-full h-10 rounded-xl border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-xs gap-2 cursor-pointer"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${isPending ? "animate-spin" : ""}`} />
+                          <span>Reenviar E-mail com PDF em Anexo + Link</span>
+                        </Button>
                       </div>
                     </div>
                   ) : (
