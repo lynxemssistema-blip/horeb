@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import {
   purchaseEbookAction,
   checkEbookOrderStatusAction,
+  getPublicEbooks,
 } from "@/app/actions/ebooks";
 
 interface EbooksStoreSectionProps {
@@ -33,9 +34,10 @@ interface EbooksStoreSectionProps {
 }
 
 export function EbooksStoreSection({
-  ebooks = [],
+  ebooks: initialEbooks = [],
   isSuperAdmin = false,
 }: EbooksStoreSectionProps) {
+  const [ebooks, setEbooks] = useState<any[]>(initialEbooks);
   const [selectedEbook, setSelectedEbook] = useState<any | null>(null);
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
@@ -49,6 +51,31 @@ export function EbooksStoreSection({
   const [copiedPix, setCopiedPix] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setEbooks(initialEbooks);
+  }, [initialEbooks]);
+
+  // Busca sempre os valores mais recentes direto do banco ao montar / voltar para a aba
+  useEffect(() => {
+    let mounted = true;
+    const syncLatestEbooks = () => {
+      getPublicEbooks()
+        .then((res) => {
+          if (mounted && res.success && Array.isArray(res.ebooks)) {
+            setEbooks(res.ebooks);
+          }
+        })
+        .catch(() => {});
+    };
+
+    syncLatestEbooks();
+    window.addEventListener("focus", syncLatestEbooks);
+    return () => {
+      mounted = false;
+      window.removeEventListener("focus", syncLatestEbooks);
+    };
+  }, []);
 
   // Polling automático a cada 6 segundos enquanto o modal de PIX estiver aguardando pagamento
   useEffect(() => {

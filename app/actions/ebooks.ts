@@ -71,8 +71,8 @@ async function ensureInitialEbooksSeeded() {
           author: "Pastor Luan de Matos",
           description:
             "Um guia profundo e prático para vencer a guerra na mente e guardar o coração. Compreenda a verdadeira natureza da prisão espiritual, o engano na mente e a compressão da alma, o alinhamento em Cristo, os 5 passos práticos para a verdadeira liberdade e como permanecer livre através do domínio próprio.",
-          price: 29.9,
-          originalPrice: 59.9,
+          price: 9.9,
+          originalPrice: 29.9,
           coverUrl: "/ebooks-covers/libertacao-espiritual.jpg",
           relativePdfPath:
             "Libertação Espiritual/Libertação Espiritual - Restaurando a Ordem e o Equilíbrio.pdf",
@@ -89,8 +89,8 @@ async function ensureInitialEbooksSeeded() {
           author: "Pastor Luan de Matos",
           description:
             "Estudo bíblico profundo sobre corpo, alma e espírito e os seis instintos naturais criados por Deus (Aquisição, Alimentação, Reprodução, Autoproteção, Domínio Próprio e Comunhão). Descubra onde termina o que é natural e onde começa o pecado e aprenda a quebrar os ciclos de desequilíbrio.",
-          price: 29.9,
-          originalPrice: 59.9,
+          price: 9.9,
+          originalPrice: 29.9,
           coverUrl: "/ebooks-covers/seis-instintos-da-alma.jpg",
           relativePdfPath:
             "Os Seis Instintos da Alm/Os Seis Instintos da Alma rev 01.pdf",
@@ -107,8 +107,8 @@ async function ensureInitialEbooksSeeded() {
           author: "Pastor Luan de Matos",
           description:
             "Conheça à luz das Escrituras as estratégias do inimigo, o papel das regiões celestiais, as ferramentas espirituais do cristão e como permanecer firme e vitorioso debaixo da autoridade de Cristo sem transformar pessoas em inimigas.",
-          price: 24.9,
-          originalPrice: 49.9,
+          price: 9.9,
+          originalPrice: 29.9,
           coverUrl: "/ebooks-covers/batalha-invisivel.jpg",
           relativePdfPath:
             "Batalha Invisível - E-book Completo/Batalha Invisível - E-book Completo.pdf",
@@ -430,6 +430,7 @@ export async function saveEbookProduct(data: {
 
       revalidatePath("/");
       revalidatePath("/admin");
+      revalidatePath(`/ebooks/${data.id}`);
       return { success: true, ebook: updated };
     } else {
       if (!data.pdfUrl) {

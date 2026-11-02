@@ -113,6 +113,8 @@ export function SuperAdminDashboard({
   const [emailLogs, setEmailLogs] = useState(initialEmailLogs);
   const [inbox, setInbox] = useState(initialInbox);
   const [metrics, setMetrics] = useState(initialMetrics);
+  const [ebooksList, setEbooksList] = useState(initialEbooks);
+  const [ebookOrdersList, setEbookOrdersList] = useState(initialEbookOrders);
   const [isPending, startTransition] = useTransition();
 
   // Estados de formulários
@@ -1724,8 +1726,10 @@ export function SuperAdminDashboard({
           {/* ========================================================================= */}
           <TabsContent value="ebooks" className="space-y-6">
             <SuperAdminEbooksManager
-              initialEbooks={initialEbooks}
-              initialOrders={initialEbookOrders}
+              initialEbooks={ebooksList}
+              initialOrders={ebookOrdersList}
+              onEbooksChange={setEbooksList}
+              onOrdersChange={setEbookOrdersList}
             />
           </TabsContent>
         </Tabs>

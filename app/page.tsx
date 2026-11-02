@@ -46,6 +46,9 @@ import { logoutUser } from "@/app/actions/tenant";
 import { redirect } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function HomePage(props: {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {

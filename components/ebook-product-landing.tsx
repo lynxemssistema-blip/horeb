@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import {
   purchaseEbookAction,
   checkEbookOrderStatusAction,
+  getPublicEbookById,
 } from "@/app/actions/ebooks";
 
 interface EbookProductLandingProps {
@@ -38,15 +39,35 @@ interface EbookProductLandingProps {
 }
 
 export function EbookProductLanding({
-  ebook,
+  ebook: initialEbook,
   initialOrder = null,
   isSuperAdmin = false,
 }: EbookProductLandingProps) {
+  const [ebook, setEbook] = useState<any>(initialEbook);
   const [buyerName, setBuyerName] = useState(initialOrder?.buyerName || "");
   const [buyerEmail, setBuyerEmail] = useState(initialOrder?.buyerEmail || "");
   const [buyerCpf, setBuyerCpf] = useState("");
   const [buyerPhone, setBuyerPhone] = useState("");
   const [billingType, setBillingType] = useState<"UNDEFINED" | "CREDIT_CARD" | "PIX">("UNDEFINED");
+
+  useEffect(() => {
+    setEbook(initialEbook);
+  }, [initialEbook]);
+
+  useEffect(() => {
+    if (!initialEbook?.id) return;
+    let mounted = true;
+    getPublicEbookById(initialEbook.id)
+      .then((res) => {
+        if (mounted && res.success && res.ebook) {
+          setEbook(res.ebook);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [initialEbook?.id]);
 
   const [activeOrder, setActiveOrder] = useState<any | null>(initialOrder);
   const [isPaid, setIsPaid] = useState(

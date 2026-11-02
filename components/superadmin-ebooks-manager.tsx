@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   BookOpen,
@@ -34,20 +35,51 @@ import {
   saveEbookProduct,
   deleteEbookProduct,
   dispatchEbookOfferByAdminAction,
+  getAdminEbooksData,
 } from "@/app/actions/ebooks";
 
 interface SuperAdminEbooksManagerProps {
   initialEbooks: any[];
   initialOrders: any[];
+  onEbooksChange?: (ebooks: any[]) => void;
+  onOrdersChange?: (orders: any[]) => void;
 }
 
 export function SuperAdminEbooksManager({
   initialEbooks = [],
   initialOrders = [],
+  onEbooksChange,
+  onOrdersChange,
 }: SuperAdminEbooksManagerProps) {
+  const router = useRouter();
   const [ebooks, setEbooks] = useState<any[]>(initialEbooks);
   const [orders, setOrders] = useState<any[]>(initialOrders);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setEbooks(initialEbooks);
+  }, [initialEbooks]);
+
+  useEffect(() => {
+    setOrders(initialOrders);
+  }, [initialOrders]);
+
+  // Busca sempre os dados mais recentes do banco ao abrir a aba
+  useEffect(() => {
+    let activeMount = true;
+    getAdminEbooksData()
+      .then((res) => {
+        if (!activeMount || !res.success) return;
+        setEbooks(res.ebooks);
+        setOrders(res.orders);
+        onEbooksChange?.(res.ebooks);
+        onOrdersChange?.(res.orders);
+      })
+      .catch(() => {});
+    return () => {
+      activeMount = false;
+    };
+  }, []);
 
   // Modal de criar/editar E-book
   const [showModal, setShowModal] = useState(false);
@@ -273,6 +305,11 @@ export function SuperAdminEbooksManager({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const parsedPrice = parseFloat(String(price).replace(",", ".")) || 0;
+    const parsedOriginalPrice = originalPrice
+      ? parseFloat(String(originalPrice).replace(",", "."))
+      : null;
+
     startTransition(async () => {
       try {
         const res = await saveEbookProduct({
@@ -281,8 +318,8 @@ export function SuperAdminEbooksManager({
           subtitle,
           author,
           description,
-          price: parseFloat(price) || 0,
-          originalPrice: originalPrice ? parseFloat(originalPrice) : null,
+          price: parsedPrice,
+          originalPrice: parsedOriginalPrice,
           coverUrl: coverUrl || null,
           pdfUrl: pdfUrl || undefined,
           pdfFileName: pdfFileName || "ebook-horeb.pdf",
@@ -300,11 +337,12 @@ export function SuperAdminEbooksManager({
               : "E-book cadastrado e publicado na página inicial!"
           );
           setShowModal(false);
-          if (editingEbook) {
-            setEbooks((prev) => prev.map((b) => (b.id === res.ebook.id ? res.ebook : b)));
-          } else {
-            setEbooks((prev) => [res.ebook, ...prev]);
-          }
+          const nextEbooks = editingEbook
+            ? ebooks.map((b) => (b.id === res.ebook.id ? res.ebook : b))
+            : [res.ebook, ...ebooks];
+          setEbooks(nextEbooks);
+          onEbooksChange?.(nextEbooks);
+          router.refresh();
         } else {
           toast.error(res.error || "Erro ao salvar E-book.");
         }
@@ -334,7 +372,10 @@ export function SuperAdminEbooksManager({
       const res = await deleteEbookProduct(id);
       if (res.success) {
         toast.success("E-book removido.");
-        setEbooks((prev) => prev.filter((b) => b.id !== id));
+        const nextEbooks = ebooks.filter((b) => b.id !== id);
+        setEbooks(nextEbooks);
+        onEbooksChange?.(nextEbooks);
+        router.refresh();
       } else {
         toast.error(res.error || "Erro ao excluir.");
       }

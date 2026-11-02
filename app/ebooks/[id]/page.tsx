@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session";
 import { EbookProductLanding } from "@/components/ebook-product-landing";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function generateMetadata({
   params,
@@ -66,3 +67,4 @@ export default async function EbookProductPage({
     />
   );
 }
+
