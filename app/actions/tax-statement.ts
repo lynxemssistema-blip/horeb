@@ -37,6 +37,21 @@ export async function getMemberAnnualTaxStatement(
       return { success: false, error: "Usuário não autenticado." };
     }
 
+    // 🔒 Blindagem de Privacidade e Isolamento de Dados:
+    // Se o usuário tentar consultar o informe de outro membro, DEVE possuir papel administrativo/financeiro
+    if (targetUserId && targetUserId !== session.userId) {
+      const allowedRoles = ["ADMIN", "PASTOR", "FINANCIAL", "SECRETARY", "SUPERADMIN"];
+      const isSuperAdmin = session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN";
+      const isPrivileged = isSuperAdmin || (allowedRoles.includes(session.role) && session.tenantSlug === slug);
+
+      if (!isPrivileged) {
+        return {
+          success: false,
+          error: "Acesso negado: Você só possui autorização para consultar seu próprio informe de dízimos.",
+        };
+      }
+    }
+
     const userId = targetUserId || session.userId;
 
     const tenant = await prisma.tenant.findUnique({
@@ -59,8 +74,15 @@ export async function getMemberAnnualTaxStatement(
       return { success: false, error: "Congregação não encontrada." };
     }
 
-    const member = await prisma.user.findUnique({
-      where: { id: userId },
+    // 🔒 Garantir que o membro pertence de fato a esta congregação
+    const member = await prisma.user.findFirst({
+      where: {
+        id: userId,
+        OR: [
+          { tenantId: tenant.id },
+          { churchAccesses: { some: { tenantId: tenant.id } } },
+        ],
+      },
       select: {
         id: true,
         name: true,
@@ -71,7 +93,7 @@ export async function getMemberAnnualTaxStatement(
     });
 
     if (!member) {
-      return { success: false, error: "Membro não encontrado." };
+      return { success: false, error: "Membro não encontrado nesta congregação." };
     }
 
     const startDate = new Date(`${year}-01-01T00:00:00.000Z`);

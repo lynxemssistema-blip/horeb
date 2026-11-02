@@ -47,8 +47,12 @@ export async function generatePixTransaction({
       });
     }
 
-    const resolvedTenantId = tenant?.id || tenantId || "default-tenant";
-    const churchName = tenant?.name || "Igreja Local";
+    if (!tenant) {
+      throw new Error("Congregação não encontrada para geração da contribuição.");
+    }
+
+    const resolvedTenantId = tenant.id;
+    const churchName = tenant.name;
 
     // 3. Salvar no Prisma com status 'PENDING'
     const transaction = await prisma.transaction.create({
@@ -56,7 +60,8 @@ export async function generatePixTransaction({
         tenantId: resolvedTenantId,
         amount: Number(amount),
         category,
-        type: "PIX",
+        type: "INCOME",
+        paymentMethod: "PIX",
         status: "PENDING",
       },
     });
@@ -64,10 +69,11 @@ export async function generatePixTransaction({
     // 4. Gravar de forma assíncrona no Supabase na VPS (se conectado)
     try {
       await supabase.from("transactions").insert({
-        tenant_id: tenantId,
+        tenant_id: resolvedTenantId,
         amount: Number(amount),
         category,
-        type: "PIX",
+        type: "INCOME",
+        paymentMethod: "PIX",
         status: "PENDING",
       });
     } catch (sbErr) {

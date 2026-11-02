@@ -301,6 +301,12 @@ model Transaction {
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, type])
+  @@index([tenantId, createdAt])
+  @@index([memberId])
 }
 
 model Plan {

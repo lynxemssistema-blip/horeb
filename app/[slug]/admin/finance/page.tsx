@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { checkChurchAccess, requirePermission } from "@/lib/session";
 import { AccessDeniedScreen } from "@/components/access-denied-screen";
-import { getFinancialDashboard, seedFinancialDemoData } from "@/app/actions/finance-admin";
+import { getFinancialDashboard } from "@/app/actions/finance-admin";
 import { FinanceDashboardView } from "@/components/finance-dashboard-view";
 
 interface FinancePageProps {
@@ -49,14 +49,8 @@ export default async function AdminFinancePage({
 
   let effectiveRole = auth.role === "SUPERADMIN" || auth.role === "ADMIN" ? "MASTER" : auth.role;
 
-  // 3. Obter dados do Dashboard Financeiro com o Motor RBAC
-  let dashData = await getFinancialDashboard(effectiveRole, tenant.id, filterChurchId);
-
-  // Se o banco estiver sem movimentações para esta igreja, rodar o seed inicial automaticamente
-  if (dashData.success && dashData.transactions && dashData.transactions.length === 0) {
-    await seedFinancialDemoData(slug);
-    dashData = await getFinancialDashboard(effectiveRole, tenant.id, filterChurchId);
-  }
+  // 3. Obter dados do Dashboard Financeiro com o Motor RBAC e isolamento multi-tenant
+  const dashData = await getFinancialDashboard(effectiveRole, tenant.id, filterChurchId);
 
   if (!dashData.success || !dashData.kpis) {
     return (

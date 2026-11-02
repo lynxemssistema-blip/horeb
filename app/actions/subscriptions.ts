@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 import {
   getAsaasConfig,
   getOrCreateAsaasCustomer,
@@ -10,6 +11,31 @@ import {
   cancelAsaasSubscription,
 } from "@/lib/asaas";
 import { revalidatePath } from "next/cache";
+
+/**
+ * Validação de permissão para gerenciamento de assinaturas da igreja
+ */
+async function validateSubscriptionAccess(tenantId: string) {
+  const session = await getSession();
+  if (!session) {
+    return { authorized: false, error: "Usuário não autenticado." };
+  }
+
+  const isSuperAdmin = session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN";
+  if (isSuperAdmin) {
+    return { authorized: true, session };
+  }
+
+  const isTenantAdmin = session.tenantId === tenantId && ["ADMIN", "PASTOR"].includes(session.role);
+  if (isTenantAdmin) {
+    return { authorized: true, session };
+  }
+
+  return {
+    authorized: false,
+    error: "Acesso negado: Você não possui autorização para gerenciar a assinatura desta igreja.",
+  };
+}
 
 /**
  * Retorna o status da configuração do Asaas
@@ -38,6 +64,11 @@ export async function createTenantSubscription(params: {
   couponCode?: string;
 }) {
   try {
+    const auth = await validateSubscriptionAccess(params.tenantId);
+    if (!auth.authorized) {
+      return { success: false, error: auth.error };
+    }
+
     const tenant = await prisma.tenant.findUnique({
       where: { id: params.tenantId },
     });
@@ -255,6 +286,11 @@ export async function createTenantSubscription(params: {
  */
 export async function getTenantSubscriptionDetails(tenantId: string) {
   try {
+    const auth = await validateSubscriptionAccess(tenantId);
+    if (!auth.authorized) {
+      return { success: false, error: auth.error };
+    }
+
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
       include: {
@@ -297,6 +333,11 @@ export async function getTenantSubscriptionDetails(tenantId: string) {
  */
 export async function cancelTenantSubscriptionAction(tenantId: string) {
   try {
+    const auth = await validateSubscriptionAccess(tenantId);
+    if (!auth.authorized) {
+      return { success: false, error: auth.error };
+    }
+
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
     });

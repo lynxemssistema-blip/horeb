@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { getSession } from "@/lib/session";
 import {
   FinancialKPIs,
   MonthlyChartPoint,
@@ -11,6 +12,66 @@ import {
   ChurchFilterOption,
   CATEGORY_LABELS,
 } from "@/lib/finance-constants";
+
+/**
+ * Validação rigorosa de autenticação e RBAC para proteção e isolamento multi-tenant
+ */
+async function validateFinancialAccess(targetTenantId: string) {
+  const session = await getSession();
+  if (!session) {
+    return { authorized: false, error: "Usuário não autenticado. Faça login para continuar." };
+  }
+
+  // 1. Super Admin possui autorização irrestrita de suporte e auditoria
+  if (session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN") {
+    return { authorized: true, session, role: "SUPERADMIN" as const };
+  }
+
+  // 2. Buscar igreja alvo
+  const targetTenant = await prisma.tenant.findUnique({
+    where: { id: targetTenantId },
+    select: { id: true, slug: true, parentId: true },
+  });
+
+  if (!targetTenant) {
+    return { authorized: false, error: "Congregação não encontrada." };
+  }
+
+  const allowedRoles = ["ADMIN", "PASTOR", "FINANCIAL"];
+
+  // 3. Usuário pertence diretamente à congregação
+  if (session.tenantId === targetTenant.id && allowedRoles.includes(session.role)) {
+    return { authorized: true, session, role: session.role };
+  }
+
+  // 4. Regra de Hierarquia Eclesiástica: Se o usuário é ADMIN ou PASTOR da Matriz (Sede),
+  // ele possui autorização executiva nas congregações filiais vinculadas
+  if (
+    (session.role === "ADMIN" || session.role === "PASTOR") &&
+    targetTenant.parentId === session.tenantId
+  ) {
+    return { authorized: true, session, role: session.role };
+  }
+
+  // 5. Acesso explícito multi-igreja (UserChurchAccess)
+  const explicitAccess = await prisma.userChurchAccess.findUnique({
+    where: {
+      userId_tenantId: {
+        userId: session.userId,
+        tenantId: targetTenant.id,
+      },
+    },
+  });
+
+  if (explicitAccess && allowedRoles.includes(explicitAccess.role)) {
+    return { authorized: true, session, role: explicitAccess.role };
+  }
+
+  return {
+    authorized: false,
+    error: "Acesso negado: Você não possui autorização para visualizar ou movimentar o financeiro desta congregação.",
+  };
+}
 
 /**
  * ============================================================================
@@ -71,8 +132,14 @@ export async function getFinancialDashboardData(
     } else {
       // userRole === "MASTER"
       if (filterTenantId && filterTenantId !== "ALL" && filterTenantId.trim() !== "") {
+        // 🔒 BLINDAGEM MULTI-TENANT: O filtro só pode retornar dados se o filterTenantId
+        // for a própria igreja ou uma filial legítima subordinada a esta Matriz (parentId === currentTenantId)
         whereClause = {
           tenantId: filterTenantId,
+          OR: [
+            { tenantId: currentTenantId },
+            { tenant: { parentId: currentTenantId } },
+          ],
           status: "COMPLETED",
         };
       } else {
@@ -230,6 +297,12 @@ export async function createManualTransaction(data: any) {
       throw new Error("Identificador da congregação (tenantId) é obrigatório.");
     }
 
+    // 🔒 Blindagem de Acesso e Multi-Tenancy:
+    const auth = await validateFinancialAccess(tenantId);
+    if (!auth.authorized) {
+      throw new Error(auth.error || "Acesso negado para lançar movimentações nesta congregação.");
+    }
+
     if (!amount || isNaN(amount) || amount <= 0) {
       throw new Error("O valor da movimentação deve ser um número maior que zero.");
     }
@@ -318,6 +391,11 @@ export async function getFinancialDashboard(
   filterTenantId?: string
 ) {
   try {
+    const auth = await validateFinancialAccess(currentTenantId);
+    if (!auth.authorized) {
+      return { success: false, error: auth.error };
+    }
+
     const currentChurch = await prisma.tenant.findUnique({
       where: { id: currentTenantId },
       include: {
@@ -380,8 +458,15 @@ export async function getFinancialDashboard(
     let whereClause: any;
     if (roleForEngine === "LOCAL") {
       whereClause = { tenantId: currentTenantId, status: "COMPLETED" };
-    } else if (filterTenantId && filterTenantId !== "ALL") {
-      whereClause = { tenantId: filterTenantId, status: "COMPLETED" };
+    } else if (filterTenantId && filterTenantId !== "ALL" && filterTenantId.trim() !== "") {
+      whereClause = {
+        tenantId: filterTenantId,
+        OR: [
+          { tenantId: currentTenantId },
+          { tenant: { parentId: currentTenantId } },
+        ],
+        status: "COMPLETED",
+      };
     } else {
       whereClause = {
         OR: [
@@ -505,6 +590,11 @@ export async function getFinancialDashboard(
  */
 export async function getMembersForTithes(tenantId: string) {
   try {
+    const auth = await validateFinancialAccess(tenantId);
+    if (!auth.authorized) {
+      return { success: false, users: [], error: auth.error };
+    }
+
     const users = await prisma.user.findMany({
       where: {
         OR: [

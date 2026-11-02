@@ -11,3 +11,4 @@ self.addEventListener('fetch', (event) => {
   // Pass-through fetch
   return;
 });
+
