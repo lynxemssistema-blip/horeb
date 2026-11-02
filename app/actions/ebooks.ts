@@ -84,7 +84,7 @@ async function ensureInitialEbooksSeeded() {
         originalPrice: 49.9,
         coverUrl:
           "https://images.unsplash.com/photo-1507434965515-61970f2bd7c6?auto=format&fit=crop&w=900&q=80",
-        fileName: "Batalha Invisível - E-book.pdf",
+        fileName: "Batalha Invisível - E-book rev 01.pdf",
         badge: "LANÇAMENTO",
         pagesCount: 8,
         category: "BATALHA ESPIRITUAL",
