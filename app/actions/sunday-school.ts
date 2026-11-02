@@ -1,15 +1,16 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { getSession, checkChurchAccess } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export async function getSundaySchoolDashboard(slug: string) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return { success: false, error: "Acesso não autorizado." };
+    const access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso não autorizado a esta congregação." };
     }
+    const session = access.user;
 
     const tenant = await prisma.tenant.findUnique({
       where: { slug },
@@ -162,9 +163,12 @@ export async function createSundaySchoolClass(
   }
 ) {
   try {
-    const session = await getSession();
-    if (!session || !["ADMIN", "PASTOR", "LEADER"].includes(session.role)) {
-      return { success: false, error: "Apenas administradores e líderes podem cadastrar turmas." };
+    const access = await checkChurchAccess(slug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Apenas administradores e líderes desta congregação podem cadastrar turmas." };
     }
 
     const tenant = await prisma.tenant.findUnique({
@@ -214,9 +218,17 @@ export async function recordSundaySchoolAttendance(
   }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return { success: false, error: "Acesso não autorizado." };
+    const access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso não autorizado a esta congregação." };
+    }
+    const session = access.user;
+
+    const existingClass = await prisma.sundaySchoolClass.findFirst({
+      where: { id: data.classId, tenantId: access.targetTenantId },
+    });
+    if (!existingClass) {
+      return { success: false, error: "Turma não encontrada nesta congregação." };
     }
 
     const attendance = await prisma.sundaySchoolAttendance.create({
@@ -256,9 +268,16 @@ export async function enrollMemberInDiscipleship(
   }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return { success: false, error: "Acesso não autorizado." };
+    const access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso não autorizado a esta congregação." };
+    }
+
+    const track = await prisma.discipleshipTrack.findFirst({
+      where: { id: data.trackId, tenantId: access.targetTenantId },
+    });
+    if (!track) {
+      return { success: false, error: "Trilha de discipulado não encontrada nesta congregação." };
     }
 
     const progress = await prisma.memberDiscipleshipProgress.upsert({
@@ -305,9 +324,17 @@ export async function updateDiscipleshipProgress(
   }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return { success: false, error: "Acesso não autorizado." };
+    const access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso não autorizado a esta congregação." };
+    }
+
+    const existing = await prisma.memberDiscipleshipProgress.findUnique({
+      where: { id: progressId },
+      include: { track: { select: { tenantId: true } } },
+    });
+    if (!existing || existing.track.tenantId !== access.targetTenantId) {
+      return { success: false, error: "Registro de discipulado não encontrado nesta congregação." };
     }
 
     const isCompleted = data.status === "COMPLETED";

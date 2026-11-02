@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
-import { getSession } from "@/lib/session";
+import { getSession, checkChurchAccess } from "@/lib/session";
 import { sendPrayerResponseEmail } from "@/lib/mail";
 
 export interface SubmitPrayerParams {
@@ -97,11 +97,16 @@ export async function submitPrayerRequest(params: SubmitPrayerParams) {
  */
 export async function getChurchPrayerRequests(slug: string) {
   try {
-    const session = await getSession();
+    const access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso negado: você não pertence a esta congregação." };
+    }
+
+    const session = access.user;
     const isLeadership =
-      session?.role === "ADMIN" ||
-      session?.role === "PASTOR" ||
-      session?.role === "SUPERADMIN";
+      access.effectiveRole === "ADMIN" ||
+      access.effectiveRole === "PASTOR" ||
+      access.effectiveRole === "SUPERADMIN";
 
     if (!isLeadership) {
       return { success: false, error: "Acesso restrito à liderança pastoral e administração." };
@@ -151,11 +156,16 @@ export async function respondToPrayerRequest(params: {
   slug: string;
 }) {
   try {
-    const session = await getSession();
+    const access = await checkChurchAccess(params.slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso negado: você não pertence a esta congregação." };
+    }
+
+    const session = access.user;
     const isLeadership =
-      session?.role === "ADMIN" ||
-      session?.role === "PASTOR" ||
-      session?.role === "SUPERADMIN";
+      access.effectiveRole === "ADMIN" ||
+      access.effectiveRole === "PASTOR" ||
+      access.effectiveRole === "SUPERADMIN";
 
     if (!isLeadership) {
       return { success: false, error: "Apenas pastores e administradores podem enviar respostas pastorais." };
@@ -165,13 +175,13 @@ export async function respondToPrayerRequest(params: {
       return { success: false, error: "A mensagem pastoral de resposta deve ter pelo menos 5 caracteres." };
     }
 
-    const request = await prisma.prayerRequest.findUnique({
-      where: { id: params.requestId },
+    const request = await prisma.prayerRequest.findFirst({
+      where: { id: params.requestId, tenantId: access.targetTenantId },
       include: { tenant: true },
     });
 
     if (!request) {
-      return { success: false, error: "Pedido de oração não encontrado." };
+      return { success: false, error: "Pedido de oração não encontrado nesta congregação." };
     }
 
     const pastorName = session?.name || "Pastor da Igreja";
@@ -244,14 +254,25 @@ export async function respondToPrayerRequest(params: {
  */
 export async function updatePrayerStatus(requestId: string, status: string, slug: string) {
   try {
-    const session = await getSession();
+    const access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso negado: você não pertence a esta congregação." };
+    }
+
     const isLeadership =
-      session?.role === "ADMIN" ||
-      session?.role === "PASTOR" ||
-      session?.role === "SUPERADMIN";
+      access.effectiveRole === "ADMIN" ||
+      access.effectiveRole === "PASTOR" ||
+      access.effectiveRole === "SUPERADMIN";
 
     if (!isLeadership) {
       return { success: false, error: "Permissão insuficiente." };
+    }
+
+    const existing = await prisma.prayerRequest.findFirst({
+      where: { id: requestId, tenantId: access.targetTenantId },
+    });
+    if (!existing) {
+      return { success: false, error: "Pedido de oração não encontrado nesta congregação." };
     }
 
     const updated = await prisma.prayerRequest.update({
@@ -276,14 +297,25 @@ export async function updatePrayerStatus(requestId: string, status: string, slug
  */
 export async function deletePrayerRequest(requestId: string, slug: string) {
   try {
-    const session = await getSession();
+    const access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso negado: você não pertence a esta congregação." };
+    }
+
     const isLeadership =
-      session?.role === "ADMIN" ||
-      session?.role === "PASTOR" ||
-      session?.role === "SUPERADMIN";
+      access.effectiveRole === "ADMIN" ||
+      access.effectiveRole === "PASTOR" ||
+      access.effectiveRole === "SUPERADMIN";
 
     if (!isLeadership) {
       return { success: false, error: "Permissão insuficiente." };
+    }
+
+    const existing = await prisma.prayerRequest.findFirst({
+      where: { id: requestId, tenantId: access.targetTenantId },
+    });
+    if (!existing) {
+      return { success: false, error: "Pedido de oração não encontrado nesta congregação." };
     }
 
     await prisma.prayerRequest.delete({

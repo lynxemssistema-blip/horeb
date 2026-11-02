@@ -146,6 +146,8 @@ model Ministry {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
 }
 
 model MinistryMember {
@@ -228,6 +230,8 @@ model CellGroup {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
 }
 
 model ChurchVideo {
@@ -243,6 +247,8 @@ model ChurchVideo {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
 }
 
 model Event {
@@ -265,6 +271,9 @@ model Event {
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, startDate])
 }
 
 model Ticket {
@@ -536,7 +545,7 @@ model PastoralMessage {
 // ==========================================
 model OfficialDocument {
   id             String   @id @default(cuid())
-  documentNumber String   @unique // ex: DOC-2026-0001
+  documentNumber String   // ex: DOC-2026-0001 (único dentro da mesma congregação)
   type           String   // TRANSFER_LETTER, RECOMMENDATION_LETTER, BAPTISM_CERTIFICATE, CHILD_PRESENTATION, MARRIAGE_CERTIFICATE, ORDINATION_CERTIFICATE
   title          String
   recipientName  String
@@ -552,6 +561,7 @@ model OfficialDocument {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  @@unique([tenantId, documentNumber])
   @@index([tenantId, type])
 }
 
@@ -698,7 +708,7 @@ model AssemblyVote {
 // ==========================================
 model ChurchAsset {
   id             String   @id @default(cuid())
-  code           String   @unique // ex: PAT-00124 (número de tombamento)
+  code           String   // ex: PAT-2026-0001 (único dentro da mesma congregação)
   name           String   // ex: "Mesa de Som Behringer X32"
   category       String   // AUDIO_VISUAL, INSTRUMENT, FURNITURE, CLIMATE, VEHICLE, REAL_ESTATE, IT
   invoiceNumber  String?  // Número da NF
@@ -716,6 +726,7 @@ model ChurchAsset {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  @@unique([tenantId, code])
   @@index([tenantId, category])
 }
 

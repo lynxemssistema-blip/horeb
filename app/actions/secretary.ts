@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { getSession, checkChurchAccess } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export interface CreateDocumentParams {
@@ -22,9 +22,14 @@ export interface CreateDocumentParams {
 
 export async function getOfficialDocuments(slug: string, typeFilter?: string) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return { success: false, error: "Acesso não autorizado." };
+    const access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso não autorizado a esta congregação." };
+    }
+    const session = access.user;
+    const isLeadership = ["ADMIN", "PASTOR", "SECRETARIA", "SUPERADMIN"].includes(access.effectiveRole);
+    if (!isLeadership) {
+      return { success: false, error: "Acesso restrito à secretaria e liderança." };
     }
 
     const tenant = await prisma.tenant.findUnique({
@@ -66,11 +71,17 @@ export async function getOfficialDocuments(slug: string, typeFilter?: string) {
 
 export async function createOfficialDocument(params: CreateDocumentParams) {
   try {
-    const session = await getSession();
+    const access = await checkChurchAccess(params.slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso negado a esta congregação." };
+    }
+
+    const session = access.user;
     const isLeadership =
-      session?.role === "ADMIN" ||
-      session?.role === "PASTOR" ||
-      session?.role === "SUPERADMIN";
+      access.effectiveRole === "ADMIN" ||
+      access.effectiveRole === "PASTOR" ||
+      access.effectiveRole === "SECRETARIA" ||
+      access.effectiveRole === "SUPERADMIN";
 
     if (!isLeadership) {
       return { success: false, error: "Permissão restrita à secretaria e liderança pastoral." };
@@ -89,7 +100,19 @@ export async function createOfficialDocument(params: CreateDocumentParams) {
       where: { tenantId: tenant.id },
     });
     const year = new Date().getFullYear();
-    const documentNumber = `DOC-${year}-${String(count + 1).padStart(4, "0")}`;
+    let seq = count + 1;
+    let documentNumber = `DOC-${year}-${String(seq).padStart(4, "0")}`;
+
+    // Evita colisão caso algum documento anterior tenha sido excluído
+    while (
+      await prisma.officialDocument.findFirst({
+        where: { tenantId: tenant.id, documentNumber },
+        select: { id: true },
+      })
+    ) {
+      seq++;
+      documentNumber = `DOC-${year}-${String(seq).padStart(4, "0")}`;
+    }
 
     const doc = await prisma.officialDocument.create({
       data: {
@@ -122,14 +145,26 @@ export async function createOfficialDocument(params: CreateDocumentParams) {
 
 export async function deleteOfficialDocument(id: string, slug: string) {
   try {
-    const session = await getSession();
+    const access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso negado a esta congregação." };
+    }
+
     const isLeadership =
-      session?.role === "ADMIN" ||
-      session?.role === "PASTOR" ||
-      session?.role === "SUPERADMIN";
+      access.effectiveRole === "ADMIN" ||
+      access.effectiveRole === "PASTOR" ||
+      access.effectiveRole === "SECRETARIA" ||
+      access.effectiveRole === "SUPERADMIN";
 
     if (!isLeadership) {
       return { success: false, error: "Permissão insuficiente." };
+    }
+
+    const existing = await prisma.officialDocument.findFirst({
+      where: { id, tenantId: access.targetTenantId },
+    });
+    if (!existing) {
+      return { success: false, error: "Documento não encontrado nesta congregação." };
     }
 
     await prisma.officialDocument.delete({
@@ -149,9 +184,16 @@ export async function deleteOfficialDocument(id: string, slug: string) {
 
 export async function getMemberCredentialData(slug: string, targetUserId?: string) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return { success: false, error: "Usuário não autenticado." };
+    const access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      return { success: false, error: "Usuário não autorizado nesta congregação." };
+    }
+
+    const session = access.user;
+    const isLeadership = ["ADMIN", "PASTOR", "SECRETARIA", "SUPERADMIN"].includes(access.effectiveRole);
+
+    if (targetUserId && targetUserId !== session.userId && !isLeadership) {
+      return { success: false, error: "Acesso negado: você só pode consultar sua própria credencial." };
     }
 
     const userId = targetUserId || session.userId;
@@ -167,6 +209,7 @@ export async function getMemberCredentialData(slug: string, targetUserId?: strin
         cpf: true,
         pastoralTitle: true,
         createdAt: true,
+        tenantId: true,
         tenant: {
           select: {
             id: true,
@@ -182,6 +225,10 @@ export async function getMemberCredentialData(slug: string, targetUserId?: strin
 
     if (!user) {
       return { success: false, error: "Membro não encontrado." };
+    }
+
+    if (access.effectiveRole !== "SUPERADMIN" && user.tenantId !== access.targetTenantId) {
+      return { success: false, error: "Este membro não pertence a esta congregação." };
     }
 
     // Código de validação criptográfica legível em QR Code

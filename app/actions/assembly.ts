@@ -1,17 +1,18 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { getSession, checkChurchAccess } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export async function getChurchAssemblies(slug: string) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return { success: false, error: "Acesso não autorizado." };
+    const access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso não autorizado a esta congregação." };
     }
+    const session = access.user;
 
     const tenant = await prisma.tenant.findUnique({
       where: { slug },
@@ -149,9 +150,12 @@ export async function createAssembly(
   }
 ) {
   try {
-    const session = await getSession();
-    if (!session || !["ADMIN", "PASTOR"].includes(session.role)) {
-      return { success: false, error: "Apenas administradores e pastores podem convocar assembleias." };
+    const access = await checkChurchAccess(slug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Apenas administradores e pastores desta congregação podem convocar assembleias." };
     }
 
     const tenant = await prisma.tenant.findUnique({
@@ -207,9 +211,19 @@ export async function updateAssemblyStatus(
   status: "SCHEDULED" | "IN_PROGRESS" | "CLOSED"
 ) {
   try {
-    const session = await getSession();
-    if (!session || !["ADMIN", "PASTOR"].includes(session.role)) {
+    const access = await checkChurchAccess(slug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
       return { success: false, error: "Permissão insuficiente." };
+    }
+
+    const existing = await prisma.assembly.findFirst({
+      where: { id: assemblyId, tenantId: access.targetTenantId },
+    });
+    if (!existing) {
+      return { success: false, error: "Assembleia não encontrada nesta congregação." };
     }
 
     // Se estiver fechando, atualizar minuta da ata automaticamente
@@ -244,9 +258,20 @@ export async function updateAgendaItemStatus(
   status: "PENDING" | "VOTING" | "CLOSED"
 ) {
   try {
-    const session = await getSession();
-    if (!session || !["ADMIN", "PASTOR"].includes(session.role)) {
+    const access = await checkChurchAccess(slug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
       return { success: false, error: "Permissão insuficiente." };
+    }
+
+    const existing = await prisma.assemblyAgendaItem.findUnique({
+      where: { id: itemId },
+      include: { assembly: { select: { tenantId: true } } },
+    });
+    if (!existing || existing.assembly.tenantId !== access.targetTenantId) {
+      return { success: false, error: "Pauta não encontrada nesta congregação." };
     }
 
     const updated = await prisma.assemblyAgendaItem.update({
@@ -272,18 +297,19 @@ export async function submitAssemblyVote(
   voteChoice: "YES" | "NO" | "ABSTAIN"
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return { success: false, error: "Você precisa estar conectado para votar." };
+    const access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      return { success: false, error: "Você precisa ser membro conectado desta congregação para votar." };
     }
+    const session = access.user;
 
     const item = await prisma.assemblyAgendaItem.findUnique({
       where: { id: agendaItemId },
       include: { assembly: true },
     });
 
-    if (!item) {
-      return { success: false, error: "Pauta não encontrada." };
+    if (!item || item.assembly.tenantId !== access.targetTenantId) {
+      return { success: false, error: "Pauta não encontrada nesta congregação." };
     }
 
     if (item.status !== "VOTING") {
@@ -325,9 +351,19 @@ export async function submitAssemblyVote(
 
 export async function generateAssemblyMinutes(slug: string, assemblyId: string) {
   try {
-    const session = await getSession();
-    if (!session || !["ADMIN", "PASTOR"].includes(session.role)) {
+    const access = await checkChurchAccess(slug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
       return { success: false, error: "Permissão insuficiente." };
+    }
+
+    const existing = await prisma.assembly.findFirst({
+      where: { id: assemblyId, tenantId: access.targetTenantId },
+    });
+    if (!existing) {
+      return { success: false, error: "Assembleia não encontrada nesta congregação." };
     }
 
     const minutesText = await buildMinutesText(assemblyId);

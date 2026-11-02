@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { getSession, checkChurchAccess } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export async function getChurchAssets(
@@ -13,10 +13,11 @@ export async function getChurchAssets(
   }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return { success: false, error: "Acesso não autorizado." };
+    const access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso não autorizado a esta congregação." };
     }
+    const session = access.user;
 
     const tenant = await prisma.tenant.findUnique({
       where: { slug },
@@ -110,9 +111,12 @@ export async function createChurchAsset(
   }
 ) {
   try {
-    const session = await getSession();
-    if (!session || !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(session.role)) {
-      return { success: false, error: "Apenas liderança pode cadastrar bens patrimoniais." };
+    const access = await checkChurchAccess(slug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Apenas liderança desta congregação pode cadastrar bens patrimoniais." };
     }
 
     const tenant = await prisma.tenant.findUnique({
@@ -131,7 +135,17 @@ export async function createChurchAsset(
       const count = await prisma.churchAsset.count({
         where: { tenantId: tenant.id },
       });
-      assetCode = `PAT-${year}-${String(count + 1).padStart(4, "0")}`;
+      let seq = count + 1;
+      assetCode = `PAT-${year}-${String(seq).padStart(4, "0")}`;
+      while (
+        await prisma.churchAsset.findFirst({
+          where: { tenantId: tenant.id, code: assetCode },
+          select: { id: true },
+        })
+      ) {
+        seq++;
+        assetCode = `PAT-${year}-${String(seq).padStart(4, "0")}`;
+      }
     }
 
     const asset = await prisma.churchAsset.create({
@@ -185,9 +199,19 @@ export async function updateChurchAsset(
   }
 ) {
   try {
-    const session = await getSession();
-    if (!session || !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(session.role)) {
+    const access = await checkChurchAccess(slug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
       return { success: false, error: "Permissão insuficiente." };
+    }
+
+    const existing = await prisma.churchAsset.findFirst({
+      where: { id: assetId, tenantId: access.targetTenantId },
+    });
+    if (!existing) {
+      return { success: false, error: "Bem patrimonial não encontrado nesta congregação." };
     }
 
     const updated = await prisma.churchAsset.update({
@@ -221,9 +245,19 @@ export async function updateChurchAsset(
 
 export async function deleteChurchAsset(slug: string, assetId: string) {
   try {
-    const session = await getSession();
-    if (!session || !["ADMIN", "PASTOR", "SUPERADMIN"].includes(session.role)) {
-      return { success: false, error: "Apenas administradores e pastores podem excluir bens." };
+    const access = await checkChurchAccess(slug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Apenas administradores e pastores desta congregação podem excluir bens." };
+    }
+
+    const existing = await prisma.churchAsset.findFirst({
+      where: { id: assetId, tenantId: access.targetTenantId },
+    });
+    if (!existing) {
+      return { success: false, error: "Bem patrimonial não encontrado nesta congregação." };
     }
 
     await prisma.churchAsset.delete({

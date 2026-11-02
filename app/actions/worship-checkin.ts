@@ -1,17 +1,18 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { getSession, checkChurchAccess } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export async function getWorshipServices(slug: string) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return { success: false, error: "Acesso não autorizado." };
+    const access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso não autorizado a esta congregação." };
     }
+    const session = access.user;
 
     const tenant = await prisma.tenant.findUnique({
       where: { slug },
@@ -125,9 +126,12 @@ export async function createWorshipService(
   }
 ) {
   try {
-    const session = await getSession();
-    if (!session || !["ADMIN", "PASTOR", "LEADER"].includes(session.role)) {
-      return { success: false, error: "Apenas administradores e líderes podem cadastrar cultos." };
+    const access = await checkChurchAccess(slug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Apenas administradores e líderes desta congregação podem cadastrar cultos." };
     }
 
     const tenant = await prisma.tenant.findUnique({
@@ -168,10 +172,11 @@ export async function validateAndCheckinMember(
   serviceName?: string
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return { success: false, error: "Sessão expirada. Faça login novamente." };
+    const access = await checkChurchAccess(slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso negado a esta congregação." };
     }
+    const session = access.user;
 
     const tenant = await prisma.tenant.findUnique({
       where: { slug },
@@ -322,9 +327,12 @@ export async function validateAndCheckinMember(
 
 export async function getMemberAbsenceRadar(slug: string) {
   try {
-    const session = await getSession();
-    if (!session || !["ADMIN", "PASTOR", "LEADER"].includes(session.role)) {
-      return { success: false, error: "Acesso restrito à liderança." };
+    const access = await checkChurchAccess(slug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Acesso restrito à liderança desta congregação." };
     }
 
     const tenant = await prisma.tenant.findUnique({

@@ -1,13 +1,27 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 import { mailTransporter, testSmtpConnection, getMailSender } from "@/lib/mail";
 import { fetchInboxEmails, testImapConnection } from "@/lib/imap";
 import { revalidatePath } from "next/cache";
 
+/**
+ * Guarda exclusiva para garantir que apenas o Super Administrador execute ações globais
+ */
+async function requireSuperAdmin() {
+  const session = await getSession();
+  const isSuper = session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN";
+  if (!isSuper) {
+    throw new Error("Acesso negado: Operação restrita ao Super Administrador da plataforma.");
+  }
+  return session;
+}
+
 // 1. Métricas do SaaS Horeb para o Super Admin
 export async function getSuperAdminMetrics() {
   try {
+    await requireSuperAdmin();
     const tenants = await prisma.tenant.findMany({
       include: {
         users: true,
@@ -57,6 +71,7 @@ export async function getSuperAdminMetrics() {
 // 2. Buscar todas as congregações cadastradas
 export async function getAllTenants() {
   try {
+    await requireSuperAdmin();
     const tenants = await prisma.tenant.findMany({
       include: {
         parent: { select: { id: true, name: true, slug: true } },
@@ -88,6 +103,7 @@ export async function updateTenantSubscription({
   setupPrice: number;
 }) {
   try {
+    await requireSuperAdmin();
     const updated = await prisma.tenant.update({
       where: { id: tenantId },
       data: {
@@ -133,6 +149,7 @@ export async function createOrUpdatePlan(data: {
   active?: boolean;
 }) {
   try {
+    await requireSuperAdmin();
     const featuresJson = JSON.stringify(data.features || []);
     const calculatedAnnual = data.annualPrice && data.annualPrice > 0 ? data.annualPrice : data.monthlyPrice * 10;
 
@@ -183,6 +200,7 @@ export async function createOrUpdatePlan(data: {
 
 export async function deletePlan(planId: string) {
   try {
+    await requireSuperAdmin();
     await prisma.plan.delete({ where: { id: planId } });
     revalidatePath("/admin");
     revalidatePath("/");
@@ -195,6 +213,7 @@ export async function deletePlan(planId: string) {
 // 5. Gestão Global de Usuários
 export async function getAllUsers() {
   try {
+    await requireSuperAdmin();
     const users = await prisma.user.findMany({
       include: {
         tenant: { select: { id: true, name: true, slug: true } },
@@ -209,6 +228,7 @@ export async function getAllUsers() {
 
 export async function manuallyVerifyUser(userId: string) {
   try {
+    await requireSuperAdmin();
     const user = await prisma.user.update({
       where: { id: userId },
       data: {
@@ -227,6 +247,7 @@ export async function manuallyVerifyUser(userId: string) {
 
 export async function deleteUserBySuperAdminAction(userId: string) {
   try {
+    await requireSuperAdmin();
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return { success: false, error: "Usuário não encontrado." };
     if (user.role === "SUPERADMIN" || user.email === "edsonmanoel2012@gmail.com") {
@@ -248,6 +269,7 @@ export async function deleteUserBySuperAdminAction(userId: string) {
 
 export async function deleteTenantBySuperAdminAction(tenantId: string) {
   try {
+    await requireSuperAdmin();
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) return { success: false, error: "Congregação não encontrada." };
 
@@ -264,6 +286,7 @@ export async function deleteTenantBySuperAdminAction(tenantId: string) {
 
 export async function purgeAllNonSuperAdminDataAction() {
   try {
+    await requireSuperAdmin();
     await prisma.userChurchAccess.deleteMany({});
     await prisma.user.deleteMany({
       where: {
@@ -294,6 +317,7 @@ export async function purgeAllNonSuperAdminDataAction() {
 // 6. Central de E-mails (Entrada e Saída)
 export async function getEmailCenterData() {
   try {
+    await requireSuperAdmin();
     // 1. Logs de E-mails Enviados / Registrados
     const emailLogs = await prisma.emailLog.findMany({
       orderBy: { createdAt: "desc" },
@@ -332,6 +356,7 @@ export async function sendDirectEmail({
   htmlContent: string;
 }) {
   try {
+    await requireSuperAdmin();
     const cleanTo = to.trim().toLowerCase();
     const sender = getMailSender("Horeb Suporte & Gestão");
     const res = await mailTransporter.sendMail({
@@ -361,6 +386,7 @@ export async function sendDirectEmail({
 
 // 8. Testar Conexão de E-mail (SMTP e IMAP)
 export async function testEmailDiagnostics() {
+  await requireSuperAdmin();
   const smtpRes = await testSmtpConnection();
   const imapRes = await testImapConnection();
 
@@ -440,6 +466,7 @@ export async function updatePromotionConfig(data: {
   ctaText: string;
 }) {
   try {
+    await requireSuperAdmin();
     const config = await prisma.promotionConfig.upsert({
       where: { id: "default" },
       update: data,

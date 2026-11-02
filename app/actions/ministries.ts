@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { checkChurchAccess } from "@/lib/session";
 
 export async function getChurchMinistries(churchSlug: string) {
   try {
@@ -97,6 +98,14 @@ export async function createMinistry(params: {
   logoUrl?: string;
 }) {
   try {
+    const access = await checkChurchAccess(params.tenantSlug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Apenas a liderança desta congregação pode criar ministérios." };
+    }
+
     const tenant = await prisma.tenant.findUnique({
       where: { slug: params.tenantSlug },
     });
@@ -167,6 +176,21 @@ export async function updateMinistry(params: {
   churchSlug: string;
 }) {
   try {
+    const access = await checkChurchAccess(params.churchSlug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Apenas a liderança desta congregação pode editar ministérios." };
+    }
+
+    const existing = await prisma.ministry.findFirst({
+      where: { id: params.id, tenantId: access.targetTenantId },
+    });
+    if (!existing) {
+      return { success: false, error: "Ministério não encontrado nesta congregação." };
+    }
+
     const leadersToAssign = params.leaderIds !== undefined
       ? params.leaderIds
       : params.leaderId
@@ -273,6 +297,21 @@ export async function updateMinistry(params: {
 
 export async function deleteMinistry(id: string, churchSlug: string) {
   try {
+    const access = await checkChurchAccess(churchSlug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Apenas administradores e pastores desta congregação podem excluir ministérios." };
+    }
+
+    const existing = await prisma.ministry.findFirst({
+      where: { id, tenantId: access.targetTenantId },
+    });
+    if (!existing) {
+      return { success: false, error: "Ministério não encontrado nesta congregação." };
+    }
+
     await prisma.ministry.delete({
       where: { id },
     });

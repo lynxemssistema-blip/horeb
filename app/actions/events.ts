@@ -27,7 +27,17 @@ export async function createEvent(
   currentTenantId: string
 ) {
   try {
-    const isMaster = userRole === "MASTER" || userRole === "SUPERADMIN";
+    const session = await getSession();
+    if (!session?.userId) {
+      return { success: false, error: "Autenticação necessária para criar eventos." };
+    }
+
+    const effectiveRole = session.role || userRole || "LOCAL";
+    const isMaster =
+      effectiveRole === "MASTER" ||
+      effectiveRole === "ADMIN" ||
+      effectiveRole === "SUPERADMIN" ||
+      effectiveRole === "PASTOR";
 
     // Regras de negócio: determina o alvo inicial
     const rawTarget = isMaster && data.targetTenantId ? data.targetTenantId : currentTenantId;
@@ -40,7 +50,7 @@ export async function createEvent(
           { slug: rawTarget },
         ],
       },
-      select: { id: true, slug: true, name: true },
+      select: { id: true, slug: true, name: true, parentId: true },
     });
 
     if (!tenant && currentTenantId) {
@@ -51,12 +61,24 @@ export async function createEvent(
             { slug: currentTenantId },
           ],
         },
-        select: { id: true, slug: true, name: true },
+        select: { id: true, slug: true, name: true, parentId: true },
       });
     }
 
     if (!tenant) {
       return { success: false, error: `Congregação não encontrada com ID ou slug '${rawTarget}'.` };
+    }
+
+    // Validação Multi-Tenant: garante que o usuário só cria evento na sua congregação ou em suas filiais
+    if (
+      session.role !== "SUPERADMIN" &&
+      tenant.id !== session.tenantId &&
+      tenant.parentId !== session.tenantId
+    ) {
+      return {
+        success: false,
+        error: "Acesso negado: você não tem permissão para criar eventos nesta congregação.",
+      };
     }
 
     const effectiveTenantId = tenant.id;
@@ -114,7 +136,7 @@ export async function getEventsFeed(
           { slug: currentTenantId },
         ],
       },
-      select: { id: true },
+      select: { id: true, parentId: true },
     });
 
     const realTenantId = tenant ? tenant.id : currentTenantId;
@@ -142,11 +164,19 @@ export async function getEventsFeed(
       };
     }
 
+    // Isolamento estrito Multi-Tenant:
+    // Busca apenas eventos da própria congregação OU eventos globais da SUA igreja-mãe (Sede),
+    // nunca eventos de outras igrejas independentes na plataforma.
+    const tenantOrConditions: any[] = [{ tenantId: realTenantId }];
+    if (tenant?.parentId) {
+      tenantOrConditions.push({
+        tenantId: tenant.parentId,
+        isGlobalFeature: true,
+      });
+    }
+
     const whereClause: any = {
-      OR: [
-        { tenantId: realTenantId },
-        { isGlobalFeature: true },
-      ],
+      OR: tenantOrConditions,
       ...dateFilter,
     };
 
@@ -516,11 +546,23 @@ export async function updateEvent(
 
     const existing = await prisma.event.findUnique({
       where: { id: data.id },
-      include: { tenant: { select: { id: true, slug: true } } },
+      include: { tenant: { select: { id: true, slug: true, parentId: true } } },
     });
 
     if (!existing) {
       return { success: false, error: "Evento não encontrado para edição." };
+    }
+
+    // Validação Multi-Tenant: garante que o usuário só edita evento da sua congregação ou de suas filiais
+    if (
+      session?.role !== "SUPERADMIN" &&
+      existing.tenantId !== session?.tenantId &&
+      existing.tenant?.parentId !== session?.tenantId
+    ) {
+      return {
+        success: false,
+        error: "Acesso negado: você não tem permissão para editar eventos desta congregação.",
+      };
     }
 
     const effectiveIsGlobalFeature =

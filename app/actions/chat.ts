@@ -94,30 +94,20 @@ export async function getUserConversation(tenantSlug: string) {
       return { success: false, error: "Igreja não encontrada.", messages: [] };
     }
 
-    // Busca usuário ativo no banco
-    let userId = session?.userId;
+    // Busca usuário ativo na sessão (nunca usa fallback de outro membro da igreja)
+    const userId = session?.userId;
     let userName = session?.name || null;
 
     if (!userId) {
-      // Se não logado por sessão, busca o primeiro membro ou admin de fallback para vincular
-      const fallbackUser = await prisma.user.findFirst({
-        where: { tenantId: tenant.id },
-        select: { id: true, name: true },
-      });
-      if (fallbackUser) {
-        userId = fallbackUser.id;
-        if (!userName) userName = fallbackUser.name;
-      }
-    } else if (!userName) {
+      return { success: true, conversationId: null, messages: [], userName: null, firstName: "" };
+    }
+
+    if (!userName) {
       const dbUser = await prisma.user.findUnique({
         where: { id: userId },
         select: { name: true },
       });
       if (dbUser?.name) userName = dbUser.name;
-    }
-
-    if (!userId) {
-      return { success: true, conversationId: null, messages: [], userName: null, firstName: "" };
     }
 
     const firstName = formatFirstName(userName);
@@ -190,15 +180,7 @@ export async function resetUserConversation(tenantSlug: string) {
 
     if (!tenant) return { success: false, error: "Igreja não encontrada." };
 
-    let userId = session?.userId;
-    if (!userId) {
-      const fallbackUser = await prisma.user.findFirst({
-        where: { tenantId: tenant.id },
-        select: { id: true },
-      });
-      if (fallbackUser) userId = fallbackUser.id;
-    }
-
+    const userId = session?.userId;
     if (!userId) return { success: false, error: "Usuário não autenticado." };
 
     const agents = await getOrSeedAgents(tenant.id);
@@ -240,9 +222,23 @@ export async function processTextMessage({
 
     if (!tenant) return { success: false, error: "Igreja não encontrada." };
 
-    // 1. Garante ou recupera a conversa persistente
+    // 1. Garante ou recupera a conversa persistente (validando propriedade do usuário e tenant)
+    const session = await getSession();
     let currentConvId = conversationId;
-    if (!currentConvId) {
+    if (currentConvId) {
+      const existingConv = await prisma.conversation.findFirst({
+        where: {
+          id: currentConvId,
+          tenantId: tenant.id,
+          ...(session?.userId ? { userId: session.userId } : {}),
+        },
+        select: { id: true },
+      });
+      if (!existingConv) {
+        currentConvId = null;
+      }
+    }
+    if (!currentConvId && session?.userId) {
       const convRes = await getUserConversation(tenantSlug);
       if (convRes.success && convRes.conversationId) {
         currentConvId = convRes.conversationId;
@@ -291,7 +287,6 @@ REGRA ESTRITA: Retorne APENAS um JSON válido no formato exato:
     const selectedAgent = agents.find((a) => a.id === selectedAgentId) || agents[0];
 
     // Buscar informações do usuário para personalização humana e afetuosa
-    const session = await getSession();
     let userName = session?.name;
     if (!userName && currentConvId) {
       const conv = await prisma.conversation.findUnique({
@@ -413,7 +408,21 @@ export async function processVoiceMessage(formData: FormData) {
 
     if (!tenant) return { success: false, error: "Igreja não encontrada." };
 
-    if (!conversationId) {
+    const session = await getSession();
+    if (conversationId) {
+      const existingConv = await prisma.conversation.findFirst({
+        where: {
+          id: conversationId,
+          tenantId: tenant.id,
+          ...(session?.userId ? { userId: session.userId } : {}),
+        },
+        select: { id: true },
+      });
+      if (!existingConv) {
+        conversationId = null;
+      }
+    }
+    if (!conversationId && session?.userId) {
       const convRes = await getUserConversation(tenantSlug);
       if (convRes.success && convRes.conversationId) {
         conversationId = convRes.conversationId;
@@ -474,7 +483,6 @@ REGRA ESTRITA: Retorne APENAS um objeto JSON válido. Não inclua blocos de cód
     const selectedAgent = agents.find((a) => a.id === orchestratorData.selectedAgentId) || agents[0];
 
     // Buscar informações do usuário
-    const session = await getSession();
     let userName = session?.name;
     if (!userName && conversationId) {
       const conv = await prisma.conversation.findUnique({

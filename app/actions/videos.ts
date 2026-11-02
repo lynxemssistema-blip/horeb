@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { extractYouTubeId } from "@/lib/utils";
+import { checkChurchAccess } from "@/lib/session";
 
 export async function getChurchVideos(churchSlug: string) {
   try {
@@ -60,6 +61,14 @@ export async function createChurchVideo(params: {
   category?: string;
 }) {
   try {
+    const access = await checkChurchAccess(params.tenantSlug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Apenas a liderança desta congregação pode cadastrar vídeos." };
+    }
+
     const tenant = await prisma.tenant.findUnique({
       where: { slug: params.tenantSlug },
     });
@@ -100,6 +109,21 @@ export async function createChurchVideo(params: {
 
 export async function deleteChurchVideo(id: string, churchSlug: string) {
   try {
+    const access = await checkChurchAccess(churchSlug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Apenas a liderança desta congregação pode remover vídeos." };
+    }
+
+    const existing = await prisma.churchVideo.findFirst({
+      where: { id, tenantId: access.targetTenantId },
+    });
+    if (!existing) {
+      return { success: false, error: "Vídeo não encontrado nesta congregação." };
+    }
+
     await prisma.churchVideo.delete({
       where: { id },
     });
