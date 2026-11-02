@@ -74,9 +74,9 @@ async function ensureInitialEbooksSeeded() {
             "Um guia profundo e prático para vencer a guerra na mente e guardar o coração. Compreenda a verdadeira natureza da prisão espiritual, o engano na mente e a compressão da alma, o alinhamento em Cristo, os 5 passos práticos para a verdadeira liberdade e como permanecer livre através do domínio próprio.",
           price: 9.9,
           originalPrice: 29.9,
-          coverUrl: "/ebooks-covers/libertacao-espiritual.jpg",
+          coverUrl: "/ebooks-covers/libertacao-espiritual.jpg?v=2",
           relativePdfPath:
-            "Libertação Espiritual/Libertação Espiritual - Restaurando a Ordem e o Equilíbrio rev 01.pdf",
+            "Libertação Espiritual/Libertação Espiritual - Restaurando a Ordem e o Equilíbrio (1).pdf",
           fileName: "Libertação Espiritual - Restaurando a Ordem e o Equilíbrio.pdf",
           badge: "NOVO LANÇAMENTO",
           pagesCount: 10,
@@ -92,10 +92,10 @@ async function ensureInitialEbooksSeeded() {
             "Estudo bíblico profundo sobre corpo, alma e espírito e os seis instintos naturais criados por Deus (Aquisição, Alimentação, Reprodução, Autoproteção, Domínio Próprio e Comunhão). Descubra onde termina o que é natural e onde começa o pecado e aprenda a quebrar os ciclos de desequilíbrio.",
           price: 9.9,
           originalPrice: 29.9,
-          coverUrl: "/ebooks-covers/seis-instintos-da-alma.jpg",
+          coverUrl: "/ebooks-covers/seis-instintos-da-alma.jpg?v=2",
           relativePdfPath:
-            "Os Seis Instintos da Alm/Os Seis Instintos da Alma rev 01.pdf",
-          fileName: "Os Seis Instintos da Alma rev 01.pdf",
+            "Os Seis Instintos da Alm/Os Seis Instintos da Alma.pdf",
+          fileName: "Os Seis Instintos da Alma.pdf",
           badge: "MAIS VENDIDO",
           pagesCount: 12,
           category: "SANTIDADE & EQUILÍBRIO",
@@ -110,7 +110,7 @@ async function ensureInitialEbooksSeeded() {
             "Conheça à luz das Escrituras as estratégias do inimigo, o papel das regiões celestiais, as ferramentas espirituais do cristão e como permanecer firme e vitorioso debaixo da autoridade de Cristo sem transformar pessoas em inimigas.",
           price: 9.9,
           originalPrice: 29.9,
-          coverUrl: "/ebooks-covers/batalha-invisivel.jpg",
+          coverUrl: "/ebooks-covers/batalha-invisivel.jpg?v=2",
           relativePdfPath:
             "Batalha Invisível - E-book Completo/Batalha Invisível - E-book Completo.pdf",
           fileName: "Batalha Invisível - E-book Completo.pdf",
@@ -178,10 +178,11 @@ async function ensureInitialEbooksSeeded() {
             },
           });
         } else {
-          // Atualiza apenas se a capa ainda for do Unsplash ou vazia (NUNCA sobrescreve capa customizada enviada pelo Super Admin!)
+          // Atualiza se a capa ainda for antiga sem ?v=2 (exceto capas customizadas data: enviadas pelo Super Admin)
           const needsCoverUpdate =
             !found.coverUrl ||
-            found.coverUrl.includes("images.unsplash.com");
+            found.coverUrl.includes("images.unsplash.com") ||
+            (found.coverUrl.startsWith("/ebooks-covers/") && !found.coverUrl.includes("?v=2"));
           const needsPdfUpdate = !found.pdfUrl || !found.pdfUrl.startsWith("data:");
           const needsAuthorUpdate =
             !found.author ||

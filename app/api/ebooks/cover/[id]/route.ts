@@ -45,9 +45,10 @@ export async function GET(
       }
     }
 
-    // 2. Se for arquivo local em public/ (ex: /ebooks-covers/libertacao-espiritual.jpg)
+    // 2. Se for arquivo local em public/ (ex: /ebooks-covers/libertacao-espiritual.jpg?v=2)
     if (coverUrl.startsWith("/")) {
-      const localPath = path.join(process.cwd(), "public", coverUrl.replace(/^\/+/, ""));
+      const cleanRelPath = coverUrl.split("?")[0].replace(/^\/+/, "");
+      const localPath = path.join(process.cwd(), "public", cleanRelPath);
       try {
         const fileBuf = await fs.readFile(localPath);
         const ext = path.extname(localPath).toLowerCase();
