@@ -4,7 +4,8 @@ const nextConfig: NextConfig = {
   output: "standalone",
   experimental: {
     serverActions: {
-      bodySizeLimit: "5mb",
+      // Base64 adiciona ~33% ao tamanho de um arquivo de 5MB (~6.8MB + capa). 8MB garante envio de PDFs de até 5MB sem erro!
+      bodySizeLimit: "8mb",
     },
   },
   images: {

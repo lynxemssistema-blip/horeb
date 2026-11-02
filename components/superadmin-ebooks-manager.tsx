@@ -223,8 +223,12 @@ export function SuperAdminEbooksManager({
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 4 * 1024 * 1024) {
-      toast.error("A imagem de capa deve ter no máximo 4 MB.");
+    if (file.size > 5 * 1024 * 1024) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      toast.error(
+        `A imagem selecionada tem ${sizeMb} MB. O tamanho máximo permitido é de 5 MB.`
+      );
+      e.target.value = "";
       return;
     }
     const reader = new FileReader();
@@ -242,11 +246,16 @@ export function SuperAdminEbooksManager({
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-      toast.error("Selecione um arquivo no formato PDF (.pdf).");
+      toast.error("Selecione apenas arquivos no formato PDF (.pdf).");
+      e.target.value = "";
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("O arquivo PDF deve ter no máximo 5 MB para envio direto ao Asaas.");
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      toast.error(
+        `O arquivo PDF selecionado tem ${sizeMb} MB. O limite máximo permitido é de 5 MB.`
+      );
+      e.target.value = "";
       return;
     }
 
@@ -265,38 +274,56 @@ export function SuperAdminEbooksManager({
     e.preventDefault();
 
     startTransition(async () => {
-      const res = await saveEbookProduct({
-        id: editingEbook?.id,
-        title,
-        subtitle,
-        author,
-        description,
-        price: parseFloat(price) || 0,
-        originalPrice: originalPrice ? parseFloat(originalPrice) : null,
-        coverUrl: coverUrl || null,
-        pdfUrl: pdfUrl || undefined,
-        pdfFileName: pdfFileName || "ebook-horeb.pdf",
-        badge: badge || null,
-        pagesCount: pagesCount ? parseInt(pagesCount, 10) : null,
-        category,
-        active,
-        featured,
-      });
+      try {
+        const res = await saveEbookProduct({
+          id: editingEbook?.id,
+          title,
+          subtitle,
+          author,
+          description,
+          price: parseFloat(price) || 0,
+          originalPrice: originalPrice ? parseFloat(originalPrice) : null,
+          coverUrl: coverUrl || null,
+          pdfUrl: pdfUrl || undefined,
+          pdfFileName: pdfFileName || "ebook-horeb.pdf",
+          badge: badge || null,
+          pagesCount: pagesCount ? parseInt(pagesCount, 10) : null,
+          category,
+          active,
+          featured,
+        });
 
-      if (res.success && res.ebook) {
-        toast.success(
-          editingEbook
-            ? "E-book atualizado com sucesso!"
-            : "E-book cadastrado e publicado na página inicial!"
-        );
-        setShowModal(false);
-        if (editingEbook) {
-          setEbooks((prev) => prev.map((b) => (b.id === res.ebook.id ? res.ebook : b)));
+        if (res.success && res.ebook) {
+          toast.success(
+            editingEbook
+              ? "E-book atualizado com sucesso!"
+              : "E-book cadastrado e publicado na página inicial!"
+          );
+          setShowModal(false);
+          if (editingEbook) {
+            setEbooks((prev) => prev.map((b) => (b.id === res.ebook.id ? res.ebook : b)));
+          } else {
+            setEbooks((prev) => [res.ebook, ...prev]);
+          }
         } else {
-          setEbooks((prev) => [res.ebook, ...prev]);
+          toast.error(res.error || "Erro ao salvar E-book.");
         }
-      } else {
-        toast.error(res.error || "Erro ao salvar E-book.");
+      } catch (err: any) {
+        const msg = String(err?.message || "");
+        if (
+          msg.toLowerCase().includes("body exceeded") ||
+          msg.toLowerCase().includes("limit") ||
+          msg.includes("413") ||
+          msg.includes("500")
+        ) {
+          toast.error(
+            "Arquivo muito grande! O tamanho máximo permitido para o PDF e a capa é de 5 MB."
+          );
+        } else {
+          toast.error(
+            "Não foi possível enviar o arquivo. Verifique se o tamanho não ultrapassa o limite de 5 MB."
+          );
+        }
       }
     });
   };
@@ -1135,7 +1162,8 @@ export function SuperAdminEbooksManager({
                   </div>
 
                   <p className="text-[11px] text-zinc-400 leading-snug">
-                    Este PDF será anexado na cobrança do Asaas e entregue automaticamente ao comprador assim que o pagamento for confirmado.
+                    Este PDF será anexado na cobrança do Asaas e entregue automaticamente ao comprador após o pagamento.{" "}
+                    <strong className="text-emerald-300">(Tamanho máximo: 5 MB)</strong>
                   </p>
 
                   <label className="flex items-center justify-center gap-2 w-full h-10 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs cursor-pointer transition-colors">
@@ -1171,7 +1199,8 @@ export function SuperAdminEbooksManager({
                   </div>
 
                   <p className="text-[11px] text-zinc-400 leading-snug">
-                    Envie uma imagem de capa do seu computador ou cole uma URL de imagem abaixo.
+                    Envie uma imagem de capa do seu computador ou cole uma URL abaixo.{" "}
+                    <strong className="text-amber-300">(Tamanho máximo: 5 MB)</strong>
                   </p>
 
                   <div className="flex gap-2">
