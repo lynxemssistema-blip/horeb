@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
-import { generateActivationCode, sendActivationCodeEmail } from "@/lib/mail";
+import { generateActivationCode, sendActivationCodeEmail, sendPasswordResetEmail } from "@/lib/mail";
 import { isValidEmail, sanitizeSlug } from "@/lib/validators";
 import { createSession, destroySession, getSession, checkChurchAccess } from "@/lib/session";
 import { isFeatureAllowedForPlan } from "@/lib/plans";
@@ -565,6 +565,232 @@ export async function createBranchChurch(params: CreateBranchParams) {
     return {
       success: false,
       error: error.message || "Erro ao criar congregação filial.",
+    };
+  }
+}
+
+// 4. Solicitar Recuperação de Senha (Esqueci minha senha)
+export async function requestPasswordReset(identifier: string) {
+  try {
+    const clean = identifier?.trim();
+    if (!clean) {
+      return { success: false, error: "Informe seu e-mail ou nome de usuário cadastrado." };
+    }
+
+    const cleanLower = clean.toLowerCase();
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: cleanLower },
+          { name: { equals: clean } },
+          { name: { contains: clean } },
+        ],
+      },
+      include: { tenant: true },
+    });
+
+    if (!user || !user.email) {
+      return {
+        success: false,
+        error: "Nenhuma conta encontrada com este e-mail ou nome de usuário.",
+      };
+    }
+
+    const code = generateActivationCode();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        verificationCode: code,
+        codeExpiresAt: expiresAt,
+      },
+    });
+
+    await prisma.activationCode.create({
+      data: {
+        email: user.email.toLowerCase(),
+        code,
+        expiresAt,
+      },
+    });
+
+    const mailRes = await sendPasswordResetEmail({
+      to: user.email,
+      name: user.name,
+      code,
+      churchName: user.tenant?.name || "Horeb",
+      churchSlug: user.tenant?.slug,
+      primaryColor: user.tenant?.primaryColor || "#f59e0b",
+      logoUrl: user.tenant?.logoUrl,
+    });
+
+    // Registrar no log de e-mails
+    try {
+      await prisma.emailLog.create({
+        data: {
+          type: "OUTGOING",
+          from: "suporte@lynxems.com.br",
+          to: user.email,
+          subject: `${code} é seu código para redefinir sua senha no Horeb`,
+          snippet: `Solicitação de recuperação de senha para ${user.name} (${user.email}).`,
+          status: mailRes.success ? "SENT" : "FAILED",
+          code,
+        },
+      });
+    } catch {}
+
+    // Mascarar e-mail para exibição segura caso o usuário tenha digitado apenas o nome
+    const [localPart, domainPart] = user.email.split("@");
+    const maskedEmail =
+      localPart && domainPart
+        ? `${localPart.slice(0, 2)}${"*".repeat(Math.max(2, localPart.length - 2))}@${domainPart}`
+        : user.email;
+
+    return {
+      success: true,
+      email: user.email,
+      maskedEmail,
+      message: `Enviamos um código de 6 dígitos para ${maskedEmail}.`,
+    };
+  } catch (error: any) {
+    console.error("Erro ao solicitar recuperação de senha:", error);
+    return {
+      success: false,
+      error: "Não foi possível enviar o código de recuperação. Tente novamente.",
+    };
+  }
+}
+
+// 5. Confirmar Código de Recuperação e Definir Nova Senha
+export async function resetPasswordWithCode(params: {
+  email: string;
+  code: string;
+  newPassword: string;
+}) {
+  try {
+    const cleanEmail = params.email?.trim().toLowerCase();
+    const cleanCode = params.code?.trim();
+    const rawPassword = params.newPassword?.trim();
+
+    if (!cleanEmail || !cleanCode) {
+      return { success: false, error: "Informe o código de 6 dígitos enviado para seu e-mail." };
+    }
+
+    if (!rawPassword || rawPassword.length < 6) {
+      return { success: false, error: "A nova senha deve ter no mínimo 6 caracteres." };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+      include: { tenant: true },
+    });
+
+    if (!user) {
+      return { success: false, error: "Conta não encontrada." };
+    }
+
+    let isValid = false;
+    if (user.verificationCode && user.verificationCode === cleanCode) {
+      if (!user.codeExpiresAt || user.codeExpiresAt > new Date()) {
+        isValid = true;
+      }
+    }
+
+    if (!isValid) {
+      const activation = await prisma.activationCode.findFirst({
+        where: {
+          email: cleanEmail,
+          code: cleanCode,
+          used: false,
+          expiresAt: { gt: new Date() },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (activation) {
+        isValid = true;
+        await prisma.activationCode.update({
+          where: { id: activation.id },
+          data: { used: true },
+        });
+      }
+    }
+
+    if (!isValid) {
+      return {
+        success: false,
+        error: "Código inválido ou expirado. Solicite um novo código.",
+      };
+    }
+
+    const hashedPassword = await bcrypt.hash(rawPassword, 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        isEmailVerified: true,
+        verificationCode: null,
+        codeExpiresAt: null,
+      },
+    });
+
+    // Autenticar automaticamente o usuário após redefinir a senha
+    const accesses = await prisma.userChurchAccess.findMany({
+      where: { userId: user.id },
+      include: { tenant: true },
+    });
+
+    const targetTenantSlug =
+      user.role === "SUPERADMIN"
+        ? "admin"
+        : accesses.length === 1
+        ? accesses[0].tenant.slug
+        : user.tenant?.slug || "";
+    const targetTenantId =
+      accesses.length === 1 ? accesses[0].tenantId : user.tenantId || "";
+    const targetRole =
+      user.role === "SUPERADMIN"
+        ? "SUPERADMIN"
+        : accesses.length === 1
+        ? accesses[0].role
+        : user.role;
+
+    await createSession({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      avatarUrl: (user as any).avatarUrl || null,
+      role: targetRole,
+      tenantId: targetTenantId,
+      tenantSlug: targetTenantSlug || "admin",
+    });
+
+    const redirectUrl =
+      user.role === "SUPERADMIN"
+        ? "/admin"
+        : accesses.length > 1
+        ? "/select-church"
+        : `/${targetTenantSlug}`;
+
+    return {
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: targetRole,
+        tenantSlug: targetTenantSlug,
+      },
+      redirectUrl,
+    };
+  } catch (error: any) {
+    console.error("Erro ao redefinir senha:", error);
+    return {
+      success: false,
+      error: "Erro ao atualizar sua senha. Tente novamente.",
     };
   }
 }

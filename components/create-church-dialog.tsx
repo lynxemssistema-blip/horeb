@@ -18,6 +18,8 @@ import {
   registerMasterAndChurch,
   createBranchChurch,
   loginUser,
+  requestPasswordReset,
+  resetPasswordWithCode,
 } from "@/app/actions/tenant";
 import { isValidEmail } from "@/lib/validators";
 import {
@@ -38,6 +40,8 @@ import {
   Palette,
   Sparkles,
   ArrowRight,
+  ArrowLeft,
+  RefreshCw,
   Upload,
   Image as ImageIcon,
   Trash2,
@@ -129,10 +133,18 @@ export function CreateChurchDialog({
   const [branchAddress, setBranchAddress] = useState("");
   const branchLogoInputRef = useRef<HTMLInputElement>(null);
 
-  // Tab 3: Login
+  // Tab 3: Login & Recuperação de Senha
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [forgotMode, setForgotMode] = useState<"none" | "request" | "verify">("none");
+  const [resetIdentifier, setResetIdentifier] = useState("");
+  const [resetTargetEmail, setResetTargetEmail] = useState("");
+  const [resetMaskedEmail, setResetMaskedEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [resetNewPassword, setResetNewPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [showResetPassword, setShowResetPassword] = useState(false);
 
   const emailIsValid = masterEmail.length === 0 || isValidEmail(masterEmail);
 
@@ -271,6 +283,76 @@ export function CreateChurchDialog({
       }
     } catch {
       toast.error("Erro ao autenticar.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRequestPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanId = resetIdentifier?.trim();
+    if (!cleanId) {
+      toast.error("Informe seu e-mail ou nome de usuário cadastrado.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await requestPasswordReset(cleanId);
+      if (res.success && res.email) {
+        setResetTargetEmail(res.email);
+        setResetMaskedEmail(res.maskedEmail || res.email);
+        setForgotMode("verify");
+        toast.success("Código de recuperação enviado!", {
+          description: res.message,
+        });
+      } else {
+        toast.error(res.error || "Conta não localizada.");
+      }
+    } catch {
+      toast.error("Erro ao solicitar código de recuperação.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleConfirmPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetCode || resetCode.trim().length !== 6) {
+      toast.error("Informe o código de 6 dígitos enviado para seu e-mail.");
+      return;
+    }
+
+    if (!resetNewPassword || resetNewPassword.length < 6) {
+      toast.error("A nova senha deve ter no mínimo 6 caracteres.");
+      return;
+    }
+
+    if (resetNewPassword !== resetConfirmPassword) {
+      toast.error("A confirmação da nova senha não confere.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await resetPasswordWithCode({
+        email: resetTargetEmail,
+        code: resetCode.trim(),
+        newPassword: resetNewPassword,
+      });
+
+      if (res.success && res.redirectUrl) {
+        toast.success("Senha redefinida com sucesso!", {
+          description: `Bem-vindo de volta, ${res.user?.name}!`,
+        });
+        setOpen(false);
+        setForgotMode("none");
+        window.location.href = res.redirectUrl;
+      } else {
+        toast.error(res.error || "Código inválido ou expirado.");
+      }
+    } catch {
+      toast.error("Erro ao redefinir a senha.");
     } finally {
       setIsLoading(false);
     }
@@ -813,78 +895,261 @@ export function CreateChurchDialog({
               </form>
             </TabsContent>
 
-            {/* TAB 3: LOGIN */}
+            {/* TAB 3: LOGIN & RECUPERAÇÃO DE SENHA */}
             <TabsContent
               value="login"
               className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-4 space-y-4 touch-pan-y overscroll-contain"
             >
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="rounded-2xl bg-muted/30 border border-border p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-500">
-                    <KeyRound className="w-3.5 h-3.5" />
-                    <span>Acesso à Sua Conta</span>
+              {forgotMode === "none" && (
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="rounded-2xl bg-muted/30 border border-border p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-500">
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>Acesso à Sua Conta</span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-foreground">
+                          E-mail ou Nome de Usuário Cadastrado
+                        </label>
+                        <Input
+                          required
+                          type="text"
+                          autoComplete="username"
+                          autoCapitalize="none"
+                          value={loginEmail}
+                          onChange={(e) => setLoginEmail(e.target.value)}
+                          placeholder="pastor@igreja.org ou Pr. Luan Demattos"
+                          className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl font-medium"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-foreground">
+                            Senha de Acesso
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setResetIdentifier(loginEmail);
+                              setForgotMode("request");
+                            }}
+                            className="text-[11px] font-bold text-amber-500 hover:text-amber-400 underline underline-offset-2 cursor-pointer transition-colors"
+                          >
+                            Esqueceu a senha?
+                          </button>
+                        </div>
+                        <div className="relative">
+                          <Input
+                            required
+                            type={showLoginPassword ? "text" : "password"}
+                            value={loginPassword}
+                            onChange={(e) => setLoginPassword(e.target.value)}
+                            placeholder="••••••••"
+                            className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl pr-10 font-medium"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowLoginPassword(!showLoginPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                          >
+                            {showLoginPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="space-y-2.5">
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full h-11 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:brightness-110 text-black font-black text-xs rounded-xl shadow-lg gap-2 cursor-pointer sticky bottom-0 z-20"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Autenticando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <LogIn className="w-4 h-4" />
+                        <span>Entrar no Painel</span>
+                      </>
+                    )}
+                  </Button>
+                </form>
+              )}
+
+              {forgotMode === "request" && (
+                <form onSubmit={handleRequestPasswordReset} className="space-y-4">
+                  <div className="rounded-2xl bg-muted/30 border border-border p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-500">
+                        <Mail className="w-3.5 h-3.5" />
+                        <span>Recuperar Senha de Acesso</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForgotMode("none")}
+                        className="text-[11px] font-bold text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer"
+                      >
+                        <ArrowLeft className="w-3 h-3" />
+                        <span>Voltar ao login</span>
+                      </button>
+                    </div>
+
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Informe seu <strong>e-mail</strong> ou <strong>nome cadastrado</strong>. Enviaremos um código de segurança de 6 dígitos para o seu e-mail para criar uma nova senha.
+                    </p>
+
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-foreground">
-                        E-mail ou Nome de Usuário Cadastrado
+                        E-mail ou Nome de Usuário Cadastrado *
                       </label>
                       <Input
                         required
                         type="text"
-                        autoComplete="username"
-                        autoCapitalize="none"
-                        value={loginEmail}
-                        onChange={(e) => setLoginEmail(e.target.value)}
-                        placeholder="pastor@igreja.org ou Pr. Luan Demattos"
+                        autoFocus
+                        value={resetIdentifier}
+                        onChange={(e) => setResetIdentifier(e.target.value)}
+                        placeholder="pastor@igreja.org ou Pr. Marcos"
                         className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl font-medium"
                       />
                     </div>
+                  </div>
 
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-foreground">
-                        Senha de Acesso
-                      </label>
-                      <div className="relative">
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full h-11 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:brightness-110 text-black font-black text-xs rounded-xl shadow-lg gap-2 cursor-pointer"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Enviando Código...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4" />
+                        <span>Enviar Código de Recuperação</span>
+                      </>
+                    )}
+                  </Button>
+                </form>
+              )}
+
+              {forgotMode === "verify" && (
+                <form onSubmit={handleConfirmPasswordReset} className="space-y-4">
+                  <div className="rounded-2xl bg-muted/30 border border-border p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-500">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>Definir Nova Senha</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForgotMode("request")}
+                        className="text-[11px] font-bold text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer"
+                      >
+                        <ArrowLeft className="w-3 h-3" />
+                        <span>Trocar e-mail</span>
+                      </button>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-[11px] text-muted-foreground">
+                      Código enviado para <strong className="text-amber-400 font-mono">{resetMaskedEmail}</strong>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-foreground">
+                          Código de 6 Dígitos Recebido no E-mail *
+                        </label>
                         <Input
                           required
-                          type={showLoginPassword ? "text" : "password"}
-                          value={loginPassword}
-                          onChange={(e) => setLoginPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl pr-10 font-medium"
+                          type="text"
+                          maxLength={6}
+                          value={resetCode}
+                          onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ""))}
+                          placeholder="000000"
+                          className="bg-muted/70 border border-amber-500/40 text-amber-400 text-center font-mono text-lg font-black tracking-[8px] h-10 rounded-xl"
                         />
-                        <button
-                          type="button"
-                          onClick={() => setShowLoginPassword(!showLoginPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                        >
-                          {showLoginPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-foreground">
+                          Nova Senha (mínimo 6 caracteres) *
+                        </label>
+                        <div className="relative">
+                          <Input
+                            required
+                            minLength={6}
+                            type={showResetPassword ? "text" : "password"}
+                            value={resetNewPassword}
+                            onChange={(e) => setResetNewPassword(e.target.value)}
+                            placeholder="••••••••"
+                            className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl pr-10 font-medium"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowResetPassword(!showResetPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                          >
+                            {showResetPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-foreground">
+                          Confirmar Nova Senha *
+                        </label>
+                        <Input
+                          required
+                          minLength={6}
+                          type={showResetPassword ? "text" : "password"}
+                          value={resetConfirmPassword}
+                          onChange={(e) => setResetConfirmPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="bg-muted/70 border border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary text-xs h-9 rounded-xl font-medium"
+                        />
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full h-11 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:brightness-110 text-black font-black text-xs rounded-xl shadow-lg gap-2 cursor-pointer sticky bottom-0 z-20"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Autenticando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <LogIn className="w-4 h-4" />
-                      <span>Entrar no Painel</span>
-                    </>
-                  )}
-                </Button>
-              </form>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      type="submit"
+                      disabled={isLoading || resetCode.length !== 6}
+                      className="w-full h-11 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:brightness-110 text-black font-black text-xs rounded-xl shadow-lg gap-2 cursor-pointer"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Salvando Nova Senha...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4" />
+                          <span>Confirmar Nova Senha e Entrar</span>
+                        </>
+                      )}
+                    </Button>
+
+                    <button
+                      type="button"
+                      disabled={isLoading}
+                      onClick={handleRequestPasswordReset}
+                      className="text-[11px] font-bold text-amber-500 hover:text-amber-400 flex items-center justify-center gap-1 py-1 cursor-pointer"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Reenviar código por e-mail</span>
+                    </button>
+                  </div>
+                </form>
+              )}
             </TabsContent>
           </Tabs>
         </DialogContent>

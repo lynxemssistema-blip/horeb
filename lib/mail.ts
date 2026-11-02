@@ -949,4 +949,131 @@ export async function sendEbookOfferEmail({
   }
 }
 
+export async function sendPasswordResetEmail({
+  to,
+  name,
+  code,
+  churchName = "Horeb",
+  churchSlug,
+  primaryColor = "#f59e0b",
+  logoUrl,
+}: {
+  to: string;
+  name: string;
+  code: string;
+  churchName?: string;
+  churchSlug?: string;
+  primaryColor?: string;
+  logoUrl?: string | null;
+}) {
+  try {
+    const cleanTo = to.trim().toLowerCase();
+    const logoSrc = getEmailLogoSrc(churchSlug, logoUrl);
+    const messageId = `<horeb-reset-${Date.now()}-${Math.random().toString(36).substring(2, 8)}@lynxems.com.br>`;
+
+    const plainText = [
+      `Olá, ${name}!`,
+      ``,
+      `Recebemos uma solicitação de recuperação de senha para sua conta no Horeb (${churchName}).`,
+      `Seu código de recuperação de 6 dígitos é:`,
+      `${code}`,
+      ``,
+      `Este código é válido por 15 minutos.`,
+      `Se você não solicitou a redefinição de senha, ignore este e-mail com segurança.`,
+      ``,
+      `Atenciosamente,`,
+      `Equipe Horeb • Lynx EMS Sistemas`,
+      `suporte@lynxems.com.br`,
+    ].join("\n");
+
+    const sender = getMailSender(churchName ? `${churchName} • Horeb` : "Horeb Tecnologia");
+
+    const info = await mailTransporter.sendMail({
+      from: sender.from,
+      envelope: sender.envelope(cleanTo),
+      to: cleanTo,
+      replyTo: smtpUser,
+      subject: `${code} é seu código para redefinir sua senha no Horeb`,
+      text: plainText,
+      headers: {
+        "Message-ID": messageId,
+        "X-Mailer": "Horeb Mail Engine 1.0",
+        "X-Priority": "3",
+        "Auto-Submitted": "auto-generated",
+      },
+      html: `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Recuperação de Senha • Horeb</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f4f5f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #18181b;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f5f7; padding: 30px 15px;">
+            <tr>
+              <td align="center">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 520px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e4e4e7; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+                  <tr>
+                    <td height="5" style="background: ${primaryColor};"></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 28px 32px 18px 32px; text-align: center;">
+                      <div style="text-align: center; margin-bottom: 14px;">
+                        <img 
+                          src="${logoSrc}" 
+                          alt="${churchName}" 
+                          width="64" 
+                          height="64" 
+                          style="width: 64px; height: 64px; border-radius: 16px; object-fit: cover; border: 2px solid #e4e4e7; background-color: #ffffff; display: inline-block;" 
+                        />
+                      </div>
+                      <div style="display: inline-block; padding: 4px 14px; border-radius: 9999px; background-color: #fef3c7; color: #b45309; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px;">
+                        RECUPERAÇÃO DE SENHA • HOREB
+                      </div>
+                      <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #09090b; letter-spacing: -0.3px;">
+                        Redefinir Sua Senha
+                      </h1>
+                      <p style="margin: 10px 0 0 0; font-size: 14px; color: #52525b; line-height: 1.5;">
+                        Olá, <strong>${name}</strong>! Utilize o código de segurança abaixo para cadastrar uma nova senha na sua conta.
+                      </p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 32px 25px 32px; text-align: center;">
+                      <div style="background-color: #fafafa; border: 2px dashed #f59e0b; border-radius: 14px; padding: 20px 10px; margin: 5px 0;">
+                        <span style="display: block; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">
+                          Código de Recuperação
+                        </span>
+                        <span style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 900; letter-spacing: 6px; color: #d97706;">
+                          ${code}
+                        </span>
+                      </div>
+                      <p style="margin: 12px 0 0 0; font-size: 12px; color: #71717a;">
+                        Válido por <strong>15 minutos</strong>. Se não foi você, ignore este aviso.
+                      </p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="background-color: #f8fafc; border-top: 1px solid #e4e4e7; padding: 18px 32px; text-align: center; font-size: 11px; color: #71717a; line-height: 1.6;">
+                      Mensagem automática de segurança enviada por <strong>Horeb Soluções para Igrejas</strong>.<br>
+                      Desenvolvido por <strong>Lynx EMS Sistemas</strong> • <a href="mailto:suporte@lynxems.com.br" style="color: #d97706; text-decoration: none;">suporte@lynxems.com.br</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+    });
+
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error("Erro ao enviar e-mail de recuperação de senha:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 
