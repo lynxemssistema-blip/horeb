@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { triggerSingleUseEbookDeliveryEmail } from "@/app/actions/ebooks";
 
 export async function POST(req: NextRequest) {
   try {
@@ -63,8 +64,14 @@ export async function POST(req: NextRequest) {
           where: { id: ebookOrder.ebookId },
           data: { salesCount: { increment: 1 } },
         });
+      }
+
+      if (isNowPaid) {
+        await triggerSingleUseEbookDeliveryEmail(ebookOrder.id).catch((err) => {
+          console.error("[Asaas Webhook] Erro ao enviar e-mail de download único:", err);
+        });
         console.log(
-          `[Asaas Webhook] Venda de E-book '${ebookOrder.ebook.title}' CONFIRMADA para ${ebookOrder.buyerEmail}. O Asaas liberou o PDF na fatura!`
+          `[Asaas Webhook] Venda de E-book '${ebookOrder.ebook.title}' CONFIRMADA para ${ebookOrder.buyerEmail}. Link de download de uso único enviado por e-mail!`
         );
       }
 

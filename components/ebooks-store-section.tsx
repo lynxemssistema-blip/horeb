@@ -509,44 +509,36 @@ export function EbooksStoreSection({
                 {isPaid ? (
                   <div className="p-5 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/50 text-center space-y-4">
                     <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <h4 className="text-lg font-black text-white">
                         Pagamento Confirmado com Sucesso!
                       </h4>
-                      <p className="text-xs text-zinc-300">
-                        O Asaas confirmou seu pagamento e liberou o PDF do seu E-book!
+                      <p className="text-xs text-zinc-200 leading-relaxed">
+                        Enviamos o <strong>link exclusivo para baixar o PDF</strong> para o seu e-mail{" "}
+                        {buyerEmail ? (
+                          <strong className="text-amber-300 font-mono">({buyerEmail})</strong>
+                        ) : null}
+                        .
+                      </p>
+                      <p className="text-[11px] text-amber-300 font-bold">
+                        🔒 Atenção: O link enviado é válido para 1 único acesso (uso único).
                       </p>
                     </div>
 
                     <div className="flex flex-col gap-2.5">
-                      {activeOrder.invoiceUrl && (
-                        <a
-                          href={activeOrder.invoiceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full"
-                        >
-                          <Button className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs gap-2 cursor-pointer">
-                            <ExternalLink className="w-4 h-4" />
-                            <span>Baixar PDF na Fatura Oficial do Asaas</span>
-                          </Button>
-                        </a>
-                      )}
-
                       {unlockedPdfUrl && (
                         <a
                           href={unlockedPdfUrl}
-                          download={selectedEbook.pdfFileName || "ebook-horeb.pdf"}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="w-full"
+                          onClick={() => {
+                            setTimeout(() => setUnlockedPdfUrl(null), 1500);
+                          }}
                         >
-                          <Button
-                            variant="outline"
-                            className="w-full h-11 rounded-xl border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-xs gap-2 cursor-pointer"
-                          >
+                          <Button className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs gap-2 cursor-pointer">
                             <Download className="w-4 h-4" />
-                            <span>Baixar PDF Diretamente Agora</span>
+                            <span>Baixar Meu PDF Agora (1 Único Acesso)</span>
                           </Button>
                         </a>
                       )}

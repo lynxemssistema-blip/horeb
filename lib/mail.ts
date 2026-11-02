@@ -1076,4 +1076,162 @@ export async function sendPasswordResetEmail({
   }
 }
 
+export async function sendEbookSingleUseDownloadEmail({
+  to,
+  buyerName,
+  ebookTitle,
+  ebookSubtitle,
+  ebookAuthor,
+  ebookCoverUrl,
+  singleUseDownloadUrl,
+  asaasInvoiceUrl,
+}: {
+  to: string;
+  buyerName: string;
+  ebookTitle: string;
+  ebookSubtitle?: string | null;
+  ebookAuthor?: string | null;
+  ebookCoverUrl?: string | null;
+  singleUseDownloadUrl: string;
+  asaasInvoiceUrl?: string | null;
+}) {
+  try {
+    const cleanTo = to.trim().toLowerCase();
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://horeb.lynxems.com.br";
+    const logoSrc = getEmailLogoSrc();
+    const resolvedCover =
+      ebookCoverUrl && ebookCoverUrl.startsWith("/")
+        ? `${baseUrl}${ebookCoverUrl}`
+        : ebookCoverUrl;
+    const messageId = `<horeb-ebook-delivery-${Date.now()}-${Math.random().toString(36).substring(2, 8)}@lynxems.com.br>`;
+
+    const plainText = [
+      `Olá, ${buyerName}! A paz do Senhor!`,
+      ``,
+      `Seu pagamento para o E-book "${ebookTitle}" foi confirmado com sucesso!`,
+      ``,
+      `Abaixo está o seu link exclusivo para baixar o arquivo PDF completo:`,
+      `${singleUseDownloadUrl}`,
+      ``,
+      `ATENÇÃO IMPORTANTE: Por segurança, este link é válido para 1 ÚNICO ACESSO (download único). Ao clicar nele, salve imediatamente o arquivo PDF no seu celular ou computador.`,
+      ``,
+      `Atenciosamente,`,
+      `Biblioteca Digital Horeb • Lynx EMS Sistemas`,
+      `suporte@lynxems.com.br`,
+    ].join("\n");
+
+    const sender = getMailSender("Biblioteca Digital Horeb");
+
+    const info = await mailTransporter.sendMail({
+      from: sender.from,
+      envelope: sender.envelope(cleanTo),
+      to: cleanTo,
+      replyTo: smtpUser,
+      subject: `✅ Pagamento Confirmado: Baixe seu E-book "${ebookTitle}" (Link de Uso Único)`,
+      text: plainText,
+      headers: {
+        "Message-ID": messageId,
+        "X-Mailer": "Horeb Mail Engine 1.0",
+        "X-Priority": "1",
+        "Auto-Submitted": "auto-generated",
+      },
+      html: `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Download do Seu E-book • Horeb</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f4f5f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #18181b;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f5f7; padding: 30px 15px;">
+            <tr>
+              <td align="center">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 540px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e4e4e7; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+                  <tr>
+                    <td height="6" style="background: linear-gradient(90deg, #10b981, #f59e0b);"></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 28px 32px 16px 32px; text-align: center;">
+                      <div style="text-align: center; margin-bottom: 12px;">
+                        <img src="${logoSrc}" alt="Horeb" width="56" height="56" style="width: 56px; height: 56px; border-radius: 14px; object-fit: cover; border: 2px solid #e4e4e7; background-color: #ffffff; display: inline-block;" />
+                      </div>
+                      <div style="display: inline-block; padding: 4px 14px; border-radius: 9999px; background-color: #ecfdf5; color: #047857; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; border: 1px solid #a7f3d0;">
+                        PAGAMENTO CONFIRMADO • DOWNLOAD LIBERADO
+                      </div>
+                      <h1 style="margin: 0; font-size: 22px; font-weight: 900; color: #09090b; letter-spacing: -0.3px;">
+                        ${ebookTitle}
+                      </h1>
+                      ${
+                        ebookSubtitle
+                          ? `<p style="margin: 6px 0 0 0; font-size: 13px; color: #52525b; font-weight: 600;">${ebookSubtitle}</p>`
+                          : ""
+                      }
+                      ${
+                        ebookAuthor
+                          ? `<p style="margin: 6px 0 0 0; font-size: 12px; color: #71717a;">Autor: <strong style="color: #18181b;">${ebookAuthor}</strong></p>`
+                          : ""
+                      }
+                    </td>
+                  </tr>
+
+                  ${
+                    resolvedCover && resolvedCover.startsWith("http")
+                      ? `
+                  <tr>
+                    <td style="padding: 8px 32px 16px 32px; text-align: center;">
+                      <img src="${resolvedCover}" alt="${ebookTitle}" style="max-width: 220px; max-height: 260px; object-fit: contain; border-radius: 12px; border: 1px solid #e4e4e7;" />
+                    </td>
+                  </tr>
+                  `
+                      : ""
+                  }
+
+                  <tr>
+                    <td style="padding: 8px 32px 20px 32px;">
+                      <p style="margin: 0 0 12px 0; font-size: 14px; color: #27272a; line-height: 1.6;">
+                        Olá, <strong>${buyerName}</strong>! A paz do Senhor! 🙏<br>
+                        Seu pagamento foi confirmado e o arquivo PDF oficial do seu E-book já está liberado.
+                      </p>
+
+                      <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 10px; padding: 14px; font-size: 12px; color: #92400e; line-height: 1.5; margin-bottom: 20px;">
+                        <strong>🔒 Link Exclusivo de Uso Único:</strong><br>
+                        Por política de direitos autorais e segurança, o botão de download abaixo é válido para <strong>1 único acesso</strong>. Assim que clicar, salve o arquivo PDF no seu dispositivo!
+                      </div>
+
+                      <div style="text-align: center; margin: 22px 0;">
+                        <a href="${singleUseDownloadUrl}" target="_blank" style="display: inline-block; width: 88%; padding: 15px 20px; background-color: #10b981; color: #000000; font-size: 14px; font-weight: 900; text-decoration: none; border-radius: 12px; box-shadow: 0 4px 14px rgba(16,185,129,0.35); text-transform: uppercase; letter-spacing: 0.5px;">
+                          📥 Baixar Meu E-book em PDF Agora (Uso Único)
+                        </a>
+                      </div>
+
+                      <p style="margin: 14px 0 0 0; font-size: 11px; color: #71717a; text-align: center;">
+                        Caso o botão não abra diretamente, copie e cole este link de uso único no navegador:<br>
+                        <a href="${singleUseDownloadUrl}" style="color: #059669; word-break: break-all;">${singleUseDownloadUrl}</a>
+                      </p>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background-color: #f8fafc; border-top: 1px solid #e4e4e7; padding: 18px 32px; text-align: center; font-size: 11px; color: #71717a; line-height: 1.6;">
+                      Biblioteca Digital Horeb • Desenvolvido por <strong>Lynx EMS Sistemas</strong>.<br>
+                      Suporte oficial: <a href="mailto:suporte@lynxems.com.br" style="color: #d97706; text-decoration: none;">suporte@lynxems.com.br</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+    });
+
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error("Erro ao enviar e-mail com link de uso único do E-book:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 

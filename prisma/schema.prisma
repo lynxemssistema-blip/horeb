@@ -871,28 +871,33 @@ model EbookProduct {
 }
 
 model EbookOrder {
-  id              String       @id @default(cuid())
-  ebookId         String
-  ebook           EbookProduct @relation(fields: [ebookId], references: [id], onDelete: Cascade)
-  buyerName       String
-  buyerEmail      String
-  buyerCpf        String
-  buyerPhone      String?
-  amount          Float
-  billingType     String       @default("PIX") // PIX, BOLETO, CREDIT_CARD, UNDEFINED
-  status          String       @default("PENDING") // PENDING, RECEIVED, CONFIRMED, OVERDUE, REFUNDED
-  asaasCustomerId String?
-  asaasPaymentId  String       @unique
-  asaasDocumentId String?      // ID do documento PDF anexado na cobrança Asaas (availableAfterPayment=true)
-  invoiceUrl      String?      // Link da fatura Asaas onde o próprio Asaas libera o PDF após pagamento
-  pixQrCode       String?      // Código Copia-e-Cola PIX
-  pixQrCodeImage  String?      // Base64 da imagem QR Code PIX
-  paidAt          DateTime?
+  id                String       @id @default(cuid())
+  ebookId           String
+  ebook             EbookProduct @relation(fields: [ebookId], references: [id], onDelete: Cascade)
+  buyerName         String
+  buyerEmail        String
+  buyerCpf          String
+  buyerPhone        String?
+  amount            Float
+  billingType       String       @default("PIX") // PIX, BOLETO, CREDIT_CARD, UNDEFINED
+  status            String       @default("PENDING") // PENDING, RECEIVED, CONFIRMED, OVERDUE, REFUNDED
+  asaasCustomerId   String?
+  asaasPaymentId    String       @unique
+  asaasDocumentId   String?      // ID do documento PDF anexado na cobrança Asaas (availableAfterPayment=true)
+  invoiceUrl        String?      // Link da fatura Asaas onde o próprio Asaas libera o PDF após pagamento
+  pixQrCode         String?      // Código Copia-e-Cola PIX
+  pixQrCodeImage    String?      // Base64 da imagem QR Code PIX
+  downloadToken     String?      @unique // Token exclusivo de uso único para download do PDF
+  downloadUsed      Boolean      @default(false) // Indica se o link de download de uso único já foi utilizado
+  downloadUsedAt    DateTime?    // Data/hora em que o link de uso único foi acessado
+  deliveryEmailSent Boolean      @default(false) // Indica se o e-mail com o link de uso único já foi enviado ao comprador
+  paidAt            DateTime?
 
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   @@index([ebookId])
   @@index([buyerEmail])
   @@index([status])
+  @@index([downloadToken])
 }
