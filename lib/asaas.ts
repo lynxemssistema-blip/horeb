@@ -77,19 +77,19 @@ const DEFAULT_ASAAS_PROD_KEY = [
 export function getAsaasConfig() {
   let apiKey = (process.env.ASAAS_API_KEY || "").trim();
   // Remove aspas extras e barra invertida se o parser manteve '\$aact_...'
-  apiKey = apiKey.replace(/^["']+|["']+$/g, "").trim();
+  apiKey = apiKey.replace(/^["'\\]+|["']+$/g, "").trim();
   if (apiKey.startsWith("\\$")) {
     apiKey = apiKey.slice(1);
   }
   if (apiKey && !apiKey.startsWith("$") && apiKey.startsWith("aact_")) {
     apiKey = `$${apiKey}`;
   }
-  // Se a chave do ambiente foi truncada ou corrompida pelo interpolador de '$' do Docker/Easypanel
-  // (a chave completa possui 166 caracteres e 2 separadores '::' em base64), usa a chave oficial íntegra
+  // Garante rigorosamente a chave completa de 166 caracteres caso o Docker/Easypanel tenha alterado qualquer caractere
   if (
     !apiKey ||
-    apiKey.length < 150 ||
-    !apiKey.startsWith("$aact_") ||
+    apiKey.length !== 166 ||
+    !apiKey.startsWith("$aact_prod_") ||
+    !apiKey.includes("ZGY6OjQzZjcz") ||
     !apiKey.includes("JGFhY2hf")
   ) {
     apiKey = DEFAULT_ASAAS_PROD_KEY;
