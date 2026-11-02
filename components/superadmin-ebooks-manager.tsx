@@ -245,8 +245,8 @@ export function SuperAdminEbooksManager({
       toast.error("Selecione um arquivo no formato PDF (.pdf).");
       return;
     }
-    if (file.size > 15 * 1024 * 1024) {
-      toast.error("O arquivo PDF deve ter no máximo 15 MB para envio direto ao Asaas.");
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("O arquivo PDF deve ter no máximo 5 MB para envio direto ao Asaas.");
       return;
     }
 
