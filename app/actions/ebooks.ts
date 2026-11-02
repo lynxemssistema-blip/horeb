@@ -177,9 +177,11 @@ async function ensureInitialEbooksSeeded() {
             },
           });
         } else {
-          // Atualiza apenas se a capa ainda for do Unsplash ou vazia, ou se o autor ainda usar grafia antiga
+          // Atualiza apenas se a capa ainda for do Unsplash, base64 pesado ou vazia, ou se o autor ainda usar grafia antiga
           const needsCoverUpdate =
-            !found.coverUrl || found.coverUrl.includes("images.unsplash.com");
+            !found.coverUrl ||
+            found.coverUrl.includes("images.unsplash.com") ||
+            found.coverUrl.startsWith("data:");
           const needsPdfUpdate = !found.pdfUrl || !found.pdfUrl.startsWith("data:");
           const needsAuthorUpdate =
             !found.author ||
