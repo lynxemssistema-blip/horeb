@@ -841,3 +841,58 @@ model PersonalToolInvoice {
   @@index([userId])
   @@index([status])
 }
+
+// ==========================================
+// 8. LOJA DE E-BOOKS & MATERIAIS DIGITAIS (SUPER ADMIN + ASAAS)
+// ==========================================
+model EbookProduct {
+  id            String       @id @default(cuid())
+  title         String
+  subtitle      String?
+  author        String       @default("Edson Manoel")
+  description   String
+  price         Float
+  originalPrice Float?
+  coverUrl      String?
+  pdfUrl        String       // Base64 data URI ou caminho em /uploads/ebooks/...
+  pdfFileName   String       @default("ebook-horeb.pdf")
+  badge         String?      // ex: "MAIS VENDIDO", "LANÇAMENTO"
+  pagesCount    Int?
+  category      String       @default("LIDERANÇA & GESTÃO")
+  active        Boolean      @default(true)
+  featured      Boolean      @default(false)
+  salesCount    Int          @default(0)
+  orders        EbookOrder[]
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([active])
+}
+
+model EbookOrder {
+  id              String       @id @default(cuid())
+  ebookId         String
+  ebook           EbookProduct @relation(fields: [ebookId], references: [id], onDelete: Cascade)
+  buyerName       String
+  buyerEmail      String
+  buyerCpf        String
+  buyerPhone      String?
+  amount          Float
+  billingType     String       @default("PIX") // PIX, BOLETO, CREDIT_CARD, UNDEFINED
+  status          String       @default("PENDING") // PENDING, RECEIVED, CONFIRMED, OVERDUE, REFUNDED
+  asaasCustomerId String?
+  asaasPaymentId  String       @unique
+  asaasDocumentId String?      // ID do documento PDF anexado na cobrança Asaas (availableAfterPayment=true)
+  invoiceUrl      String?      // Link da fatura Asaas onde o próprio Asaas libera o PDF após pagamento
+  pixQrCode       String?      // Código Copia-e-Cola PIX
+  pixQrCodeImage  String?      // Base64 da imagem QR Code PIX
+  paidAt          DateTime?
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([ebookId])
+  @@index([buyerEmail])
+  @@index([status])
+}

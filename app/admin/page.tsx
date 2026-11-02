@@ -12,6 +12,7 @@ import {
 } from "@/app/actions/superadmin";
 import { getAgentProfiles } from "@/app/actions/agent";
 import { getRolePermissions } from "@/app/actions/permissions";
+import { getAdminEbooksData } from "@/app/actions/ebooks";
 
 export const metadata = {
   title: "Super Admin • Horeb por Lynx EMS Sistemas",
@@ -24,7 +25,7 @@ export default async function AdminPage() {
     redirect("/?auth=admin_required");
   }
 
-  const [metricsRes, tenantsRes, plansRes, usersRes, emailDataRes, promoRes, agentsRes, permissionsRes] =
+  const [metricsRes, tenantsRes, plansRes, usersRes, emailDataRes, promoRes, agentsRes, permissionsRes, ebooksDataRes] =
     await Promise.all([
       getSuperAdminMetrics(),
       getAllTenants(),
@@ -33,7 +34,8 @@ export default async function AdminPage() {
       getEmailCenterData(),
       getPromotionConfig(),
       getAgentProfiles(null), // null = agentes globais
-      getRolePermissions()
+      getRolePermissions(),
+      getAdminEbooksData(),
     ]);
 
   return (
@@ -50,6 +52,8 @@ export default async function AdminPage() {
       user={session}
       initialAgents={agentsRes?.profiles || []}
       initialPermissions={permissionsRes.permissions || []}
+      initialEbooks={ebooksDataRes.ebooks || []}
+      initialEbookOrders={ebooksDataRes.orders || []}
     />
   );
 }

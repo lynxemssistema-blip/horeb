@@ -422,3 +422,103 @@ export async function getAsaasPayment(
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * 7. Cria uma Cobrança Avulsa (Pagamento Único) no Asaas — ideal para venda de E-books / Produtos Digitais
+ */
+export async function createAsaasPayment(data: {
+  customerId: string;
+  value: number;
+  dueDate: string; // YYYY-MM-DD
+  description: string;
+  billingType?: "PIX" | "BOLETO" | "CREDIT_CARD" | "UNDEFINED";
+  externalReference?: string;
+}): Promise<{ success: boolean; payment?: AsaasPayment; error?: string }> {
+  const { apiKey, baseUrl, isConfigured } = getAsaasConfig();
+  if (!isConfigured) {
+    return { success: false, error: "Asaas API Key não configurada no .env" };
+  }
+
+  try {
+    const res = await fetch(`${baseUrl}/payments`, {
+      method: "POST",
+      headers: getHeaders(apiKey),
+      body: JSON.stringify({
+        customer: data.customerId,
+        billingType: data.billingType || "PIX",
+        value: data.value,
+        dueDate: data.dueDate,
+        description: data.description,
+        externalReference: data.externalReference,
+      }),
+      cache: "no-store",
+    });
+
+    const payData = await res.json();
+
+    if (!res.ok) {
+      const msg = payData?.errors?.[0]?.description || "Falha ao criar cobrança no Asaas";
+      return { success: false, error: msg };
+    }
+
+    return { success: true, payment: payData };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Erro de conexão ao criar cobrança" };
+  }
+}
+
+/**
+ * 8. Anexa o Arquivo PDF na Cobrança do Asaas com `availableAfterPayment = true`
+ * Assim que o pagamento é confirmado no Asaas, o próprio Asaas libera e entrega o PDF para o comprador!
+ */
+export async function uploadAsaasPaymentDocument(data: {
+  paymentId: string;
+  fileBuffer: Buffer;
+  fileName: string;
+  availableAfterPayment?: boolean;
+}): Promise<{ success: boolean; documentId?: string; fileUrl?: string; error?: string }> {
+  const { apiKey, baseUrl, isConfigured } = getAsaasConfig();
+  if (!isConfigured) {
+    return { success: false, error: "Asaas API Key não configurada" };
+  }
+
+  try {
+    const formData = new FormData();
+    const uint8Array = new Uint8Array(data.fileBuffer);
+    const blob = new Blob([uint8Array], { type: "application/pdf" });
+    formData.append("file", blob, data.fileName || "ebook-horeb.pdf");
+    formData.append(
+      "availableAfterPayment",
+      data.availableAfterPayment !== false ? "true" : "false"
+    );
+    formData.append("type", "OTHER");
+
+    const res = await fetch(`${baseUrl}/payments/${data.paymentId}/documents`, {
+      method: "POST",
+      headers: {
+        access_token: apiKey,
+        accept: "application/json",
+      },
+      body: formData,
+      cache: "no-store",
+    });
+
+    const docData = await res.json();
+
+    if (!res.ok) {
+      const msg =
+        docData?.errors?.[0]?.description || "Falha ao anexar PDF na cobrança do Asaas";
+      console.warn("[Asaas Document Upload Warning]:", msg);
+      return { success: false, error: msg };
+    }
+
+    return {
+      success: true,
+      documentId: docData.id,
+      fileUrl: docData.file?.publicAccessUrl || docData.file?.downloadUrl,
+    };
+  } catch (error: any) {
+    console.warn("[Asaas Document Upload Error]:", error);
+    return { success: false, error: error.message };
+  }
+}

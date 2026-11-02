@@ -30,7 +30,52 @@ export async function POST(req: NextRequest) {
     const customerId = payment?.customer || payload.subscription?.customer;
     const subscriptionId = payment?.subscription || payload.subscription?.id;
 
-    // 2. Busca se o evento pertence a uma Igreja (Tenant - B2B) ou a um Usuário Membro (User - B2C)
+    // 2. Busca se o evento pertence a um Pedido de E-book, a uma Igreja (Tenant - B2B) ou a um Usuário Membro (User - B2C)
+    const ebookOrder = payment?.id
+      ? await prisma.ebookOrder.findUnique({
+          where: { asaasPaymentId: payment.id },
+          include: { ebook: true },
+        })
+      : null;
+
+    if (ebookOrder && payment) {
+      const rawDate = payment.paymentDate || payment.clientPaymentDate;
+      const paymentDate = rawDate ? new Date(rawDate) : new Date();
+      const wasPaid =
+        ebookOrder.status === "RECEIVED" || ebookOrder.status === "CONFIRMED";
+      const isNowPaid =
+        event === "PAYMENT_CONFIRMED" ||
+        event === "PAYMENT_RECEIVED" ||
+        payment.status === "RECEIVED" ||
+        payment.status === "CONFIRMED";
+
+      await prisma.ebookOrder.update({
+        where: { id: ebookOrder.id },
+        data: {
+          status: payment.status || ebookOrder.status,
+          paidAt: isNowPaid ? ebookOrder.paidAt || paymentDate : ebookOrder.paidAt,
+          invoiceUrl: payment.invoiceUrl || ebookOrder.invoiceUrl,
+        },
+      });
+
+      if (isNowPaid && !wasPaid) {
+        await prisma.ebookProduct.update({
+          where: { id: ebookOrder.ebookId },
+          data: { salesCount: { increment: 1 } },
+        });
+        console.log(
+          `[Asaas Webhook] Venda de E-book '${ebookOrder.ebook.title}' CONFIRMADA para ${ebookOrder.buyerEmail}. O Asaas liberou o PDF na fatura!`
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        received: true,
+        type: "EBOOK_ORDER",
+        orderId: ebookOrder.id,
+      });
+    }
+
     const tenant = await prisma.tenant.findFirst({
       where: {
         OR: [

@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { CreateChurchDialog } from "@/components/create-church-dialog";
 import { PricingSection } from "@/components/pricing-section";
+import { EbooksStoreSection } from "@/components/ebooks-store-section";
 import { NativeMobileTools } from "@/components/native-mobile-tools";
 import { AboutHorebSection } from "@/components/about-horeb-section";
 import {
@@ -38,6 +39,7 @@ import {
   LogIn,
 } from "lucide-react";
 import { getPromotionConfig } from "@/app/actions/superadmin";
+import { getPublicEbooks } from "@/app/actions/ebooks";
 import { HelpGuideDialog } from "@/components/help-guide-dialog";
 import { getSession } from "@/lib/session";
 import { logoutUser } from "@/app/actions/tenant";
@@ -64,7 +66,7 @@ export default async function HomePage(props: {
     });
   }
 
-  const [tenants, promoRes] = await Promise.all([
+  const [tenants, promoRes, ebooksRes] = await Promise.all([
     prisma.tenant.findMany({
       include: {
         parent: true,
@@ -73,6 +75,7 @@ export default async function HomePage(props: {
       },
     }),
     getPromotionConfig(),
+    getPublicEbooks(),
   ]);
 
   return (
@@ -472,6 +475,12 @@ export default async function HomePage(props: {
             primaryColor: t.primaryColor,
           }))}
           promoConfig={promoRes.config}
+        />
+
+        {/* Vitrine Oficial de E-books & Materiais Digitais (Integrado ao Asaas com entrega automática de PDF) */}
+        <EbooksStoreSection
+          ebooks={ebooksRes.ebooks || []}
+          isSuperAdmin={session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN"}
         />
 
         {/* Pilares de Confiança */}

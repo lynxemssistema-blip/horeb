@@ -62,6 +62,7 @@ import {
   Bot,
   CreditCard,
   Camera,
+  BookOpen,
 } from "lucide-react";
 import { AgentManager } from "@/app/[slug]/admin/agentes/AgentManager";
 import { RolePermissionsManager } from "@/components/role-permissions-manager";
@@ -69,6 +70,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { AsaasSubscriptionDialog } from "@/components/asaas-subscription-dialog";
 import { SaasBillingManager } from "@/components/saas-billing-manager";
 import { SuperAdminPersonalToolsManager } from "@/components/superadmin-personal-tools-manager";
+import { SuperAdminEbooksManager } from "@/components/superadmin-ebooks-manager";
 
 interface SuperAdminDashboardProps {
   metrics: any;
@@ -83,6 +85,8 @@ interface SuperAdminDashboardProps {
   user?: any;
   initialAgents?: any[];
   initialPermissions?: any[];
+  initialEbooks?: any[];
+  initialEbookOrders?: any[];
 }
 
 export function SuperAdminDashboard({
@@ -98,6 +102,8 @@ export function SuperAdminDashboard({
   user,
   initialAgents = [],
   initialPermissions = [],
+  initialEbooks = [],
+  initialEbookOrders = [],
 }: SuperAdminDashboardProps) {
   const [tenants, setTenants] = useState(initialTenants);
   const [plans, setPlans] = useState(initialPlans);
@@ -499,6 +505,7 @@ export function SuperAdminDashboard({
                 { id: "agents", label: "Agentes de IA", icon: Bot, badge: "NOVO" },
                 { id: "permissions", label: "Controle de Acessos", icon: ShieldCheck },
                 { id: "promo", label: "Promoção Especial", icon: Gift, badge: "Dezembro" },
+                { id: "ebooks", label: "Meus E-books (Asaas)", icon: BookOpen, badge: "PDF" },
                 { id: "personal-tools", label: "Minhas Ferramentas (B2C)", icon: Camera, badge: "VENDAS" },
               ].map((tab) => {
                 const isActive = activeTab === tab.id;
@@ -1706,6 +1713,16 @@ export function SuperAdminDashboard({
           {/* ========================================================================= */}
           <TabsContent value="personal-tools" className="space-y-6">
             <SuperAdminPersonalToolsManager />
+          </TabsContent>
+
+          {/* ========================================================================= */}
+          {/* TAB 11: MEUS E-BOOKS (LOJA NA PÁGINA INICIAL + ENTREGA PDF ASAAS)         */}
+          {/* ========================================================================= */}
+          <TabsContent value="ebooks" className="space-y-6">
+            <SuperAdminEbooksManager
+              initialEbooks={initialEbooks}
+              initialOrders={initialEbookOrders}
+            />
           </TabsContent>
         </Tabs>
         </main>
