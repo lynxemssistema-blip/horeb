@@ -453,13 +453,21 @@ export function SuperAdminEbooksManager({
                 className="rounded-2xl bg-zinc-900/80 border border-white/[0.08] overflow-hidden flex flex-col justify-between shadow-lg hover:border-amber-500/40 transition-all"
               >
                 <div>
-                  <div className="relative h-48 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black flex items-center justify-center overflow-hidden border-b border-white/[0.06]">
+                  <div className="relative h-60 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black flex items-center justify-center overflow-hidden border-b border-white/[0.06]">
                     {ebook.coverUrl ? (
-                      <img
-                        src={ebook.coverUrl}
-                        alt={ebook.title}
-                        className="w-full h-full object-cover"
-                      />
+                      <>
+                        <img
+                          src={ebook.coverUrl}
+                          alt=""
+                          aria-hidden="true"
+                          className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-35"
+                        />
+                        <img
+                          src={ebook.coverUrl}
+                          alt={ebook.title}
+                          className="relative z-10 max-h-full max-w-full object-contain py-3 px-4 drop-shadow-2xl"
+                        />
+                      </>
                     ) : (
                       <div className="flex flex-col items-center gap-2 text-amber-400/60">
                         <BookOpen className="w-12 h-12" />
@@ -467,7 +475,7 @@ export function SuperAdminEbooksManager({
                       </div>
                     )}
 
-                    <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                    <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5">
                       <span
                         className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
                           ebook.active

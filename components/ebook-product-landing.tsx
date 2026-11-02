@@ -233,13 +233,21 @@ export function EbookProductLanding({
 
             {/* Card da Capa + Metadados */}
             <div className="rounded-3xl bg-zinc-900/70 border border-white/[0.08] overflow-hidden shadow-2xl">
-              <div className="relative h-64 sm:h-80 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black flex items-center justify-center overflow-hidden border-b border-white/[0.06]">
+              <div className="relative h-80 sm:h-96 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black flex items-center justify-center overflow-hidden border-b border-white/[0.06]">
                 {ebook.coverUrl ? (
-                  <img
-                    src={ebook.coverUrl}
-                    alt={ebook.title}
-                    className="w-full h-full object-cover"
-                  />
+                  <>
+                    <img
+                      src={ebook.coverUrl}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-35"
+                    />
+                    <img
+                      src={ebook.coverUrl}
+                      alt={ebook.title}
+                      className="relative z-10 max-h-full max-w-full object-contain py-4 px-6 drop-shadow-2xl"
+                    />
+                  </>
                 ) : (
                   <div className="flex flex-col items-center gap-3 text-amber-400/70">
                     <BookOpen className="w-16 h-16" />
@@ -249,7 +257,7 @@ export function EbookProductLanding({
                   </div>
                 )}
 
-                <div className="absolute bottom-4 left-4 right-4 flex flex-wrap items-center justify-between gap-2">
+                <div className="absolute bottom-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-2">
                   <span className="px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/15 text-xs font-bold text-white flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-amber-400" />
                     <span>Autor: {ebook.author}</span>

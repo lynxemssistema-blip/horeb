@@ -208,14 +208,22 @@ export function EbooksStoreSection({
                 {/* Capa */}
                 <Link
                   href={`/ebooks/${ebook.id}`}
-                  className="relative h-56 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black flex items-center justify-center overflow-hidden border-b border-white/[0.06] block"
+                  className="relative h-72 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black flex items-center justify-center overflow-hidden border-b border-white/[0.06] block"
                 >
                   {ebook.coverUrl ? (
-                    <img
-                      src={ebook.coverUrl}
-                      alt={ebook.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
+                    <>
+                      <img
+                        src={ebook.coverUrl}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-35"
+                      />
+                      <img
+                        src={ebook.coverUrl}
+                        alt={ebook.title}
+                        className="relative z-10 max-h-full max-w-full object-contain py-3 px-4 drop-shadow-2xl group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </>
                   ) : (
                     <div className="flex flex-col items-center gap-2 text-amber-400/70">
                       <BookOpen className="w-14 h-14" />
@@ -226,12 +234,12 @@ export function EbooksStoreSection({
                   )}
 
                   {ebook.badge && (
-                    <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-amber-500 text-black font-black text-[10px] uppercase tracking-wider shadow-lg">
+                    <span className="absolute top-3 left-3 z-20 px-3 py-1 rounded-full bg-amber-500 text-black font-black text-[10px] uppercase tracking-wider shadow-lg">
                       {ebook.badge}
                     </span>
                   )}
 
-                  <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-md border border-white/15 text-emerald-300 font-bold text-[10px] flex items-center gap-1">
+                  <span className="absolute bottom-3 right-3 z-20 px-2.5 py-1 rounded-lg bg-black/80 backdrop-blur-md border border-white/15 text-emerald-300 font-bold text-[10px] flex items-center gap-1 shadow-lg">
                     <FileText className="w-3 h-3" />
                     PDF Digital • Entrega Asaas
                   </span>
@@ -265,43 +273,49 @@ export function EbooksStoreSection({
               </div>
 
               {/* Rodapé de Preço e Botão Comprar */}
-              <div className="p-6 pt-0 space-y-3">
-                <div className="flex items-end justify-between pt-3 border-t border-white/[0.06]">
-                  <div>
-                    {ebook.originalPrice && ebook.originalPrice > ebook.price && (
-                      <span className="text-xs text-zinc-500 line-through block">
-                        De R${" "}
-                        {Number(ebook.originalPrice).toLocaleString("pt-BR", {
+              <div className="p-6 pt-0">
+                <div className="pt-4 border-t border-white/[0.06] space-y-3.5">
+                  <div className="flex items-end justify-between gap-2">
+                    <div>
+                      {ebook.originalPrice && ebook.originalPrice > ebook.price && (
+                        <span className="text-xs text-zinc-500 line-through block">
+                          De R${" "}
+                          {Number(ebook.originalPrice).toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </span>
+                      )}
+                      <span className="text-xs text-zinc-400 block">Por apenas</span>
+                      <span className="text-2xl font-black text-amber-400 leading-none">
+                        R${" "}
+                        {Number(ebook.price).toLocaleString("pt-BR", {
                           minimumFractionDigits: 2,
                         })}
                       </span>
-                    )}
-                    <span className="text-xs text-zinc-400 block">Por apenas</span>
-                    <span className="text-2xl font-black text-amber-400">
-                      R${" "}
-                      {Number(ebook.price).toLocaleString("pt-BR", {
-                        minimumFractionDigits: 2,
-                      })}
+                    </div>
+
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
+                      PIX • Cartão • Boleto
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Link href={`/ebooks/${ebook.id}`}>
+                  <div className="grid grid-cols-12 gap-2.5">
+                    <Link href={`/ebooks/${ebook.id}`} className="col-span-5">
                       <Button
                         variant="outline"
-                        className="h-11 px-3.5 rounded-2xl border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-200 font-bold text-xs gap-1.5 cursor-pointer"
+                        className="w-full h-11 px-3 rounded-2xl border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-200 font-bold text-xs gap-1.5 justify-center cursor-pointer"
                         title="Abrir Página Exclusiva do Produto"
                       >
-                        <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Página</span>
+                        <ExternalLink className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>Ver Página</span>
                       </Button>
                     </Link>
 
                     <Button
                       onClick={() => handleOpenCheckout(ebook)}
-                      className="h-11 px-5 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-black font-black text-xs gap-2 shadow-lg shadow-amber-500/20 cursor-pointer"
+                      className="col-span-7 w-full h-11 px-3 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-black font-black text-xs gap-1.5 justify-center shadow-lg shadow-amber-500/20 cursor-pointer"
                     >
-                      <ShoppingBag className="w-4 h-4" />
+                      <ShoppingBag className="w-4 h-4 shrink-0" />
                       <span>Comprar E-book</span>
                     </Button>
                   </div>
