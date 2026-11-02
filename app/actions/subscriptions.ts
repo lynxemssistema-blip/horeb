@@ -92,12 +92,13 @@ export async function createTenantSubscription(params: {
       }
     }
 
-    // 3. Cadastra ou recupera o cliente no Asaas
+    // 3. Cadastra ou recupera o cliente no Asaas (vinculado ao grupo de clientes 'horeb')
     const customerRes = await getOrCreateAsaasCustomer({
       name: tenant.name,
       cpfCnpj: params.cpfCnpj,
       email: params.customerEmail,
       phone: params.customerPhone || tenant.phone || undefined,
+      groupName: "horeb",
       externalReference: tenant.id,
     });
 

@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { updateChurchSettings } from "@/app/actions/members";
 import { logoutUser } from "@/app/actions/tenant";
 import { CreateChurchDialog } from "@/components/create-church-dialog";
+import { AsaasSubscriptionDialog } from "@/components/asaas-subscription-dialog";
 
 interface ChurchSettingsProps {
   tenant: {
@@ -90,6 +91,8 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
   );
 
   const [saving, setSaving] = useState(false);
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+  const [currentTenantData, setCurrentTenantData] = useState(tenant);
 
   // Logo file upload -> Base64
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -607,31 +610,53 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
             )}
           </div>
 
-          {/* Card de Assinatura */}
-          <div className="p-6 rounded-3xl bg-card border border-border shadow-xl space-y-3">
+          {/* Card de Assinatura (Mensal / Anual via Asaas) */}
+          <div className="p-6 rounded-3xl bg-card border border-border shadow-xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
                 <h3 className="text-xs font-black uppercase tracking-wider text-foreground">
-                  Plano & Licença
+                  Plano & Assinatura
                 </h3>
               </div>
               <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500 border border-emerald-500/30">
-                {tenant.status}
+                {currentTenantData.status}
               </span>
             </div>
 
             <div className="space-y-1">
               <span className="text-[11px] text-muted-foreground">Plano Ativo:</span>
               <p className="text-base font-black text-foreground tracking-wide">
-                PLANO {tenant.plan || "GESTAO"}
+                PLANO {currentTenantData.plan || "GESTAO"}
               </p>
+              <span className="text-[11px] text-amber-400 font-semibold block">
+                Ciclo Mensal ou Anual (com 2 meses OFF)
+              </span>
             </div>
 
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Plataforma com motor multi-tenant e segurança em nuvem. Desenvolvido por Lynx EMS Sistemas.
+              Gerencie sua assinatura recorrente no Asaas (PIX, Boleto ou Cartão) e escolha entre pagamento mensal ou anual.
             </p>
+
+            <Button
+              type="button"
+              onClick={() => setIsSubscriptionModalOpen(true)}
+              className="w-full h-10 text-xs font-black bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:brightness-110 text-black rounded-xl shadow-md shadow-amber-500/20 gap-2 cursor-pointer"
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>Gerenciar Assinatura (Mensal / Anual)</span>
+            </Button>
           </div>
+
+          <AsaasSubscriptionDialog
+            tenant={currentTenantData}
+            isOpen={isSubscriptionModalOpen}
+            onClose={() => setIsSubscriptionModalOpen(false)}
+            onUpdate={(updated) => {
+              setCurrentTenantData((prev) => ({ ...prev, ...updated }));
+              router.refresh();
+            }}
+          />
 
           {/* Card de Sessão e Desconexão */}
           <div className="p-6 rounded-3xl bg-card border border-border shadow-xl space-y-3">

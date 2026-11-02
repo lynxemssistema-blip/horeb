@@ -46,7 +46,9 @@ export async function POST(req: NextRequest) {
         where: {
           OR: [
             ...(subscriptionId ? [{ toolsAsaasSubscriptionId: subscriptionId }] : []),
-            ...(customerId ? [{ toolsAsaasCustomerId: customerId }] : []),
+            ...(customerId
+              ? [{ toolsAsaasCustomerId: customerId }, { asaasCustomerId: customerId }]
+              : []),
           ],
         },
       });
@@ -93,27 +95,34 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // Lógica de Ativação / Confirmação de Pagamento
+        // Lógica de Ativação / Confirmação de Pagamento (Mensal ou Anual)
         if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
+          const isYearly =
+            tenant.billingCycle === "YEARLY" ||
+            payload.subscription?.cycle === "YEARLY" ||
+            (payment.value && payment.value >= 1000);
+          const daysToAdd = isYearly ? 370 : 32;
+
           const baseDate = new Date(payment.dueDate);
-          const nextExpiry = new Date(baseDate.getTime() + 32 * 24 * 60 * 60 * 1000);
+          const nextExpiry = new Date(baseDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
 
           const finalExpiry =
             nextExpiry.getTime() > Date.now()
               ? nextExpiry
-              : new Date(Date.now() + 32 * 24 * 60 * 60 * 1000);
+              : new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
 
           await prisma.tenant.update({
             where: { id: tenant.id },
             data: {
               status: "ACTIVE",
+              billingCycle: isYearly ? "YEARLY" : "MONTHLY",
               subscriptionExpiresAt: finalExpiry,
               billingType: payment.billingType || tenant.billingType,
             },
           });
 
           console.log(
-            `[Asaas Webhook] Igreja '${tenant.name}' ATIVADA até ${finalExpiry.toISOString()}`
+            `[Asaas Webhook] Igreja '${tenant.name}' ATIVADA (${isYearly ? "ANUAL" : "MENSAL"}) até ${finalExpiry.toISOString()}`
           );
         } else if (event === "PAYMENT_OVERDUE") {
           console.warn(`[Asaas Webhook] Cobrança vencida para igreja '${tenant.name}'`);

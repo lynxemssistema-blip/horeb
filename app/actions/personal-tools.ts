@@ -553,12 +553,13 @@ export async function subscribePersonalToolsAsaas(data: {
     const { config } = await getPersonalToolsConfig();
     const amount = data.cycle === "YEARLY" ? config.annualPrice : config.monthlyPrice;
 
-    // 1. Criar ou Buscar Cliente no Asaas
+    // 1. Criar ou Buscar Cliente no Asaas (vinculado ao grupo de clientes 'horeb')
     const customerRes = await getOrCreateAsaasCustomer({
       name: user.name,
       cpfCnpj: data.cpfCnpj,
       email: user.email,
       phone: data.phone || undefined,
+      groupName: "horeb",
       externalReference: `USER_${user.id}`,
     });
 

@@ -251,13 +251,13 @@ export async function createChurchUser(params: {
       },
     });
 
-    // Sincronizar membro como Cliente no Asaas vinculado ao Grupo da Igreja
+    // Sincronizar membro como Cliente no Asaas vinculado ao Grupo 'horeb'
     try {
       const asaasRes = await getOrCreateAsaasCustomer({
         name: user.name,
         email: user.email,
         phone: params.phone,
-        groupName: tenant.name,
+        groupName: "horeb",
         externalReference: `USER_${user.id}`,
       });
       if (asaasRes.success && asaasRes.customer?.id) {
@@ -638,13 +638,13 @@ export async function registerMemberSelf(params: {
       include: { churchAccesses: true },
     });
 
-    // Sincronizar auto-cadastro no Asaas
+    // Sincronizar auto-cadastro no Asaas vinculado ao grupo 'horeb'
     try {
       const asaasRes = await getOrCreateAsaasCustomer({
         name: user.name,
         email: user.email,
         phone: params.phone,
-        groupName: tenant.name,
+        groupName: "horeb",
         externalReference: `USER_${user.id}`,
       });
       if (asaasRes.success && asaasRes.customer?.id) {

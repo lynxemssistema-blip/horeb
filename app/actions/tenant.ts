@@ -131,13 +131,13 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
       },
     });
 
-    // 3. Integração Automática com Asaas: Cria/Vincula Grupo da Igreja e Usuário como Cliente
+    // 3. Integração Automática com Asaas: Cria/Vincula Cliente ao Grupo 'horeb'
     try {
       const asaasRes = await getOrCreateAsaasCustomer({
         name: user.name,
         email: user.email,
         phone: params.phone,
-        groupName: tenant.name,
+        groupName: "horeb",
         externalReference: `USER_${user.id}`,
       });
 
@@ -151,7 +151,7 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
           where: { id: tenant.id },
           data: {
             asaasCustomerId: asaasRes.customer.id,
-            asaasGroupId: tenant.name,
+            asaasGroupId: "horeb",
           },
         });
       }
@@ -489,7 +489,7 @@ export async function createBranchChurch(params: CreateBranchParams) {
       },
     });
 
-    // Sincronizar grupo da congregação filial no Asaas
+    // Sincronizar grupo da congregação filial no Asaas ('horeb')
     try {
       const session = await getSession();
       if (session?.email) {
@@ -497,7 +497,7 @@ export async function createBranchChurch(params: CreateBranchParams) {
           name: session.name,
           email: session.email,
           phone: params.phone,
-          groupName: branch.name,
+          groupName: "horeb",
           externalReference: `USER_${session.userId}`,
         });
       }

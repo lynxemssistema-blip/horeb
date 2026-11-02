@@ -70,8 +70,17 @@ export interface AsaasPixQrCode {
 }
 
 export function getAsaasConfig() {
-  const apiKey = process.env.ASAAS_API_KEY || "";
-  const env = (process.env.ASAAS_ENVIRONMENT || "sandbox").toLowerCase();
+  let apiKey = (process.env.ASAAS_API_KEY || "").trim();
+  // Caso o parser de .env tenha engolido o '$' inicial de '$aact_...'
+  if (apiKey && !apiKey.startsWith("$") && apiKey.startsWith("aact_")) {
+    apiKey = `$${apiKey}`;
+  }
+  // Remove barra invertida se o parser manteve '\$aact_...'
+  if (apiKey.startsWith("\\$")) {
+    apiKey = apiKey.slice(1);
+  }
+  const env = (process.env.ASAAS_ENVIRONMENT || "production").split("#")[0].trim().toLowerCase();
+  const defaultGroup = (process.env.ASAAS_CUSTOMER_GROUP || "horeb").trim();
   const baseUrl =
     env === "production"
       ? "https://api.asaas.com/v3"
@@ -80,6 +89,7 @@ export function getAsaasConfig() {
   return {
     apiKey,
     env,
+    defaultGroup,
     baseUrl,
     isConfigured: !!apiKey && apiKey.length > 5,
   };
@@ -103,14 +113,14 @@ export async function getOrCreateAsaasCustomer(data: {
   groupName?: string;
   externalReference?: string;
 }): Promise<{ success: boolean; customer?: AsaasCustomer; error?: string }> {
-  const { apiKey, baseUrl, isConfigured } = getAsaasConfig();
+  const { apiKey, baseUrl, defaultGroup, isConfigured } = getAsaasConfig();
   if (!isConfigured) {
     return { success: false, error: "Asaas API Key não configurada no .env" };
   }
 
   const cleanDoc = data.cpfCnpj ? data.cpfCnpj.replace(/\D/g, "") : "";
   const cleanEmail = data.email ? data.email.trim().toLowerCase() : "";
-  const groupName = data.groupName?.trim();
+  const groupName = data.groupName?.trim() || defaultGroup;
 
   try {
     let existingCustomer: AsaasCustomer | null = null;

@@ -67,6 +67,7 @@ export function AsaasSubscriptionDialog({
   } | null>(null);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
 
+  const [isChangingCycleOrPlan, setIsChangingCycleOrPlan] = useState(false);
   const [isSubmitting, startTransition] = useTransition();
   const [pixCopied, setPixCopied] = useState(false);
 
@@ -168,7 +169,8 @@ export function AsaasSubscriptionDialog({
       });
 
       if (res.success) {
-        toast.success("Assinatura criada com sucesso no Asaas!");
+        toast.success("Assinatura criada/atualizada com sucesso no Asaas!");
+        setIsChangingCycleOrPlan(false);
         // Recarrega detalhes
         const detailsRes = await getTenantSubscriptionDetails(tenant.id);
         if (detailsRes.success && detailsRes.data) {
@@ -282,13 +284,13 @@ export function AsaasSubscriptionDialog({
               <RefreshCw className="w-6 h-6 animate-spin text-amber-500" />
               <span className="text-xs">Carregando dados da assinatura Asaas...</span>
             </div>
-          ) : hasAsaasSubscription ? (
+          ) : hasAsaasSubscription && !isChangingCycleOrPlan ? (
             /* ========================================================== */
             /* ASSINATURA JÁ ATIVA NO ASAAS                              */
             /* ========================================================== */
             <div className="space-y-6">
               {/* Card Resumo da Assinatura */}
-              <div className="p-4 rounded-xl bg-muted/30 border border-border grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-muted/30 border border-border grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div>
                   <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">
                     ID do Cliente Asaas
@@ -309,6 +311,18 @@ export function AsaasSubscriptionDialog({
 
                 <div>
                   <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">
+                    Ciclo & Plano
+                  </span>
+                  <span className="text-xs font-black text-foreground block mt-0.5">
+                    {details?.plan || tenant.plan} •{" "}
+                    <span className="text-amber-400">
+                      {(details?.billingCycle || tenant.billingCycle) === "YEARLY" ? "ANUAL" : "MENSAL"}
+                    </span>
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">
                     Status no Sistema
                   </span>
                   <span
@@ -322,6 +336,25 @@ export function AsaasSubscriptionDialog({
                     <span>{tenant.status}</span>
                   </span>
                 </div>
+              </div>
+
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25">
+                <div className="text-xs">
+                  <span className="font-bold text-foreground block">
+                    Deseja mudar para o pagamento {(details?.billingCycle || tenant.billingCycle) === "YEARLY" ? "Mensal" : "Anual (com 2 meses grátis)"} ou alterar de plano?
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    Você pode alternar entre assinatura mensal e anual a qualquer momento.
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setIsChangingCycleOrPlan(true)}
+                  className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs shrink-0"
+                >
+                  Alterar Ciclo / Plano
+                </Button>
               </div>
 
               {/* Última Fatura / Pagamento Ativo */}
@@ -760,6 +793,16 @@ export function AsaasSubscriptionDialog({
               })()}
 
               <div className="flex justify-end gap-2 pt-2">
+                {isChangingCycleOrPlan && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsChangingCycleOrPlan(false)}
+                    className="text-xs"
+                  >
+                    Voltar
+                  </Button>
+                )}
                 <Button
                   type="button"
                   variant="outline"
