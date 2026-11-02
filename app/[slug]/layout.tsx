@@ -23,6 +23,7 @@ export async function generateViewport({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (slug.includes(".")) return {};
   const tenant = await prisma.tenant.findUnique({
     where: { slug },
     select: { primaryColor: true },
@@ -44,6 +45,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (slug.includes(".")) return { title: "404 - Not Found" };
   const tenant = await prisma.tenant.findUnique({
     where: { slug },
   });
@@ -76,6 +78,7 @@ export default async function TenantLayout({
   params,
 }: TenantLayoutProps) {
   const { slug } = await params;
+  if (slug.includes(".")) notFound();
 
   // Detectar se a requisição atual é para a página de convite/cadastro (/cadastro)
   const headerList = await headers();
