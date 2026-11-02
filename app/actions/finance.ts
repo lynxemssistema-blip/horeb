@@ -3,12 +3,14 @@
 import { prisma } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
+import { revalidatePath } from "next/cache";
 
 export interface GeneratePixParams {
   tenantId?: string;
   slug?: string;
   amount: number;
   category?: string;
+  description?: string;
 }
 
 export interface GeneratePixResponse {
@@ -17,6 +19,7 @@ export interface GeneratePixResponse {
   pixCopiaECola: string;
   amount: number;
   churchName?: string;
+  memberName?: string;
   pixKey?: string;
   pixKeyType?: string;
   error?: string;
@@ -137,13 +140,15 @@ export async function generatePixTransaction({
   slug,
   amount,
   category = "DIZIMO",
+  description,
 }: GeneratePixParams): Promise<GeneratePixResponse> {
   try {
     if (amount <= 0) {
       throw new Error("O valor da contribuição deve ser maior que zero.");
     }
 
-    // 1. Buscar informações do Tenant (Igreja) por ID ou Slug, incluindo a Chave PIX real
+    // 1. Buscar informações do Tenant (Igreja) e Sessão do Membro Logado (se houver)
+    const session = await getSession();
     let tenant = null;
     if (slug) {
       tenant = await prisma.tenant.findUnique({
@@ -190,16 +195,33 @@ export async function generatePixTransaction({
 
     const resolvedTenantId = tenant.id;
     const churchName = tenant.name;
+    const memberId = session?.userId || null;
+    const memberName = session?.name || undefined;
 
-    // 3. Salvar no Prisma com status 'PENDING' (Doação direta na conta da igreja — NÃO passa pelo Asaas)
+    const categoryLabel =
+      category === "DIZIMO"
+        ? "Dízimo"
+        : category === "MISSOES"
+          ? "Oferta de Missões"
+          : "Oferta Voluntária";
+
+    const autoDescription =
+      description?.trim() ||
+      (memberName
+        ? `${categoryLabel} via App PIX • ${memberName}`
+        : `${categoryLabel} via App PIX (Anônimo)`);
+
+    // 3. Salvar no Prisma já integrado ao Financeiro da Igreja (status 'COMPLETED') e vínculo nominal do membro logado
     const transaction = await prisma.transaction.create({
       data: {
         tenantId: resolvedTenantId,
         amount: Number(amount),
         category,
+        description: autoDescription,
         type: "INCOME",
         paymentMethod: "PIX",
-        status: "PENDING",
+        status: "COMPLETED",
+        memberId,
       },
     });
 
@@ -209,13 +231,20 @@ export async function generatePixTransaction({
         tenant_id: resolvedTenantId,
         amount: Number(amount),
         category,
+        description: autoDescription,
         type: "INCOME",
         paymentMethod: "PIX",
-        status: "PENDING",
+        status: "COMPLETED",
+        member_id: memberId,
       });
     } catch (sbErr) {
       console.warn("Supabase transaction log error (fallback ignored):", sbErr);
     }
+
+    try {
+      revalidatePath(`/${tenant.slug}/admin/finance`);
+      revalidatePath(`/${tenant.slug}`);
+    } catch {}
 
     // 5. Gerar payload EMV padrão oficial do Banco Central (BRCode com CRC16) direto para a chave PIX da igreja
     const pixCopiaECola = buildRealPixPayload({
@@ -233,6 +262,7 @@ export async function generatePixTransaction({
       pixCopiaECola,
       amount: Number(amount),
       churchName,
+      memberName,
       pixKey: cleanPixKey,
       pixKeyType: tenant.pixKeyType || "CNPJ",
     };
@@ -244,6 +274,56 @@ export async function generatePixTransaction({
       pixCopiaECola: "",
       amount: 0,
       error: error.message || "Falha ao gerar o código PIX.",
+    };
+  }
+}
+
+/**
+ * Permite que o membro informe na tela de doação que já realizou a transferência PIX no seu banco,
+ * atualizando a descrição para facilitar a conferência imediata da Tesouraria da igreja.
+ */
+export async function notifyPixPaymentDone(transactionId: string, slug?: string) {
+  try {
+    if (!transactionId) {
+      return { success: false, error: "Transação não informada." };
+    }
+
+    const tx = await prisma.transaction.findUnique({
+      where: { id: transactionId },
+      select: { id: true, description: true, status: true, tenant: { select: { slug: true } } },
+    });
+
+    if (!tx) {
+      return { success: false, error: "Registro de contribuição não encontrado." };
+    }
+
+    const currentDesc = tx.description || "Contribuição via App PIX";
+    const updatedDesc = currentDesc.includes("[Pago pelo Membro]")
+      ? currentDesc
+      : `${currentDesc} • [Pago pelo Membro - Aguardando Conferência]`;
+
+    await prisma.transaction.update({
+      where: { id: transactionId },
+      data: {
+        description: updatedDesc,
+      },
+    });
+
+    const targetSlug = slug || tx.tenant?.slug;
+    if (targetSlug) {
+      try {
+        revalidatePath(`/${targetSlug}/admin/finance`);
+      } catch {}
+    }
+
+    return {
+      success: true,
+      message: "Comunicação de pagamento enviada à Tesouraria da igreja!",
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || "Erro ao registrar confirmação.",
     };
   }
 }

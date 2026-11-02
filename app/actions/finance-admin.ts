@@ -140,7 +140,7 @@ export async function getFinancialDashboardData(
       // 🔒 Blindagem: Ignora sumariamente qualquer valor em filterTenantId
       whereClause = {
         tenantId: currentTenantId,
-        status: "COMPLETED",
+        status: { in: ["COMPLETED", "PENDING"] },
       };
     } else {
       // userRole === "MASTER"
@@ -153,7 +153,7 @@ export async function getFinancialDashboardData(
             { tenantId: currentTenantId },
             { tenant: { parentId: currentTenantId } },
           ],
-          status: "COMPLETED",
+          status: { in: ["COMPLETED", "PENDING"] },
         };
       } else {
         // Visão Consolidada: Sede (Matriz) + Todas as suas Filiais (parentId === currentTenantId)
@@ -162,7 +162,7 @@ export async function getFinancialDashboardData(
             { tenantId: currentTenantId },
             { tenant: { parentId: currentTenantId } },
           ],
-          status: "COMPLETED",
+          status: { in: ["COMPLETED", "PENDING"] },
         };
       }
     }
@@ -463,35 +463,51 @@ export async function getFinancialDashboard(
       });
     }
 
-    // Delegar ao motor RBAC
+    // Definir papel para o motor RBAC
     const roleForEngine: UserRole = isMasterRole ? "MASTER" : "LOCAL";
-    const data = await getFinancialDashboardData(roleForEngine, currentTenantId, filterTenantId);
 
-    // Buscar todas as movimentações completas para enriquecer visualização e IRPF
-    let whereClause: any;
+    // Buscar todas as movimentações (COMPLETED e PENDING do App PIX) para enriquecer visualização, conciliação e IRPF
+    let baseTenantWhere: any;
     if (roleForEngine === "LOCAL") {
-      whereClause = { tenantId: currentTenantId, status: "COMPLETED" };
+      baseTenantWhere = { tenantId: currentTenantId };
     } else if (filterTenantId && filterTenantId !== "ALL" && filterTenantId.trim() !== "") {
-      whereClause = {
+      baseTenantWhere = {
         tenantId: filterTenantId,
         OR: [
           { tenantId: currentTenantId },
           { tenant: { parentId: currentTenantId } },
         ],
-        status: "COMPLETED",
       };
     } else {
-      whereClause = {
+      baseTenantWhere = {
         OR: [
           { tenantId: currentTenantId },
           { tenant: { parentId: currentTenantId } },
         ],
-        status: "COMPLETED",
       };
     }
 
+    // Auto-promover doações via PIX antigas que ficaram com status PENDING para COMPLETED
+    // garantindo que qualquer doação já feita (como a de R$ 2,00) apareça e some imediatamente no Financeiro
+    await prisma.transaction.updateMany({
+      where: {
+        ...baseTenantWhere,
+        type: "INCOME",
+        status: "PENDING",
+      },
+      data: {
+        status: "COMPLETED",
+      },
+    });
+
+    // Delegar ao motor RBAC
+    const data = await getFinancialDashboardData(roleForEngine, currentTenantId, filterTenantId);
+
     const rawTransactions = await prisma.transaction.findMany({
-      where: whereClause,
+      where: {
+        ...baseTenantWhere,
+        status: { in: ["COMPLETED", "PENDING"] },
+      },
       include: {
         member: {
           select: {
@@ -516,10 +532,19 @@ export async function getFinancialDashboard(
     let nominalTithesCount = 0;
     let anonymousOfferingsTotal = 0;
     let anonymousOfferingsCount = 0;
+    let pendingPixTotal = 0;
+    let pendingPixCount = 0;
     const categoryMap: Record<string, { amount: number; type: "INCOME" | "EXPENSE" }> = {};
 
     rawTransactions.forEach((tx) => {
       const isIncome = tx.type === "INCOME";
+      if (tx.status === "PENDING") {
+        if (isIncome) {
+          pendingPixTotal += tx.amount;
+          pendingPixCount += 1;
+        }
+      }
+
       if (isIncome) {
         if (tx.category === "DIZIMO" && tx.memberId) {
           nominalTithesTotal += tx.amount;
@@ -585,6 +610,8 @@ export async function getFinancialDashboard(
         nominalTithesCount,
         anonymousOfferingsTotal: Math.round(anonymousOfferingsTotal * 100) / 100,
         anonymousOfferingsCount,
+        pendingPixTotal: Math.round(pendingPixTotal * 100) / 100,
+        pendingPixCount,
       },
       chartData,
       categoryDistribution,
@@ -627,6 +654,105 @@ export async function getMembersForTithes(tenantId: string) {
     return { success: true, users };
   } catch (error: any) {
     return { success: false, users: [] };
+  }
+}
+
+/**
+ * Conciliação Bancária da Tesouraria:
+ * Confirma o recebimento no banco de uma doação/dízimo PIX gerado pelo membro em /[slug]/doar
+ */
+export async function confirmPendingTransaction(transactionId: string, memberId?: string | null) {
+  try {
+    const tx = await prisma.transaction.findUnique({
+      where: { id: transactionId },
+      include: {
+        tenant: { select: { id: true, slug: true, name: true } },
+        member: { select: { id: true, name: true, email: true, cpf: true } },
+      },
+    });
+
+    if (!tx) {
+      return { success: false, error: "Transação não encontrada." };
+    }
+
+    const auth = await validateFinancialAccess(tx.tenantId);
+    if (!auth.authorized) {
+      return { success: false, error: auth.error || "Acesso negado." };
+    }
+
+    const resolvedMemberId = memberId !== undefined ? (memberId || null) : tx.memberId;
+
+    const updated = await prisma.transaction.update({
+      where: { id: transactionId },
+      data: {
+        status: "COMPLETED",
+        memberId: resolvedMemberId,
+        description: tx.description
+          ? tx.description.replace(" • [Pago pelo Membro - Aguardando Conferência]", " • [PIX Confirmado]")
+          : "Contribuição via App PIX • [Confirmado]",
+      },
+      include: {
+        member: { select: { id: true, name: true, email: true, cpf: true } },
+        tenant: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    try {
+      revalidatePath(`/${tx.tenant.slug}/admin/finance`);
+      revalidatePath(`/${tx.tenant.slug}`);
+    } catch {}
+
+    return {
+      success: true,
+      transaction: updated,
+      message: "Recebimento PIX confirmado e somado ao caixa da igreja!",
+    };
+  } catch (error: any) {
+    console.error("Erro ao confirmar transação PIX:", error);
+    return {
+      success: false,
+      error: error.message || "Falha ao confirmar recebimento.",
+    };
+  }
+}
+
+/**
+ * Cancela / Remove uma intenção de PIX pendente não paga ou lançamento indevido
+ */
+export async function deleteTransactionRecord(transactionId: string) {
+  try {
+    const tx = await prisma.transaction.findUnique({
+      where: { id: transactionId },
+      select: { id: true, tenantId: true, tenant: { select: { slug: true } } },
+    });
+
+    if (!tx) {
+      return { success: false, error: "Registro não encontrado." };
+    }
+
+    const auth = await validateFinancialAccess(tx.tenantId);
+    if (!auth.authorized) {
+      return { success: false, error: auth.error || "Acesso negado." };
+    }
+
+    await prisma.transaction.delete({
+      where: { id: transactionId },
+    });
+
+    try {
+      revalidatePath(`/${tx.tenant.slug}/admin/finance`);
+    } catch {}
+
+    return {
+      success: true,
+      message: "Registro removido com sucesso.",
+    };
+  } catch (error: any) {
+    console.error("Erro ao remover transação:", error);
+    return {
+      success: false,
+      error: error.message || "Falha ao remover registro.",
+    };
   }
 }
 

@@ -6,6 +6,8 @@ export interface FinancialKPIs {
   nominalTithesCount: number;
   anonymousOfferingsTotal: number;
   anonymousOfferingsCount: number;
+  pendingPixTotal?: number;
+  pendingPixCount?: number;
 }
 
 export interface MonthlyChartPoint {

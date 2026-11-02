@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   generatePixTransaction,
   getChurchPixConfig,
+  notifyPixPaymentDone,
   type GeneratePixResponse,
 } from "@/app/actions/finance";
 import {
@@ -36,6 +37,8 @@ import {
   Key,
   AlertTriangle,
   Settings,
+  CheckCircle2,
+  UserCheck,
 } from "lucide-react";
 
 export default function DoarPage() {
@@ -47,6 +50,8 @@ export default function DoarPage() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isLoadingConfig, setIsLoadingConfig] = useState<boolean>(true);
   const [copied, setCopied] = useState<boolean>(false);
+  const [paymentNotified, setPaymentNotified] = useState<boolean>(false);
+  const [notifyingPayment, setNotifyingPayment] = useState<boolean>(false);
   const [checkoutData, setCheckoutData] = useState<GeneratePixResponse | null>(null);
 
   const [quickAmounts, setQuickAmounts] = useState<string[]>(["30", "50", "100", "200", "500"]);
@@ -117,6 +122,7 @@ export default function DoarPage() {
       });
 
       if (response.success) {
+        setPaymentNotified(false);
         setCheckoutData(response);
         toast.info("PIX gerado com sucesso!", {
           description: "Escaneie o QR Code ou use o código Copia e Cola.",
@@ -144,6 +150,27 @@ export default function DoarPage() {
       setTimeout(() => setCopied(false), 3000);
     } catch {
       toast.error("Não foi possível copiar automaticamente.");
+    }
+  };
+
+  // Informar à Tesouraria que o pagamento PIX foi realizado
+  const handleNotifyPayment = async () => {
+    if (!checkoutData?.transactionId) return;
+    setNotifyingPayment(true);
+    try {
+      const res = await notifyPixPaymentDone(checkoutData.transactionId, slug);
+      if (res.success) {
+        setPaymentNotified(true);
+        toast.success("Pagamento informado à Tesouraria!", {
+          description: "Sua contribuição já consta para conferência no Financeiro da igreja.",
+        });
+      } else {
+        toast.error(res.error || "Não foi possível enviar a confirmação.");
+      }
+    } catch {
+      toast.error("Erro ao comunicar com o servidor.");
+    } finally {
+      setNotifyingPayment(false);
     }
   };
 
@@ -386,6 +413,12 @@ export default function DoarPage() {
                 {checkoutData.churchName || churchName}
               </strong>
             </CardDescription>
+            {checkoutData.memberName && (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[11px] font-bold mx-auto mt-1.5">
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>Vinculado a: {checkoutData.memberName} (IRPF / Tesouraria)</span>
+              </div>
+            )}
           </CardHeader>
 
           <CardContent className="space-y-5 px-6 pt-2">
@@ -404,17 +437,24 @@ export default function DoarPage() {
             </div>
 
             {/* Status Indicator */}
-            <div className="flex items-center justify-center gap-2 py-1.5 px-3 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-semibold max-w-xs mx-auto">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-              <span>Aguardando pagamento no banco...</span>
-            </div>
+            {paymentNotified ? (
+              <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 text-xs font-bold max-w-sm mx-auto text-center">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>Pagamento informado! Registrado na Tesouraria da igreja.</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2 py-1.5 px-3 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-semibold max-w-xs mx-auto">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                <span>Aguardando pagamento no banco...</span>
+              </div>
+            )}
 
             {/* Botão Largo "Copiar Código PIX" com Toast Sonner */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <Button
                 type="button"
                 onClick={handleCopyPix}
-                className="w-full h-13 text-sm sm:text-base font-bold rounded-xl shadow-md gap-2"
+                className="w-full h-13 text-sm sm:text-base font-bold rounded-xl shadow-md gap-2 cursor-pointer"
               >
                 {copied ? (
                   <>
@@ -429,6 +469,35 @@ export default function DoarPage() {
                 )}
               </Button>
 
+              <Button
+                type="button"
+                variant="outline"
+                disabled={paymentNotified || notifyingPayment}
+                onClick={handleNotifyPayment}
+                className={`w-full h-11 text-xs sm:text-sm font-bold rounded-xl gap-2 cursor-pointer transition-all ${
+                  paymentNotified
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
+                    : "border-emerald-500/40 hover:bg-emerald-500/10 text-emerald-500"
+                }`}
+              >
+                {notifyingPayment ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Avisando Tesouraria...</span>
+                  </>
+                ) : paymentNotified ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Já Informado ao Financeiro da Igreja</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Já realizei o pagamento no meu banco</span>
+                  </>
+                )}
+              </Button>
+
               <div className="p-2.5 rounded-lg bg-muted/60 border border-border/80 flex items-center justify-between text-xs text-muted-foreground">
                 <span className="truncate font-mono text-[11px] pr-2">
                   {checkoutData.pixCopiaECola.slice(0, 32)}...
@@ -436,7 +505,7 @@ export default function DoarPage() {
                 <button
                   type="button"
                   onClick={handleCopyPix}
-                  className="text-primary font-bold text-xs shrink-0 hover:underline"
+                  className="text-primary font-bold text-xs shrink-0 hover:underline cursor-pointer"
                 >
                   Copiar
                 </button>

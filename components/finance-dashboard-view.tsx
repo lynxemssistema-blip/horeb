@@ -31,6 +31,9 @@ import {
   PieChart as PieIcon,
   BarChart3,
   Check,
+  Clock,
+  Trash2,
+  QrCode,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,6 +58,8 @@ import {
   createManualTransaction,
   seedFinancialDemoData,
   getMembersForTithes,
+  confirmPendingTransaction,
+  deleteTransactionRecord,
 } from "@/app/actions/finance-admin";
 import {
   DetailedTransaction,
@@ -114,9 +119,11 @@ export function FinanceDashboardView({
 
   // Filtros da Tabela
   const [typeFilter, setTypeFilter] = useState<"ALL" | "INCOME" | "EXPENSE">("ALL");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "COMPLETED" | "PENDING">("ALL");
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [nominalFilter, setNominalFilter] = useState<"ALL" | "NOMINAL" | "ANONYMOUS">("ALL");
   const [searchTerm, setSearchTerm] = useState("");
+  const [processingTxId, setProcessingTxId] = useState<string | null>(null);
 
   // Modal: Nova Transação
   const [showNewModal, setShowNewModal] = useState(false);
@@ -161,6 +168,10 @@ export function FinanceDashboardView({
     }
     // Filtro por Tipo
     if (typeFilter !== "ALL" && tx.type !== typeFilter) {
+      return false;
+    }
+    // Filtro por Status (Confirmado vs Pendente PIX)
+    if (statusFilter !== "ALL" && tx.status !== statusFilter) {
       return false;
     }
     // Filtro por Categoria
@@ -276,6 +287,57 @@ export function FinanceDashboardView({
         toast.error(res.error || "Falha ao rodar seed.");
       }
     });
+  };
+
+  // Handler: Confirmar Recebimento de PIX Pendente
+  const handleConfirmPending = async (tx: DetailedTransaction) => {
+    setProcessingTxId(tx.id);
+    try {
+      const res = await confirmPendingTransaction(tx.id);
+      if (res.success) {
+        toast.success(res.message || "PIX confirmado no caixa!");
+        setTransactions((prev) =>
+          prev.map((item) =>
+            item.id === tx.id ? { ...item, status: "COMPLETED" } : item
+          )
+        );
+      } else {
+        toast.error(res.error || "Erro ao confirmar PIX.");
+      }
+    } finally {
+      setProcessingTxId(null);
+    }
+  };
+
+  // Handler: Excluir/Cancelar Lançamento
+  const handleDeleteTransaction = async (tx: DetailedTransaction) => {
+    setProcessingTxId(tx.id);
+    try {
+      const res = await deleteTransactionRecord(tx.id);
+      if (res.success) {
+        toast.success(res.message || "Registro removido.");
+        setTransactions((prev) => prev.filter((item) => item.id !== tx.id));
+        if (tx.status === "COMPLETED") {
+          if (tx.type === "INCOME") {
+            setKpis((prev) => ({
+              ...prev,
+              totalIncome: Math.max(0, prev.totalIncome - tx.amount),
+              balance: prev.balance - tx.amount,
+            }));
+          } else {
+            setKpis((prev) => ({
+              ...prev,
+              totalExpense: Math.max(0, prev.totalExpense - tx.amount),
+              balance: prev.balance + tx.amount,
+            }));
+          }
+        }
+      } else {
+        toast.error(res.error || "Erro ao remover lançamento.");
+      }
+    } finally {
+      setProcessingTxId(null);
+    }
   };
 
   // Agrupamento para Relatório IRPF de Membros
@@ -718,12 +780,13 @@ export function FinanceDashboardView({
                 <TableHead className="text-zinc-400 font-bold">Congregação</TableHead>
                 <TableHead className="text-zinc-400 font-bold">Forma</TableHead>
                 <TableHead className="text-zinc-400 font-bold text-right">Valor</TableHead>
+                <TableHead className="text-zinc-400 font-bold text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredTransactions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-zinc-500 text-xs">
+                  <TableCell colSpan={8} className="text-center py-8 text-zinc-500 text-xs">
                     Nenhuma movimentação encontrada para os filtros selecionados.
                   </TableCell>
                 </TableRow>
@@ -797,6 +860,33 @@ export function FinanceDashboardView({
                         >
                           {isIncome ? "+" : "-"} R$ {tx.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                         </span>
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {tx.status === "PENDING" && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={processingTxId === tx.id}
+                              onClick={() => handleConfirmPending(tx)}
+                              className="h-7 px-2 text-[10px] font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg cursor-pointer gap-1"
+                              title="Confirmar recebimento no caixa"
+                            >
+                              <Check className="w-3 h-3" />
+                              <span>Confirmar</span>
+                            </Button>
+                          )}
+                          <button
+                            type="button"
+                            disabled={processingTxId === tx.id}
+                            onClick={() => handleDeleteTransaction(tx)}
+                            className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                            title="Remover lançamento"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

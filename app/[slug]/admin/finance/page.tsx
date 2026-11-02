@@ -31,8 +31,8 @@ export default async function AdminFinancePage({
 
   if (!tenant) notFound();
 
-  // 2. Verificar Sessão e RBAC Rigoroso (ADMIN, FINANCIAL ou concedido via RBAC)
-  const auth = await requirePermission(slug, ["ADMIN", "FINANCIAL"], "/admin/finance");
+  // 2. Verificar Sessão e RBAC Rigoroso (ADMIN, PASTOR, FINANCIAL ou concedido via RBAC)
+  const auth = await requirePermission(slug, ["ADMIN", "PASTOR", "FINANCIAL"], "/admin/finance");
   if (!auth.authorized) {
     if (auth.statusCode === 401) {
       redirect(`/?auth=required&church=${slug}`);
@@ -47,7 +47,10 @@ export default async function AdminFinancePage({
     );
   }
 
-  let effectiveRole = auth.role === "SUPERADMIN" || auth.role === "ADMIN" ? "MASTER" : auth.role;
+  let effectiveRole =
+    auth.role === "SUPERADMIN" || auth.role === "ADMIN" || auth.role === "PASTOR"
+      ? "MASTER"
+      : auth.role;
 
   // 3. Obter dados do Dashboard Financeiro com o Motor RBAC e isolamento multi-tenant
   const dashData = await getFinancialDashboard(effectiveRole, tenant.id, filterChurchId);
