@@ -1,6 +1,40 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+function escapeXml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function isSafeExternalUrl(rawUrl: string): boolean {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host === "::1" ||
+      host.startsWith("10.") ||
+      host.startsWith("192.168.") ||
+      host.startsWith("169.254.") ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) ||
+      host.endsWith(".local") ||
+      host.endsWith(".internal")
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(
   request: Request,
   props: { params: Promise<{ slug: string }> }
@@ -18,22 +52,28 @@ export async function GET(
       const matches = tenant.logoUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
       if (matches && matches.length === 3) {
         const mimeType = matches[1];
-        const buffer = Buffer.from(matches[2], "base64");
-        return new NextResponse(buffer, {
-          headers: {
-            "Content-Type": mimeType,
-            "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
-          },
-        });
+        if (mimeType.startsWith("image/") && !mimeType.includes("svg")) {
+          const buffer = Buffer.from(matches[2], "base64");
+          return new NextResponse(buffer, {
+            headers: {
+              "Content-Type": mimeType,
+              "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+            },
+          });
+        }
       }
-    } else if (tenant.logoUrl.startsWith("http://") || tenant.logoUrl.startsWith("https://")) {
+    } else if (
+      (tenant.logoUrl.startsWith("http://") || tenant.logoUrl.startsWith("https://")) &&
+      isSafeExternalUrl(tenant.logoUrl)
+    ) {
       try {
         const imgRes = await fetch(tenant.logoUrl, {
           signal: AbortSignal.timeout(3000),
+          redirect: "error",
         });
         if (imgRes.ok) {
           const contentType = imgRes.headers.get("content-type") || "image/png";
-          if (contentType.startsWith("image/")) {
+          if (contentType.startsWith("image/") && !contentType.includes("svg")) {
             const arrayBuffer = await imgRes.arrayBuffer();
             return new NextResponse(Buffer.from(arrayBuffer), {
               headers: {
@@ -50,9 +90,11 @@ export async function GET(
   }
 
   // Gera ícone vetorial SVG dinâmico e de altíssima fidelidade com as cores e monograma da igreja
-  const churchName = tenant?.name || "Igreja";
-  const primaryColor = tenant?.primaryColor || "#10b981";
-  const initial = churchName.trim().charAt(0).toUpperCase() || "I";
+  const rawChurchName = tenant?.name || "Igreja";
+  const rawColor = tenant?.primaryColor || "#10b981";
+  const primaryColor = /^#[0-9A-Fa-f]{3,8}$/.test(rawColor.trim()) ? rawColor.trim() : "#10b981";
+  const initial = escapeXml(rawChurchName.trim().charAt(0).toUpperCase() || "I");
+  const safeShortName = escapeXml(rawChurchName.slice(0, 15).toUpperCase());
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
@@ -110,7 +152,7 @@ export async function GET(
     fill="#ffffff" 
     text-anchor="middle"
     letter-spacing="2"
-  >${churchName.slice(0, 15).toUpperCase()}</text>
+  >${safeShortName}</text>
 </svg>`;
 
   return new NextResponse(svg, {

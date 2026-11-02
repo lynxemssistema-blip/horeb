@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { sendTicketPurchaseEmail } from "@/lib/mail";
+import { getSession, requirePermission } from "@/lib/session";
 
 export interface PurchaseTicketResult {
   success: boolean;
@@ -135,9 +136,20 @@ export async function purchaseTickets(
  */
 export async function getUserTickets(buyerEmail: string) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return { success: false, tickets: [], error: "Sessão expirada." };
+    }
+
     const cleanEmail = buyerEmail?.trim().toLowerCase();
     if (!cleanEmail) {
       return { success: false, tickets: [] };
+    }
+
+    const isSuper = session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN";
+    const isLeadership = ["ADMIN", "PASTOR"].includes(session.role);
+    if (!isSuper && !isLeadership && session.email.toLowerCase() !== cleanEmail) {
+      return { success: false, tickets: [], error: "Acesso negado aos ingressos de outro usuário." };
     }
 
     const tickets = await prisma.ticket.findMany({
@@ -220,6 +232,21 @@ export async function validateDoorTicket(ticketId: string) {
         success: false,
         message: "QR Code Inválido ou Inexistente.",
       };
+    }
+
+    // Validação RBAC da Catraca: apenas equipe autorizada da congregação pode queimar o ingresso
+    if (ticket.event.tenant?.slug) {
+      const auth = await requirePermission(
+        ticket.event.tenant.slug,
+        ["ADMIN", "PASTOR", "LEADER", "KIDS", "PORTEIRO"],
+        "/admin/checkin"
+      );
+      if (!auth.authorized) {
+        return {
+          success: false,
+          message: "Acesso negado: apenas a equipe de portaria/recepção pode validar ingressos.",
+        };
+      }
     }
 
     // Se já foi utilizado anteriormente

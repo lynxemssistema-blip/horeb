@@ -10,12 +10,51 @@ import {
   sendMemberInvitationEmail,
 } from "@/lib/mail";
 import { ROLE_LABELS } from "@/lib/constants";
-import { createSession, getSession } from "@/lib/session";
+import { createSession, getSession, checkChurchAccess } from "@/lib/session";
 import { getOrCreateAsaasCustomer, syncUserToAsaasHoreb } from "@/lib/asaas";
+
+async function requireChurchLeadershipByTenantId(targetTenantId: string) {
+  const session = await getSession();
+  if (!session) {
+    return { authorized: false as const, error: "Sessão expirada. Faça login para continuar." };
+  }
+
+  const isSuper = session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN";
+  if (isSuper) {
+    return { authorized: true as const, session, isSuper: true };
+  }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: targetTenantId },
+    select: { id: true, slug: true, parentId: true },
+  });
+
+  if (!tenant) {
+    return { authorized: false as const, error: "Congregação não encontrada." };
+  }
+
+  const access = await checkChurchAccess(tenant.slug);
+  if (
+    access.authorized &&
+    ["ADMIN", "PASTOR", "SECRETARIA", "SUPERADMIN"].includes(access.effectiveRole)
+  ) {
+    return { authorized: true as const, session, isSuper: false };
+  }
+
+  return {
+    authorized: false as const,
+    error: "Acesso negado: você não possui permissão administrativa nesta congregação.",
+  };
+}
 
 // 1. Obter membros e toda a rede de igrejas (Matriz + Filiais)
 export async function getChurchNetworkMembers(churchSlug: string) {
   try {
+    const access = await checkChurchAccess(churchSlug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso não autorizado a esta congregação." };
+    }
+
     const currentChurch = await prisma.tenant.findUnique({
       where: { slug: churchSlug },
       include: {
@@ -177,18 +216,28 @@ export async function createChurchUser(params: {
     }
 
     const session = await getSession();
+    const isSuper = session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN";
     const isLeadership =
+      isSuper ||
       session?.role === "ADMIN" ||
-      session?.role === "PASTOR" ||
-      session?.role === "SUPERADMIN";
+      session?.role === "PASTOR";
+
+    // Se há sessão administrativa, valida acesso à congregação alvo
+    if (isLeadership && !isSuper) {
+      const auth = await requireChurchLeadershipByTenantId(tenant.id);
+      if (!auth.authorized) {
+        return { success: false, error: auth.error };
+      }
+    }
 
     // Proteção de Perfil:
     let finalRole = params.role || "MEMBER";
+    if (!isSuper && finalRole === "SUPERADMIN") {
+      return { success: false, error: "Apenas o Super Administrador pode atribuir o perfil SUPERADMIN." };
+    }
     if (!isLeadership) {
-      // Se não for liderança conectada, impede a criação com perfis privilegiados
-      if (finalRole === "ADMIN" || finalRole === "PASTOR" || finalRole === "SUPERADMIN") {
-        finalRole = "MEMBER";
-      }
+      // Se não for liderança conectada (ex: auto-cadastro via link de convite), restringe estritamente a MEMBER
+      finalRole = "MEMBER";
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -431,11 +480,33 @@ export async function updateUserRoleAndTenant(params: {
       return { success: false, error: "Não é permitido alterar o perfil do Super Administrador Master." };
     }
 
+    const targetTenantId = params.tenantId || user.tenantId;
+    if (!targetTenantId) {
+      return { success: false, error: "Congregação do usuário não identificada." };
+    }
+
+    const auth = await requireChurchLeadershipByTenantId(targetTenantId);
+    if (!auth.authorized) {
+      return { success: false, error: auth.error };
+    }
+
+    if (!auth.isSuper && params.role === "SUPERADMIN") {
+      return { success: false, error: "Apenas o Super Administrador pode atribuir o perfil SUPERADMIN." };
+    }
+
     const updated = await prisma.user.update({
       where: { id: params.userId },
       data: {
         role: params.role,
         ...(params.tenantId ? { tenantId: params.tenantId } : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        tenantId: true,
+        avatarUrl: true,
       },
     });
 
@@ -462,6 +533,18 @@ export async function deleteChurchUser(userId: string) {
 
     if (user.role === "SUPERADMIN") {
       return { success: false, error: "O Super Administrador não pode ser excluído." };
+    }
+
+    if (user.tenantId) {
+      const auth = await requireChurchLeadershipByTenantId(user.tenantId);
+      if (!auth.authorized) {
+        return { success: false, error: auth.error };
+      }
+    } else {
+      const session = await getSession();
+      if (session?.role !== "SUPERADMIN" && session?.originalRole !== "SUPERADMIN") {
+        return { success: false, error: "Acesso negado." };
+      }
     }
 
     await prisma.user.delete({
@@ -493,6 +576,11 @@ export async function updateChurchSettings(params: {
   pixPresetValues?: string | null;
 }) {
   try {
+    const auth = await requireChurchLeadershipByTenantId(params.tenantId);
+    if (!auth.authorized) {
+      return { success: false, error: auth.error };
+    }
+
     const tenant = await prisma.tenant.findUnique({
       where: { id: params.tenantId },
     });
@@ -692,6 +780,15 @@ export async function setUserChurchAccess(params: {
   role: string;
 }) {
   try {
+    const auth = await requireChurchLeadershipByTenantId(params.tenantId);
+    if (!auth.authorized) {
+      return { success: false, error: auth.error };
+    }
+
+    if (!auth.isSuper && params.role === "SUPERADMIN") {
+      return { success: false, error: "Apenas o Super Administrador pode atribuir o perfil SUPERADMIN." };
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: params.userId },
     });
@@ -729,6 +826,11 @@ export async function removeUserChurchAccess(params: {
   tenantId: string;
 }) {
   try {
+    const auth = await requireChurchLeadershipByTenantId(params.tenantId);
+    if (!auth.authorized) {
+      return { success: false, error: auth.error };
+    }
+
     await prisma.userChurchAccess.deleteMany({
       where: {
         userId: params.userId,
@@ -744,14 +846,36 @@ export async function removeUserChurchAccess(params: {
 // 10. Atualiza a foto de perfil do usuário (avatarUrl)
 export async function updateUserAvatar(userId: string, avatarUrl: string) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return { success: false, error: "Sessão expirada. Faça login novamente." };
+    }
+
+    const isOwner = session.userId === userId;
+    const isAdmin =
+      session.role === "SUPERADMIN" ||
+      session.originalRole === "SUPERADMIN" ||
+      session.role === "ADMIN" ||
+      session.role === "PASTOR";
+
+    if (!isOwner && !isAdmin) {
+      return { success: false, error: "Permissão negada para alterar a foto de outro membro." };
+    }
+
     const updated = await prisma.user.update({
       where: { id: userId },
       data: { avatarUrl },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatarUrl: true,
+        role: true,
+      },
     });
 
     // Se o usuário atualizou o próprio avatar, atualiza a sessão também
-    const session = await getSession();
-    if (session && session.userId === userId) {
+    if (session.userId === userId) {
       await createSession({
         ...session,
         avatarUrl,

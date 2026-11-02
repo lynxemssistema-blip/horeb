@@ -60,6 +60,11 @@ export async function getMinistryWorkspace(ministryId: string) {
       return { success: false, error: "Ministério não encontrado." };
     }
 
+    const access = await checkChurchAccess(ministry.tenant.slug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso negado a esta congregação." };
+    }
+
     const churchUsers = await prisma.user.findMany({
       where: { tenantId: ministry.tenantId },
       select: {
@@ -603,6 +608,14 @@ export async function removeMinistryMember(memberId: string, slug: string) {
  */
 export async function seedMinistries(tenantSlug: string = "matriz") {
   try {
+    const access = await checkChurchAccess(tenantSlug);
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Apenas a liderança pode inicializar ministérios." };
+    }
+
     const tenant = await prisma.tenant.findUnique({
       where: { slug: tenantSlug },
       include: { users: true },

@@ -359,6 +359,19 @@ export async function getPastoralAppointment(appointmentId: string) {
       return { success: false, error: "Atendimento não encontrado." };
     }
 
+    const session = await getSession();
+    const isSuper = session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN";
+    const isAdmin = session?.role === "ADMIN" || session?.role === "PASTOR";
+    if (
+      appointment.userId &&
+      session?.userId !== appointment.userId &&
+      session?.userId !== appointment.pastorId &&
+      !isSuper &&
+      !(isAdmin && session?.tenantId === appointment.tenantId)
+    ) {
+      return { success: false, error: "Acesso negado a este atendimento pastoral." };
+    }
+
     return { success: true, appointment };
   } catch (error: any) {
     console.error("Erro ao buscar atendimento pastoral:", error);
@@ -423,11 +436,37 @@ export async function updatePastoralAppointmentStatus(
   pastorNotes?: string
 ) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
+
+    const existing = await prisma.pastoralAppointment.findUnique({
+      where: { id: appointmentId },
+      select: { id: true, pastorId: true, userId: true, tenantId: true },
+    });
+
+    if (!existing) {
+      return { success: false, error: "Atendimento não encontrado." };
+    }
+
+    const isSuper = session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN";
+    const isAdminOrPastor =
+      isSuper ||
+      session.userId === existing.pastorId ||
+      ((session.role === "ADMIN" || session.role === "PASTOR") &&
+        session.tenantId === existing.tenantId);
+    const isMemberOwner = session.userId === existing.userId && status === "CANCELLED";
+
+    if (!isAdminOrPastor && !isMemberOwner) {
+      return { success: false, error: "Permissão negada para alterar o status deste atendimento." };
+    }
+
     const updated = await prisma.pastoralAppointment.update({
       where: { id: appointmentId },
       data: {
         status,
-        pastorNotes: pastorNotes !== undefined ? pastorNotes : undefined,
+        pastorNotes: isAdminOrPastor && pastorNotes !== undefined ? pastorNotes : undefined,
       },
     });
 

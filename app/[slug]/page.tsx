@@ -55,7 +55,15 @@ export default async function TenantDashboardPage({ params }: PageProps) {
       parent: true,
       branches: true,
       cellGroups: {
-        include: { leader: true },
+        include: {
+          leader: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+        },
       },
       ministries: true,
       videos: true,
@@ -66,6 +74,14 @@ export default async function TenantDashboardPage({ params }: PageProps) {
             { isPastoralCounselor: true },
             { role: "ADMIN" },
           ],
+        },
+        select: {
+          id: true,
+          name: true,
+          role: true,
+          avatarUrl: true,
+          pastoralTitle: true,
+          isLiveAvailable: true,
         },
       },
     },

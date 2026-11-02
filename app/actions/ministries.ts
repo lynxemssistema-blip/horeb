@@ -6,12 +6,24 @@ import { checkChurchAccess } from "@/lib/session";
 
 export async function getChurchMinistries(churchSlug: string) {
   try {
+    const access = await checkChurchAccess(churchSlug);
+    if (!access.authorized) {
+      return { success: false, error: "Acesso não autorizado a esta congregação." };
+    }
+
     const tenant = await prisma.tenant.findUnique({
       where: { slug: churchSlug },
       include: {
         ministries: {
           include: {
-            leader: true,
+            leader: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatarUrl: true,
+              },
+            },
             members: {
               where: { role: "LEADER" },
               include: {
@@ -252,7 +264,14 @@ export async function updateMinistry(params: {
     const refreshed = await prisma.ministry.findUnique({
       where: { id: params.id },
       include: {
-        leader: true,
+        leader: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
         members: {
           where: { role: "LEADER" },
           include: {

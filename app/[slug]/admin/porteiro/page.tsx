@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { checkChurchAccess } from "@/lib/session";
+import { checkChurchAccess, requirePermission } from "@/lib/session";
 import { AccessDeniedScreen } from "@/components/access-denied-screen";
 import { getWorshipServices } from "@/app/actions/worship-checkin";
 import { PorteiroDigitalScanner } from "@/components/porteiro-digital-scanner";
@@ -39,10 +39,24 @@ export default async function AdminPorteiroPage({ params }: PorteiroPageProps) {
 
   if (!tenant) notFound();
 
-  // 2. Permissão de Acesso (qualquer usuário autenticado com acesso à congregação pode atuar na recepção)
-  const access = await checkChurchAccess(slug);
-  if (!access.authorized) {
-    redirect(`/?auth=required&church=${slug}`);
+  // 2. Permissão de Acesso (Recepção / Liderança ou concedido via RBAC)
+  const auth = await requirePermission(
+    slug,
+    ["ADMIN", "PASTOR", "LEADER", "SECRETARIA", "PORTEIRO"],
+    "/admin/porteiro"
+  );
+  if (!auth.authorized) {
+    if (auth.statusCode === 401) {
+      redirect(`/?auth=required&church=${slug}`);
+    }
+    const access = await checkChurchAccess(slug);
+    return (
+      <AccessDeniedScreen
+        user={access.authorized ? access.user : null}
+        userChurchSlug={access.authorized ? access.user.tenantSlug : ""}
+        requestedChurchSlug={slug}
+      />
+    );
   }
 
   // 3. Buscar cultos e presenças de hoje
@@ -67,9 +81,9 @@ export default async function AdminPorteiroPage({ params }: PorteiroPageProps) {
           totalEligibleMembers: res.totalEligibleMembers || 0,
           todayYMD: res.todayYMD || new Date().toISOString().split("T")[0],
           currentUser: {
-            id: access.user.userId,
-            name: access.user.name,
-            role: access.user.role,
+            id: auth.user.userId,
+            name: auth.user.name,
+            role: auth.user.role,
           },
         }}
       />

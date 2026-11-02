@@ -19,8 +19,14 @@ export async function setImpersonatedRole(role: string | null) {
   if (!role) {
     cookieStore.delete("horeb_simulated_role");
   } else {
-    // maxAge: 2 horas, para testes
-    cookieStore.set("horeb_simulated_role", role, { path: "/", maxAge: 60 * 60 * 2 });
+    // maxAge: 2 horas, para testes (protegido via HttpOnly)
+    cookieStore.set("horeb_simulated_role", role, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 2,
+    });
   }
 
   revalidatePath("/", "layout"); // Revalida toda a aplicação para aplicar os novos acessos

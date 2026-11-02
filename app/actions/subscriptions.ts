@@ -369,6 +369,11 @@ export async function cancelTenantSubscriptionAction(tenantId: string) {
  */
 export async function syncTenantAsaasInvoices(tenantId: string) {
   try {
+    const auth = await validateSubscriptionAccess(tenantId);
+    if (!auth.authorized) {
+      return { success: false, error: auth.error };
+    }
+
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
     });
@@ -424,6 +429,16 @@ export async function syncTenantAsaasInvoices(tenantId: string) {
  */
 export async function getSaaSFinancialMetrics() {
   try {
+    const session = await getSession();
+    const isSuperAdmin =
+      session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN";
+    if (!session || !isSuperAdmin) {
+      return {
+        success: false,
+        error: "Acesso negado: exclusivo para Super Administrador.",
+      };
+    }
+
     const tenants = await prisma.tenant.findMany({
       include: {
         invoices: {

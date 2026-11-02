@@ -1,6 +1,8 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ChurchSettingsForm } from "@/components/church-settings-form";
+import { requirePermission, checkChurchAccess } from "@/lib/session";
+import { AccessDeniedScreen } from "@/components/access-denied-screen";
 
 interface ConfiguracoesPageProps {
   params: Promise<{
@@ -10,6 +12,21 @@ interface ConfiguracoesPageProps {
 
 export default async function ConfiguracoesPage({ params }: ConfiguracoesPageProps) {
   const { slug } = await params;
+
+  const auth = await requirePermission(slug, ["ADMIN", "PASTOR"], "/configuracoes");
+  if (!auth.authorized) {
+    if (auth.statusCode === 401) {
+      redirect(`/?auth=required&church=${slug}`);
+    }
+    const access = await checkChurchAccess(slug);
+    return (
+      <AccessDeniedScreen
+        user={access.authorized ? access.user : null}
+        userChurchSlug={access.authorized ? access.user.tenantSlug : ""}
+        requestedChurchSlug={slug}
+      />
+    );
+  }
 
   const tenant = await prisma.tenant.findUnique({
     where: { slug },

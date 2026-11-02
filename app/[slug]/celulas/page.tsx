@@ -34,7 +34,15 @@ export default async function CelulasPage({ params }: CelulasPageProps) {
     where: { slug },
     include: {
       cellGroups: {
-        include: { leader: true },
+        include: {
+          leader: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+        },
       },
     },
   });

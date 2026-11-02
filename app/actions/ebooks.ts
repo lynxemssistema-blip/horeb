@@ -75,7 +75,7 @@ async function ensureInitialEbooksSeeded() {
           originalPrice: 29.9,
           coverUrl: "/ebooks-covers/libertacao-espiritual.jpg",
           relativePdfPath:
-            "Libertação Espiritual/Libertação Espiritual - Restaurando a Ordem e o Equilíbrio.pdf",
+            "Libertação Espiritual/Libertação Espiritual - Restaurando a Ordem e o Equilíbrio rev 01.pdf",
           fileName: "Libertação Espiritual - Restaurando a Ordem e o Equilíbrio.pdf",
           badge: "NOVO LANÇAMENTO",
           pagesCount: 10,

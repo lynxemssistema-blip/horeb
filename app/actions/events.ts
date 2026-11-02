@@ -233,12 +233,21 @@ export async function getEventsFeed(
  */
 export async function seedMockEvents(tenantSlug: string = "matriz") {
   try {
+    const session = await getSession();
+    if (!session || !["SUPERADMIN", "ADMIN", "PASTOR"].includes(session.role)) {
+      return { success: false, error: "Apenas administradores e Prs. podem gerar eventos de demonstração." };
+    }
+
     const tenant = await prisma.tenant.findUnique({
       where: { slug: tenantSlug },
     });
 
     if (!tenant) {
       return { success: false, error: "Igreja não encontrada para seed." };
+    }
+
+    if (session.role !== "SUPERADMIN" && session.tenantId !== tenant.id) {
+      return { success: false, error: "Acesso negado a esta congregação." };
     }
 
     const mockEvents = [

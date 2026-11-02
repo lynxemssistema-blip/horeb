@@ -1,28 +1,35 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AgentManager } from "./AgentManager";
-
-import { getUserAccessRules } from "@/app/actions/permissions";
+import { requirePermission, checkChurchAccess } from "@/lib/session";
+import { AccessDeniedScreen } from "@/components/access-denied-screen";
 
 export default async function AgentesPage({ params }: { params: Promise<{ slug: string }> | { slug: string } }) {
   // 1. Validar Tenant e Permissões
   const resolvedParams = await params;
   const slug = resolvedParams.slug;
-  
+
+  const auth = await requirePermission(slug, ["ADMIN", "PASTOR"], "/admin/agentes");
+  if (!auth.authorized) {
+    if (auth.statusCode === 401) {
+      redirect(`/?auth=required&church=${slug}`);
+    }
+    const access = await checkChurchAccess(slug);
+    return (
+      <AccessDeniedScreen
+        user={access.authorized ? access.user : null}
+        userChurchSlug={access.authorized ? access.user.tenantSlug : ""}
+        requestedChurchSlug={slug}
+      />
+    );
+  }
+
   const tenant = await prisma.tenant.findUnique({
     where: { slug: slug },
     include: { parent: true },
   });
 
   if (!tenant) redirect("/");
-
-  const rules = await getUserAccessRules();
-  if (rules && !rules.allowedMenus.includes("ALL")) {
-    const hasAgentsAccess = rules.allowedMenus.some(menu => "/admin/agentes".endsWith(menu));
-    if (!hasAgentsAccess) {
-      redirect(`/${slug}`);
-    }
-  }
 
   // Bloqueia se não for a Igreja Matriz (Sede)
   const isMatriz = !tenant.parentId;

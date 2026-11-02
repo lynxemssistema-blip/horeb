@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 
 export interface SessionData {
@@ -26,16 +27,34 @@ export type AppRole =
 
 const SESSION_COOKIE_NAME = "horeb_auth_session";
 
-// Codificação segura em Base64 para garantir total compatibilidade com RFC 6265 no Safari (iOS / macOS)
+function getSessionSecret(): string {
+  return (
+    process.env.AUTH_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    process.env.ASAAS_API_KEY ||
+    "horeb-lynx-ems-hmac-secret-2026-v1"
+  );
+}
+
+function signPayload(base64Payload: string): string {
+  return crypto
+    .createHmac("sha256", getSessionSecret())
+    .update(base64Payload)
+    .digest("base64url");
+}
+
+// Codificação segura em Base64 com assinatura HMAC-SHA256 para impedir falsificação de cookie
 function encodeSessionCookie(data: SessionData): string {
   try {
-    return Buffer.from(JSON.stringify(data), "utf-8").toString("base64");
+    const base64Payload = Buffer.from(JSON.stringify(data), "utf-8").toString("base64");
+    const signature = signPayload(base64Payload);
+    return `${base64Payload}.${signature}`;
   } catch {
-    return encodeURIComponent(JSON.stringify(data));
+    return "";
   }
 }
 
-function decodeSessionCookie(raw: string): SessionData | null {
+function decodeSessionCookie(raw: string): { session: SessionData; isSigned: boolean } | null {
   try {
     let text = raw?.trim() || "";
     if (!text) return null;
@@ -47,15 +66,32 @@ function decodeSessionCookie(raw: string): SessionData | null {
       } catch {}
     }
 
-    // Se começar com '{', é JSON legado em texto puro
-    if (text.startsWith("{")) {
-      return JSON.parse(text) as SessionData;
+    // 1. Verificar formato assinado: "<base64Payload>.<hmacSignature>"
+    if (text.includes(".")) {
+      const lastDotIdx = text.lastIndexOf(".");
+      const payloadPart = text.slice(0, lastDotIdx);
+      const sigPart = text.slice(lastDotIdx + 1);
+      const expectedSig = signPayload(payloadPart);
+
+      const sigBuf = Buffer.from(sigPart);
+      const expectedBuf = Buffer.from(expectedSig);
+      if (sigBuf.length === expectedBuf.length && crypto.timingSafeEqual(sigBuf, expectedBuf)) {
+        const decoded = Buffer.from(payloadPart, "base64").toString("utf-8");
+        if (decoded.startsWith("{")) {
+          return { session: JSON.parse(decoded) as SessionData, isSigned: true };
+        }
+      }
+      return null;
     }
 
-    // Decodifica Base64 seguro
+    // 2. Fallback para cookies legados sem assinatura (serão validados contra o banco em getSession)
+    if (text.startsWith("{")) {
+      return { session: JSON.parse(text) as SessionData, isSigned: false };
+    }
+
     const decoded = Buffer.from(text, "base64").toString("utf-8");
     if (decoded.startsWith("{")) {
-      return JSON.parse(decoded) as SessionData;
+      return { session: JSON.parse(decoded) as SessionData, isSigned: false };
     }
 
     return null;
@@ -105,8 +141,38 @@ export async function getSession(): Promise<SessionData | null> {
     const cookieStore = await cookies();
     const cookie = cookieStore.get(SESSION_COOKIE_NAME);
     if (!cookie?.value) return null;
-    const session = decodeSessionCookie(cookie.value);
-    if (!session) return null;
+    const parsed = decodeSessionCookie(cookie.value);
+    if (!parsed || !parsed.session?.userId) return null;
+
+    let session = parsed.session;
+
+    // Se for um cookie legado sem assinatura HMAC, valida estritamente no banco de dados contra falsificação
+    if (!parsed.isSigned) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: session.userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          avatarUrl: true,
+          role: true,
+          tenantId: true,
+          tenant: { select: { slug: true } },
+        },
+      });
+      if (!dbUser || dbUser.email.toLowerCase() !== session.email?.toLowerCase()) {
+        return null;
+      }
+      session = {
+        userId: dbUser.id,
+        email: dbUser.email,
+        name: dbUser.name,
+        avatarUrl: dbUser.avatarUrl,
+        role: dbUser.role,
+        tenantId: dbUser.tenantId || session.tenantId || "",
+        tenantSlug: dbUser.tenant?.slug || session.tenantSlug || "admin",
+      };
+    }
 
     // Aplica o papel simulado se existir (para testes e superadmin)
     if (session.role === "SUPERADMIN") {

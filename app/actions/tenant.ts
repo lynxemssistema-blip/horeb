@@ -255,6 +255,7 @@ export async function loginUser(identifier: string, rawPassword: string) {
       where: {
         OR: [
           { email: cleanLower },
+          { name: { equals: clean } },
           { name: { contains: clean } },
         ],
       },
@@ -265,19 +266,7 @@ export async function loginUser(identifier: string, rawPassword: string) {
       return { success: false, error: "E-mail/usuário ou senha incorretos." };
     }
 
-    let passwordMatches = await bcrypt.compare(rawPassword, user.password);
-
-    // Validação master para o SuperAdmin oficial Edson Manoel (aceita senha oficial e legada, auto-atualizando o hash)
-    if (!passwordMatches && user.email === "edsonmanoel2012@gmail.com") {
-      if (rawPassword === "10207597Rdv*" || rawPassword === "horeb123456") {
-        passwordMatches = true;
-        const newHash = await bcrypt.hash(rawPassword, 10);
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { password: newHash },
-        });
-      }
-    }
+    const passwordMatches = await bcrypt.compare(rawPassword, user.password);
 
     if (!passwordMatches) {
       return { success: false, error: "E-mail/usuário ou senha incorretos." };
@@ -444,6 +433,11 @@ export async function getCurrentSessionUser() {
 // 3. Cria uma Filial vinculada à Matriz
 export async function createBranchChurch(params: CreateBranchParams) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return { success: false, error: "Sessão expirada. Faça login para criar congregações filiais." };
+    }
+
     const slug = sanitizeSlug(params.branchSlug || params.branchName);
 
     if (!slug) {
@@ -456,6 +450,18 @@ export async function createBranchChurch(params: CreateBranchParams) {
 
     if (!parentTenant) {
       return { success: false, error: "Igreja sede (matriz) não encontrada." };
+    }
+
+    const access = await checkChurchAccess(parentTenant.slug);
+    const isSuper = session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN";
+    if (
+      !isSuper &&
+      (!access.authorized || !["ADMIN", "PASTOR", "SUPERADMIN"].includes(access.effectiveRole))
+    ) {
+      return {
+        success: false,
+        error: "Acesso negado: apenas Administradores ou Prs. da Igreja Matriz podem cadastrar filiais.",
+      };
     }
 
     // Verificar se o plano da Matriz permite múltiplas congregações (Plano Premium)
@@ -514,7 +520,6 @@ export async function createBranchChurch(params: CreateBranchParams) {
     }
 
     // Vincular o usuário da sessão como ADMIN também desta filial
-    const session = await getSession();
     if (session?.userId) {
       await prisma.userChurchAccess.upsert({
         where: {

@@ -120,6 +120,19 @@ export async function getFinancialDashboardData(
   filterTenantId?: string
 ) {
   try {
+    const auth = await validateFinancialAccess(currentTenantId);
+    if (!auth.authorized) {
+      return {
+        success: false,
+        error: auth.error || "Acesso negado ao painel financeiro.",
+        totalIncome: 0,
+        totalExpense: 0,
+        balance: 0,
+        recentTransactions: [],
+        chartData: [],
+      };
+    }
+
     // PASSO 3: O Motor de Regras de Negócio (RBAC)
     let whereClause: any;
 
@@ -629,6 +642,11 @@ export async function seedFinancialDemoData(churchSlug: string) {
 
     if (!mainChurch) {
       return { success: false, error: "Igreja não encontrada para seed." };
+    }
+
+    const auth = await validateFinancialAccess(mainChurch.id);
+    if (!auth.authorized) {
+      return { success: false, error: auth.error || "Acesso negado." };
     }
 
     let branchChurch = mainChurch.branches[0];

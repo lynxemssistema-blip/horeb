@@ -525,6 +525,12 @@ export async function startPersonalToolsTrial(userId: string): Promise<{
   expiresAt?: string;
 }> {
   try {
+    const session = await getSession();
+    const isSuper = session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN";
+    if (!session || (!isSuper && session.userId !== userId)) {
+      return { success: false, error: "Sessão expirada ou acesso negado." };
+    }
+
     const { config } = await getPersonalToolsConfig();
     const trialDays = config.trialDays > 0 ? config.trialDays : 30;
 
@@ -568,13 +574,21 @@ export async function subscribePersonalToolsAsaas(data: {
   amount?: number;
 }> {
   try {
+    const session = await getSession();
+    const isSuper = session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN";
+    if (!session) {
+      return { success: false, error: "Faça login na sua conta para assinar a ferramenta." };
+    }
+
+    const targetUserId = isSuper ? data.userId : session.userId;
+
     let user = await prisma.user.findUnique({
-      where: { id: data.userId },
+      where: { id: targetUserId },
       include: { tenant: true },
     });
 
-    if (!user) {
-      // Se for teste do SuperAdmin ou visitante ("guest" / "superadmin"), busca o primeiro usuário válido ou usa fallback
+    if (!user && isSuper) {
+      // Se for teste do SuperAdmin ("superadmin"), busca o primeiro usuário válido ou usa fallback
       user = await prisma.user.findFirst({
         include: { tenant: true },
       });
@@ -749,6 +763,11 @@ export async function generateSermonOutlineAction(input: {
   outline?: GeneratedSermonOutline;
   error?: string;
 }> {
+  const session = await getSession();
+  if (!session) {
+    return { success: false, error: "Autenticação necessária para utilizar o Copiloto IA." };
+  }
+
   const topic = input.topic?.trim() || "Libertação Espiritual e Autoridade em Cristo";
   const bibleText = input.bibleText?.trim() || "Efésios 6:10-18";
   const sermonType = input.sermonType || "EXPOSITIVO";
