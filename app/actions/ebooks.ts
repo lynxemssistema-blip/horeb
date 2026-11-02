@@ -3,6 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
+import fs from "fs/promises";
+import path from "path";
 import {
   getOrCreateAsaasCustomer,
   createAsaasPayment,
@@ -21,7 +23,7 @@ async function requireSuperAdmin() {
 }
 
 /**
- * Converte pdfUrl (data:application/pdf;base64,... ou URL externa) em Buffer binário para envio ao Asaas
+ * Converte pdfUrl (data:application/pdf;base64,..., caminho local em Ebooks/ ou URL externa) em Buffer binário para envio ao Asaas
  */
 async function resolvePdfBuffer(pdfUrl: string): Promise<Buffer | null> {
   try {
@@ -37,10 +39,87 @@ async function resolvePdfBuffer(pdfUrl: string): Promise<Buffer | null> {
       const arr = await res.arrayBuffer();
       return Buffer.from(arr);
     }
-    return null;
+    // Se for caminho local relativo ao projeto (ex: "Ebooks/Os Seis Instintos da Alma.pdf")
+    const localPath = path.join(process.cwd(), pdfUrl.replace(/^\/+/, ""));
+    return await fs.readFile(localPath);
   } catch (err) {
     console.warn("[resolvePdfBuffer Warning]:", err);
     return null;
+  }
+}
+
+/**
+ * Inicializa os E-books da pasta Ebooks/ caso a tabela ainda esteja vazia
+ */
+async function ensureInitialEbooksSeeded() {
+  try {
+    const count = await prisma.ebookProduct.count();
+    if (count > 0) return;
+
+    const ebooksDir = path.join(process.cwd(), "Ebooks");
+    const defaultItems = [
+      {
+        title: "Os Seis Instintos da Alma",
+        subtitle: "O que é pecado e o que não é: equilíbrio espiritual, alma e corpo",
+        author: "Edson Manoel",
+        description:
+          "Estudo bíblico profundo sobre corpo, alma e espírito e os seis instintos naturais criados por Deus (Aquisição, Alimentação, Reprodução, Autoproteção, Domínio Próprio e Comunhão). Aprenda a identificar onde começa o desequilíbrio e como quebrar ciclos espirituais e emocionais.",
+        price: 29.9,
+        originalPrice: 59.9,
+        coverUrl:
+          "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=900&q=80",
+        fileName: "Os Seis Instintos da Alma.pdf",
+        badge: "MAIS VENDIDO",
+        pagesCount: 35,
+        category: "CURA INTERIOR & DISCIPULADO",
+        featured: true,
+      },
+      {
+        title: "Batalha Invisível — Batalha Espiritual",
+        subtitle: "A verdade que o inimigo não quer que você saiba sobre autoridade em Cristo",
+        author: "Pastor Luan de Matos",
+        description:
+          "Conheça à luz das Escrituras as estratégias do inimigo, o papel das regiões celestiais, as ferramentas espirituais do cristão e como permanecer firme e vitorioso debaixo da autoridade de Cristo sem transformar pessoas em inimigas.",
+        price: 24.9,
+        originalPrice: 49.9,
+        coverUrl:
+          "https://images.unsplash.com/photo-1507434965515-61970f2bd7c6?auto=format&fit=crop&w=900&q=80",
+        fileName: "Batalha Invisível - E-book.pdf",
+        badge: "LANÇAMENTO",
+        pagesCount: 8,
+        category: "BATALHA ESPIRITUAL",
+        featured: true,
+      },
+    ];
+
+    for (const item of defaultItems) {
+      let pdfDataUri = `Ebooks/${item.fileName}`;
+      try {
+        const fileBuf = await fs.readFile(path.join(ebooksDir, item.fileName));
+        pdfDataUri = `data:application/pdf;base64,${fileBuf.toString("base64")}`;
+      } catch {}
+
+      await prisma.ebookProduct.create({
+        data: {
+          title: item.title,
+          subtitle: item.subtitle,
+          author: item.author,
+          description: item.description,
+          price: item.price,
+          originalPrice: item.originalPrice,
+          coverUrl: item.coverUrl,
+          pdfUrl: pdfDataUri,
+          pdfFileName: item.fileName,
+          badge: item.badge,
+          pagesCount: item.pagesCount,
+          category: item.category,
+          active: true,
+          featured: item.featured,
+        },
+      });
+    }
+  } catch (err) {
+    console.warn("[ensureInitialEbooksSeeded Warning]:", err);
   }
 }
 
@@ -49,6 +128,7 @@ async function resolvePdfBuffer(pdfUrl: string): Promise<Buffer | null> {
  */
 export async function getPublicEbooks() {
   try {
+    await ensureInitialEbooksSeeded();
     const ebooks = await prisma.ebookProduct.findMany({
       where: { active: true },
       select: {
@@ -84,6 +164,7 @@ export async function getPublicEbooks() {
 export async function getAdminEbooksData() {
   try {
     await requireSuperAdmin();
+    await ensureInitialEbooksSeeded();
 
     const [ebooks, orders] = await Promise.all([
       prisma.ebookProduct.findMany({
