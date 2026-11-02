@@ -124,6 +124,7 @@ export default async function TenantLayout({
     status?: string;
     plan?: string;
     subscriptionExpiresAt?: Date | string | null;
+    pixKey?: string | null;
   } | null = null;
 
   try {
@@ -146,6 +147,7 @@ export default async function TenantLayout({
         status: (supabaseTenant as any).status || "ACTIVE",
         plan: (supabaseTenant as any).plan || "GESTAO",
         subscriptionExpiresAt: (supabaseTenant as any).subscription_expires_at || null,
+        pixKey: (supabaseTenant as any).pix_key || (supabaseTenant as any).pixKey || null,
       };
     }
   } catch (err) {
@@ -174,7 +176,16 @@ export default async function TenantLayout({
         status: prismaTenant.status,
         plan: prismaTenant.plan,
         subscriptionExpiresAt: prismaTenant.subscriptionExpiresAt,
+        pixKey: prismaTenant.pixKey,
       };
+    }
+  } else if (tenantData.pixKey === null || tenantData.pixKey === undefined) {
+    const prismaPix = await prisma.tenant.findUnique({
+      where: { slug },
+      select: { pixKey: true },
+    });
+    if (prismaPix) {
+      tenantData.pixKey = prismaPix.pixKey;
     }
   }
 
@@ -320,6 +331,7 @@ export default async function TenantLayout({
           plan={tenant.plan || "GESTAO"}
           subscriptionExpiresAt={tenant.subscriptionExpiresAt}
           userRole={access?.effectiveRole}
+          hasPixConfigured={Boolean(tenant.pixKey && tenant.pixKey.trim().length > 0)}
         />
 
         <main className="flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-10 max-w-[1760px] 2xl:max-w-[1920px] w-full mx-auto px-3 sm:px-6 lg:px-8 xl:px-10 pt-3 sm:pt-6 pl-[max(0.75rem,env(safe-area-inset-left,0px))] pr-[max(0.75rem,env(safe-area-inset-right,0px))]">

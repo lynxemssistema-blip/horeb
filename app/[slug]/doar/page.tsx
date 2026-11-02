@@ -34,6 +34,8 @@ import {
   Building2,
   Lock,
   Key,
+  AlertTriangle,
+  Settings,
 } from "lucide-react";
 
 export default function DoarPage() {
@@ -43,6 +45,7 @@ export default function DoarPage() {
   const [amount, setAmount] = useState<string>("100");
   const [category, setCategory] = useState<string>("DIZIMO");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingConfig, setIsLoadingConfig] = useState<boolean>(true);
   const [copied, setCopied] = useState<boolean>(false);
   const [checkoutData, setCheckoutData] = useState<GeneratePixResponse | null>(null);
 
@@ -51,13 +54,16 @@ export default function DoarPage() {
     slug === "matriz" ? "Igreja Matriz Sede" : "Igreja Filial Central"
   );
   const [pixKeyInfo, setPixKeyInfo] = useState<{ key: string; type: string } | null>(null);
+  const [canConfigurePix, setCanConfigurePix] = useState<boolean>(false);
 
   React.useEffect(() => {
     async function loadPixConfig() {
+      setIsLoadingConfig(true);
       try {
         const res = await getChurchPixConfig(slug);
         if (res.success && res.tenant) {
           setChurchName(res.tenant.name);
+          setCanConfigurePix(!!res.canConfigurePix);
           if (res.tenant.pixPresetValues) {
             const parsed = res.tenant.pixPresetValues
               .split(",")
@@ -68,22 +74,34 @@ export default function DoarPage() {
               setAmount(parsed[0]);
             }
           }
-          if (res.tenant.pixKey) {
+          if (res.tenant.pixKey && res.tenant.pixKey.trim().length > 0) {
             setPixKeyInfo({
-              key: res.tenant.pixKey,
+              key: res.tenant.pixKey.trim(),
               type: res.tenant.pixKeyType || "CNPJ",
             });
+          } else {
+            setPixKeyInfo(null);
           }
         }
       } catch (e) {
         console.error("Falha ao carregar presets de PIX:", e);
+      } finally {
+        setIsLoadingConfig(false);
       }
     }
     loadPixConfig();
   }, [slug]);
 
+  const isPixDisabled = !isLoadingConfig && !pixKeyInfo?.key;
+
   // Ação de Gerar PIX via Server Action
   const handleGeneratePix = async () => {
+    if (isPixDisabled) {
+      toast.warning("PIX ainda não configurado para esta igreja.", {
+        description: "O Pr. / Administrador Master precisa cadastrar a chave PIX em Configurações.",
+      });
+      return;
+    }
     const numAmount = parseFloat(amount.replace(",", "."));
     if (isNaN(numAmount) || numAmount <= 0) {
       toast.error("Por favor, digite um valor válido maior que zero.");
@@ -169,6 +187,45 @@ export default function DoarPage() {
           </CardHeader>
 
           <CardContent className="space-y-6 px-6 pt-2">
+            {/* Alerta quando o PIX da Igreja ainda não foi cadastrado pelo Master / Pr. */}
+            {isPixDisabled && (
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 space-y-3 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                    <AlertTriangle className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div className="space-y-1 text-left">
+                    <p className="text-xs sm:text-sm font-black text-amber-300 uppercase tracking-wide">
+                      PIX Desativado • Aguardando Configuração
+                    </p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      As contribuições via PIX desta congregação estão temporariamente desativadas até que o{" "}
+                      <strong className="text-foreground">Usuário Master / Pr. Responsável</strong> cadastre a{" "}
+                      <strong className="text-foreground">Chave PIX oficial da igreja</strong>.
+                    </p>
+                    <p className="text-[11px] text-emerald-400 font-semibold pt-0.5">
+                      ✓ As doações via PIX vão 100% direto para a conta bancária da igreja (não passam pelo Asaas e não possuem taxas).
+                    </p>
+                  </div>
+                </div>
+
+                {canConfigurePix && (
+                  <div className="pt-1">
+                    <Link href={`/${slug}/configuracoes`}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="w-full h-10 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl gap-2 cursor-pointer shadow-md"
+                      >
+                        <Settings className="w-4 h-4" />
+                        <span>Cadastrar Chave PIX da Igreja Agora</span>
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* 1. Seleção de Destino com Tabs */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block text-center">
@@ -263,14 +320,19 @@ export default function DoarPage() {
             <div className="pt-2">
               <Button
                 type="button"
-                disabled={isLoading || !amount || parseFloat(amount) <= 0}
+                disabled={isLoading || isLoadingConfig || isPixDisabled || !amount || parseFloat(amount) <= 0}
                 onClick={handleGeneratePix}
-                className="w-full h-14 text-base font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 active:scale-[0.98] gap-2.5"
+                className="w-full h-14 text-base font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 active:scale-[0.98] gap-2.5 disabled:opacity-60"
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
                     <span>Gerando PIX bancário...</span>
+                  </>
+                ) : isPixDisabled ? (
+                  <>
+                    <Lock className="w-5 h-5" />
+                    <span>PIX Desativado (Aguardando Chave PIX da Igreja)</span>
                   </>
                 ) : (
                   <>
@@ -281,7 +343,7 @@ export default function DoarPage() {
               </Button>
               <p className="text-[11px] text-center text-muted-foreground mt-2 flex items-center justify-center gap-1">
                 <Sparkles className="w-3.5 h-3.5 text-primary" />
-                Sem taxas adicionais • Processamento imediato
+                Direto na conta da igreja • Sem intermediários (Não passa pelo Asaas)
               </p>
             </div>
           </CardContent>

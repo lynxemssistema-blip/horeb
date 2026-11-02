@@ -222,7 +222,9 @@ export function CreateChurchDialog({
           setActivationOpen(true);
         } else if (res.redirectUrl) {
           toast.success(`Igreja "${res.tenant?.name}" cadastrada com sucesso!`, {
-            description: "Você já está conectado como Usuário Master. Entrando...",
+            description:
+              "Atenção: Acesse Configurações da Igreja para informar a Chave PIX oficial e ativar as doações.",
+            duration: 8000,
           });
           setOpen(false);
           window.location.href = res.redirectUrl;
@@ -295,7 +297,9 @@ export function CreateChurchDialog({
 
       if (res.success && res.redirectUrl) {
         toast.success(`Filial "${res.branch?.name}" vinculada com sucesso!`, {
-          description: `Entrando na filial...`,
+          description:
+            "Lembre-se de acessar Configurações da Igreja para cadastrar a Chave PIX e ativar as doações.",
+          duration: 8000,
         });
         setOpen(false);
         window.location.href = res.redirectUrl;
@@ -622,6 +626,20 @@ export function CreateChurchDialog({
                   </div>
                 </div>
 
+                {/* Aviso Obrigatório sobre Ativação do PIX da Igreja (Não passa pelo Asaas) */}
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/35 text-xs space-y-1.5 shadow-sm">
+                  <div className="flex items-center gap-2 text-amber-400 font-black uppercase tracking-wider text-[11px]">
+                    <Lock className="w-3.5 h-3.5 shrink-0" />
+                    <span>Importante: Doações via PIX nascem Desativadas</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Para segurança da congregação, o recebimento de <strong>Dízimos e Ofertas via PIX</strong> inicia <strong>desativado</strong>. Assim que concluir o cadastro, acesse <strong>Configurações da Igreja</strong> como Usuário Master para informar a <strong>Chave PIX oficial da igreja</strong> e ativar as doações.
+                  </p>
+                  <p className="text-[10.5px] font-bold text-emerald-400">
+                    ✓ As doações via PIX dos membros caem 100% direto na conta bancária da igreja (não passam pelo Asaas e não possuem taxas).
+                  </p>
+                </div>
+
                 {/* Botão de Conclusão */}
                 <Button
                   type="submit"
@@ -762,6 +780,17 @@ export function CreateChurchDialog({
                       ))}
                     </div>
                   </div>
+                </div>
+
+                {/* Aviso Obrigatório sobre Ativação do PIX da Filial */}
+                <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/35 text-xs space-y-1 shadow-sm">
+                  <div className="flex items-center gap-1.5 text-amber-400 font-black uppercase tracking-wider text-[10.5px]">
+                    <Lock className="w-3.5 h-3.5 shrink-0" />
+                    <span>Atenção: PIX da Filial inicia Desativado</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Após criar a filial, acesse <strong>Configurações da Igreja</strong> para cadastrar a <strong>Chave PIX oficial</strong> e liberar os Dízimos e Ofertas (recebimento 100% direto no banco da igreja, sem passar pelo Asaas).
+                  </p>
                 </div>
 
                 <Button

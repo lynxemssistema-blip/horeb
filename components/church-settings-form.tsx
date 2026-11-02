@@ -27,6 +27,8 @@ import {
   QrCode,
   Coins,
   LogOut,
+  AlertTriangle,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -432,13 +434,38 @@ export function ChurchSettingsForm({ tenant }: ChurchSettingsProps) {
             </div>
 
             {/* SEÇÃO 3: CONFIGURAÇÃO DE DÍZIMOS E OFERTAS PIX */}
-            <div className="space-y-4 pt-4 border-t border-border">
-              <div className="flex items-center gap-2 pb-2">
-                <QrCode className="w-4 h-4 text-emerald-500" />
-                <h2 className="text-sm font-black uppercase tracking-wider text-foreground">
-                  3. Dízimos & Ofertas PIX Personalizados
-                </h2>
+            <div id="pix-config" className="space-y-4 pt-4 border-t border-border scroll-mt-24">
+              <div className="flex items-center justify-between gap-2 pb-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <QrCode className="w-4 h-4 text-emerald-500" />
+                  <h2 className="text-sm font-black uppercase tracking-wider text-foreground">
+                    3. Dízimos & Ofertas PIX Personalizados
+                  </h2>
+                </div>
+                {pixKey.trim().length > 0 ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 text-[10px] font-black uppercase tracking-wider">
+                    <Check className="w-3 h-3" />
+                    PIX Ativo (100% Direto na Igreja • Sem Asaas)
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/35 text-amber-400 text-[10px] font-black uppercase tracking-wider">
+                    <Lock className="w-3 h-3" />
+                    PIX Desativado • Aguardando Chave PIX
+                  </span>
+                )}
               </div>
+
+              {!pixKey.trim() && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/35 text-xs space-y-1 shadow-sm">
+                  <div className="flex items-center gap-2 text-amber-400 font-black uppercase tracking-wider text-[11px]">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>Alerta: Doações via PIX estão Desativadas para esta Igreja</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Para liberar a página de Dízimos e Ofertas (<strong>/{tenant.slug}/doar</strong>), informe abaixo a <strong>Chave PIX oficial da igreja</strong> e clique em Salvar. Os valores doados pelos membros caem <strong>100% direto na conta bancária da igreja</strong> (não passam pelo Asaas e não possuem taxas).
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1.5">

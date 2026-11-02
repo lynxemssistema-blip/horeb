@@ -123,9 +123,44 @@ export default async function TenantDashboardPage({ params }: PageProps) {
   const canSeeMenu = (menu: string) => allowedMenus.includes(menu) || allowedMenus.includes("ALL");
   const canDoAction = (action: string) => allowedActions.includes(action) || allowedActions.includes("ALL");
   const isLeadership = session?.role === "SUPERADMIN" || session?.role === "ADMIN" || session?.role === "PASTOR";
+  const hasPixConfigured = Boolean(tenant.pixKey && tenant.pixKey.trim().length > 0);
 
   return (
     <div className="space-y-8 w-full pb-8">
+      {/* Alerta para Igrejas sem Chave PIX Cadastrada */}
+      {!hasPixConfigured && isLeadership && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/35 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0 mt-0.5">
+              <QrCode className="w-5 h-5 text-amber-400" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase tracking-wider">
+                  Alerta Importante • PIX Desativado
+                </span>
+                <span className="text-[11px] font-bold text-emerald-400">
+                  100% Direto na Conta da Igreja (Não passa pelo Asaas)
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm font-bold text-foreground">
+                A Chave PIX oficial de Dízimos e Ofertas da {tenant.name} ainda não foi cadastrada!
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Enquanto o Usuário Master / Pr. não informar a Chave PIX oficial, o recebimento de doações via PIX permanece desativado para os membros.
+              </p>
+            </div>
+          </div>
+
+          <Link href={`/${slug}/configuracoes#pix-config`} className="shrink-0">
+            <Button className="w-full sm:w-auto h-10 bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-black font-black text-xs rounded-xl shadow-md gap-2 cursor-pointer">
+              <QrCode className="w-4 h-4" />
+              <span>Cadastrar Chave PIX Agora</span>
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* 1. Hero / Welcome Card com Theming Dinâmico */}
       <Card className="relative overflow-hidden border-border/80 shadow-md bg-gradient-to-br from-card via-card to-muted/40">
         <div
@@ -324,10 +359,17 @@ export default async function TenantDashboardPage({ params }: PageProps) {
               <div className="absolute inset-0 bg-emerald-500/10 mix-blend-overlay" />
 
               {/* Floating Badge */}
-              <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold tracking-wide backdrop-blur-md bg-black/60 border border-white/20 text-emerald-400 shadow-md">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>PIX 10 Segundos</span>
-              </div>
+              {hasPixConfigured ? (
+                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold tracking-wide backdrop-blur-md bg-black/60 border border-white/20 text-emerald-400 shadow-md">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>PIX 10 Segundos</span>
+                </div>
+              ) : (
+                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold tracking-wide backdrop-blur-md bg-black/75 border border-amber-500/40 text-amber-400 shadow-md">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  <span>PIX Desativado • Configurar</span>
+                </div>
+              )}
 
               <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex items-center justify-center text-white/80 group-hover:text-white group-hover:bg-primary group-hover:border-primary transition-all duration-300">
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -346,19 +388,45 @@ export default async function TenantDashboardPage({ params }: PageProps) {
 
             <div className="p-4 flex-1 flex flex-col justify-between bg-card/70 backdrop-blur-xs">
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Contribuição rápida com QR Code automático e comprovante nominal para declaração do Imposto de Renda (IRPF).
+                {hasPixConfigured
+                  ? "Contribuição rápida com QR Code oficial direto na conta da igreja (sem intermediários) e comprovante nominal."
+                  : "Recebimento de doações desativado temporariamente. O Pr. / Usuário Master precisa cadastrar a Chave PIX oficial da igreja."}
               </p>
               <div className="flex gap-2 mt-4 pt-3 border-t border-border/50">
-                <Link href={`/${slug}/doar`} className="flex-1">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="w-full text-xs font-bold shadow-md cursor-pointer gap-1.5"
-                  >
-                    <HeartHandshake className="w-3.5 h-3.5" />
-                    <span>Contribuir PIX</span>
-                  </Button>
-                </Link>
+                {hasPixConfigured ? (
+                  <Link href={`/${slug}/doar`} className="flex-1">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full text-xs font-bold shadow-md cursor-pointer gap-1.5"
+                    >
+                      <HeartHandshake className="w-3.5 h-3.5" />
+                      <span>Contribuir PIX</span>
+                    </Button>
+                  </Link>
+                ) : isLeadership ? (
+                  <Link href={`/${slug}/configuracoes#pix-config`} className="flex-1">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black shadow-md cursor-pointer gap-1.5"
+                    >
+                      <QrCode className="w-3.5 h-3.5" />
+                      <span>Ativar PIX Agora</span>
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link href={`/${slug}/doar`} className="flex-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs font-bold border-amber-500/30 text-amber-400 cursor-pointer gap-1.5"
+                    >
+                      <HeartHandshake className="w-3.5 h-3.5" />
+                      <span>PIX em Configuração</span>
+                    </Button>
+                  </Link>
+                )}
                 {canSeeMenu("/admin/finance") && (
                   <Link href={`/${slug}/admin/finance`} className="flex-1">
                     <Button
