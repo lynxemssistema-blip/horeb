@@ -8,7 +8,7 @@ import { generateActivationCode, sendActivationCodeEmail } from "@/lib/mail";
 import { isValidEmail, sanitizeSlug } from "@/lib/validators";
 import { createSession, destroySession, getSession, checkChurchAccess } from "@/lib/session";
 import { isFeatureAllowedForPlan } from "@/lib/plans";
-import { getOrCreateAsaasCustomer } from "@/lib/asaas";
+import { getOrCreateAsaasCustomer, syncUserToAsaasHoreb } from "@/lib/asaas";
 
 export interface RegisterMasterParams {
   masterName: string;
@@ -131,27 +131,22 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
       },
     });
 
-    // 3. Integração Automática com Asaas: Cria/Vincula Cliente ao Grupo 'horeb'
+    // 3. Integração Automática OBRIGATÓRIA com Asaas: Cadastra Usuário no Grupo 'Horeb'
     try {
-      const asaasRes = await getOrCreateAsaasCustomer({
+      const asaasRes = await syncUserToAsaasHoreb({
+        id: user.id,
         name: user.name,
         email: user.email,
         phone: params.phone,
-        groupName: "horeb",
-        externalReference: `USER_${user.id}`,
+        tenantName: tenant.name,
       });
 
-      if (asaasRes.success && asaasRes.customer?.id) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { asaasCustomerId: asaasRes.customer.id },
-        });
-
+      if (asaasRes.success && asaasRes.customerId) {
         await prisma.tenant.update({
           where: { id: tenant.id },
           data: {
-            asaasCustomerId: asaasRes.customer.id,
-            asaasGroupId: "horeb",
+            asaasCustomerId: asaasRes.customerId,
+            asaasGroupId: "Horeb",
           },
         });
       }
@@ -288,6 +283,19 @@ export async function loginUser(identifier: string, rawPassword: string) {
       return { success: false, error: "E-mail/usuário ou senha incorretos." };
     }
 
+
+    // Garante obrigatoriamente que qualquer usuário autenticado esteja registrado no Asaas Grupo 'Horeb'
+    if (!user.asaasCustomerId) {
+      try {
+        await syncUserToAsaasHoreb({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        });
+      } catch (err) {
+        console.warn("[Asaas Auto-Sync Login]:", err);
+      }
+    }
 
     // Se for SUPERADMIN, criar sessão e redirecionar direto para o painel Super Admin
     if (user.role === "SUPERADMIN") {

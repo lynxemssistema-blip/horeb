@@ -11,7 +11,7 @@ import {
 } from "@/lib/mail";
 import { ROLE_LABELS } from "@/lib/constants";
 import { createSession, getSession } from "@/lib/session";
-import { getOrCreateAsaasCustomer } from "@/lib/asaas";
+import { getOrCreateAsaasCustomer, syncUserToAsaasHoreb } from "@/lib/asaas";
 
 // 1. Obter membros e toda a rede de igrejas (Matriz + Filiais)
 export async function getChurchNetworkMembers(churchSlug: string) {

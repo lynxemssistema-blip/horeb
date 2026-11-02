@@ -80,7 +80,7 @@ export function getAsaasConfig() {
     apiKey = apiKey.slice(1);
   }
   const env = (process.env.ASAAS_ENVIRONMENT || "production").split("#")[0].trim().toLowerCase();
-  const defaultGroup = (process.env.ASAAS_CUSTOMER_GROUP || "horeb").trim();
+  const defaultGroup = (process.env.ASAAS_CUSTOMER_GROUP || "Horeb").trim();
   const baseUrl =
     env === "production"
       ? "https://api.asaas.com/v3"
@@ -210,6 +210,44 @@ export async function getOrCreateAsaasCustomer(data: {
     return { success: true, customer: createData };
   } catch (error: any) {
     return { success: false, error: error.message || "Erro de conexão com o Asaas" };
+  }
+}
+
+/**
+ * 1B. Garante OBRIGATORIAMENTE que o Usuário esteja cadastrado no Asaas dentro do Grupo 'Horeb'
+ */
+export async function syncUserToAsaasHoreb(userData: {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  cpf?: string | null;
+  tenantName?: string | null;
+}): Promise<{ success: boolean; customerId?: string; error?: string }> {
+  try {
+    const res = await getOrCreateAsaasCustomer({
+      name: userData.name,
+      email: userData.email,
+      phone: userData.phone || undefined,
+      cpfCnpj: userData.cpf || undefined,
+      groupName: "Horeb",
+      externalReference: `USER_${userData.id}`,
+    });
+
+    if (res.success && res.customer?.id) {
+      // Salva o asaasCustomerId no banco de dados
+      const { prisma } = await import("@/lib/prisma");
+      await prisma.user.update({
+        where: { id: userData.id },
+        data: { asaasCustomerId: res.customer.id },
+      });
+      return { success: true, customerId: res.customer.id };
+    }
+
+    return { success: false, error: res.error || "Erro ao sincronizar usuário no Asaas" };
+  } catch (error: any) {
+    console.error(`[Asaas Sync Error - User ${userData.email}]:`, error);
+    return { success: false, error: error?.message || "Falha na sincronização Asaas" };
   }
 }
 
