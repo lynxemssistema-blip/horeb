@@ -167,11 +167,17 @@ export async function togglePastorLiveAvailability(slug: string, isAvailable: bo
       return { success: false, error: "Pr. não encontrado." };
     }
 
-    // Apenas o próprio pastor, administradores ou superadmin podem alterar
+    // Apenas o próprio pastor, administradores da MESMA igreja ou superadmin podem alterar
     const isOwner = session.userId === pastorIdToUpdate;
-    const isAdmin = session.role === "ADMIN" || session.role === "SUPERADMIN";
-    if (!isOwner && !isAdmin) {
-      return { success: false, error: "Permissão negada para alterar o status do Pr." };
+    const isSuper =
+      session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN";
+    const isTenantAdmin =
+      session.role === "ADMIN" && session.tenantId === user.tenantId;
+    if (!isOwner && !isSuper && !isTenantAdmin) {
+      return {
+        success: false,
+        error: "Permissão negada para alterar o status do Pr.",
+      };
     }
 
     const updated = await prisma.user.update({
@@ -218,9 +224,18 @@ export async function updatePastorScheduleConfig(params: {
     const session = await getSession();
     if (!session) return { success: false, error: "Não autenticado." };
 
+    const targetPastor = await prisma.user.findUnique({
+      where: { id: params.pastorId },
+      select: { id: true, tenantId: true },
+    });
+    if (!targetPastor) return { success: false, error: "Pr. não encontrado." };
+
     const isOwner = session.userId === params.pastorId;
-    const isAdmin = session.role === "ADMIN" || session.role === "SUPERADMIN";
-    if (!isOwner && !isAdmin) {
+    const isSuper =
+      session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN";
+    const isTenantAdmin =
+      session.role === "ADMIN" && session.tenantId === targetPastor.tenantId;
+    if (!isOwner && !isSuper && !isTenantAdmin) {
       return { success: false, error: "Permissão insuficiente." };
     }
 
@@ -394,6 +409,21 @@ export async function sendPastoralMessage(appointmentId: string, content: string
     if (!appointment) return { success: false, error: "Atendimento não encontrado." };
 
     const session = await getSession();
+    const isSuper =
+      session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN";
+    const isAuthorizedParticipant =
+      isSuper ||
+      session?.userId === appointment.pastorId ||
+      (appointment.userId && session?.userId === appointment.userId) ||
+      ((session?.role === "ADMIN" || session?.role === "PASTOR") &&
+        session?.tenantId === appointment.tenantId);
+
+    if (appointment.userId && !isAuthorizedParticipant) {
+      return {
+        success: false,
+        error: "Acesso negado a este atendimento pastoral.",
+      };
+    }
 
     // Determina se o remetente é o pastor ou o membro
     const isPastorSender = session?.userId === appointment.pastorId;
@@ -508,8 +538,17 @@ export async function getPastoralCabinetData(slug: string) {
       },
     });
 
-    // Busca todos os atendimentos direcionados a este pastor (ou todos da igreja se for ADMIN/SUPERADMIN)
-    const isAdmin = session.role === "ADMIN" || session.role === "SUPERADMIN";
+    // Busca todos os atendimentos direcionados a este pastor (ou todos da igreja se for ADMIN/SUPERADMIN da própria igreja)
+    const isSuper =
+      session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN";
+    if (!isSuper && session.tenantId !== tenant.id) {
+      return {
+        success: false,
+        error: "Acesso negado ao gabinete pastoral de outra congregação.",
+      };
+    }
+    const isAdmin =
+      isSuper || (session.role === "ADMIN" && session.tenantId === tenant.id);
     const whereClause: any = { tenantId: tenant.id };
     if (!isAdmin) {
       whereClause.pastorId = session.userId;

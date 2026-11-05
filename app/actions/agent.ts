@@ -7,7 +7,17 @@ import { getSession } from "@/lib/session";
 export async function getAgentProfiles(tenantId?: string | null) {
   try {
     const session = await getSession();
-    const effectiveTenantId = tenantId || session?.tenantId || null;
+    if (!session) {
+      return { success: false, error: "Não autenticado.", profiles: [] };
+    }
+    const isSuper =
+      session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN";
+    const isAdminOrPastor = ["SUPERADMIN", "ADMIN", "PASTOR"].includes(
+      session.role
+    );
+    const effectiveTenantId = isSuper
+      ? tenantId || session.tenantId || null
+      : session.tenantId;
 
     const profiles = await prisma.agentProfile.findMany({
       where: effectiveTenantId
@@ -15,6 +25,17 @@ export async function getAgentProfiles(tenantId?: string | null) {
             OR: [{ tenantId: effectiveTenantId }, { tenantId: null }],
           }
         : { tenantId: null },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        model: true,
+        temperature: true,
+        isActive: true,
+        tenantId: true,
+        createdAt: true,
+        systemPrompt: isAdminOrPastor,
+      },
       orderBy: { createdAt: "desc" },
     });
     return { success: true, profiles };

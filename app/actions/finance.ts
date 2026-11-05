@@ -211,7 +211,7 @@ export async function generatePixTransaction({
         ? `${categoryLabel} via App PIX • ${memberName}`
         : `${categoryLabel} via App PIX (Anônimo)`);
 
-    // 3. Salvar no Prisma já integrado ao Financeiro da Igreja (status 'COMPLETED') e vínculo nominal do membro logado
+    // 3. Salvar no Prisma como 'PENDING' até confirmação efetiva da Tesouraria da Igreja
     const transaction = await prisma.transaction.create({
       data: {
         tenantId: resolvedTenantId,
@@ -220,7 +220,7 @@ export async function generatePixTransaction({
         description: autoDescription,
         type: "INCOME",
         paymentMethod: "PIX",
-        status: "COMPLETED",
+        status: "PENDING",
         memberId,
       },
     });

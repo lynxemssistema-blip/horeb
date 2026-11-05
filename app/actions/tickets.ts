@@ -46,9 +46,9 @@ export async function purchaseTickets(
     // Simulação do Gateway de Pagamento (delay de 2 segundos)
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // Cria os ingressos individualmente para gerar UUIDs únicos
+    // Cria os ingressos individualmente para gerar UUIDs únicos (limite máximo de 10 por transação contra abuso)
     const createdTickets = [];
-    const validCount = Math.min(quantity, guestNames.length);
+    const validCount = Math.min(Math.max(1, quantity), guestNames.length, 10);
 
     for (let i = 0; i < validCount; i++) {
       const gName = guestNames[i]?.trim() || `Convidado ${i + 1}`;
@@ -155,6 +155,9 @@ export async function getUserTickets(buyerEmail: string) {
     const tickets = await prisma.ticket.findMany({
       where: {
         buyerEmail: cleanEmail,
+        ...(!isSuper && session.email.toLowerCase() !== cleanEmail
+          ? { event: { tenantId: session.tenantId } }
+          : {}),
       },
       include: {
         event: {

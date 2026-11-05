@@ -688,14 +688,21 @@ export async function subscribePersonalToolsAsaas(data: {
     }
 
     if (user?.id) {
+      const isImmediateConfirmed =
+        firstPayment?.status === "CONFIRMED" ||
+        firstPayment?.status === "RECEIVED";
       await prisma.user.update({
         where: { id: user.id },
         data: {
           toolsAsaasCustomerId: asaasCustomer.id,
           toolsAsaasSubscriptionId: asaasSub.id,
-          hasToolsSubscription: true,
-          toolsSubscriptionStatus: "ACTIVE",
-          toolsSubscriptionExpiresAt: expiresAt,
+          ...(isImmediateConfirmed
+            ? {
+                hasToolsSubscription: true,
+                toolsSubscriptionStatus: "ACTIVE",
+                toolsSubscriptionExpiresAt: expiresAt,
+              }
+            : {}),
         } as any,
       });
 

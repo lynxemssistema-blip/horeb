@@ -180,12 +180,20 @@ export async function getEventsFeed(
       ...dateFilter,
     };
 
-    if (!isUserLoggedIn) {
+    const session = await getSession();
+    const isAuthenticatedMember =
+      !!session &&
+      (session.role === "SUPERADMIN" || session.tenantId === realTenantId);
+    const canViewInactive =
+      isAuthenticatedMember &&
+      ["SUPERADMIN", "ADMIN", "PASTOR", "LEADER"].includes(session.role);
+
+    if (!isAuthenticatedMember) {
       whereClause.isPublic = true;
     }
 
     // Se não tiver permissão para ver inativos (Master/Pastor), só busca eventos ativos
-    if (!includeInactive) {
+    if (!includeInactive || !canViewInactive) {
       whereClause.isActive = true;
     }
 

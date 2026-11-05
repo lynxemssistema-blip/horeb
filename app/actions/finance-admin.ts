@@ -487,20 +487,7 @@ export async function getFinancialDashboard(
       };
     }
 
-    // Auto-promover doações via PIX antigas que ficaram com status PENDING para COMPLETED
-    // garantindo que qualquer doação já feita (como a de R$ 2,00) apareça e some imediatamente no Financeiro
-    await prisma.transaction.updateMany({
-      where: {
-        ...baseTenantWhere,
-        type: "INCOME",
-        status: "PENDING",
-      },
-      data: {
-        status: "COMPLETED",
-      },
-    });
-
-    // Delegar ao motor RBAC
+    // Delegar ao motor RBAC (sem auto-aprovar transações PENDING sem conferência da Tesouraria)
     const data = await getFinancialDashboardData(roleForEngine, currentTenantId, filterTenantId);
 
     const rawTransactions = await prisma.transaction.findMany({
@@ -795,7 +782,10 @@ export async function seedFinancialDemoData(churchSlug: string) {
     });
 
     if (!adminUser) {
-      const initialSecret = process.env.SUPERADMIN_INITIAL_PASSWORD || process.env.SMTP_PASS || "change-me-on-first-login";
+      const crypto = await import("crypto");
+      const initialSecret =
+        process.env.SUPERADMIN_INITIAL_PASSWORD ||
+        crypto.randomBytes(24).toString("hex");
       const hashedPassword = await bcrypt.hash(initialSecret, 10);
       adminUser = await prisma.user.create({
         data: {

@@ -9,15 +9,10 @@ import { revalidatePath } from "next/cache";
  */
 async function checkSuperAdmin() {
   const session = await getSession();
-  const userEmail = session?.email?.toLowerCase();
-
-  const isSuperAdmin =
-    session?.role === "SUPERADMIN" ||
-    userEmail === "edsonmanoel2012@gmail.com" ||
-    userEmail === "lynxemssistema@gmail.com" ||
-    userEmail === "suporte@lynxems.com.br";
-
-  return isSuperAdmin;
+  return Boolean(
+    session &&
+      (session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN")
+  );
 }
 
 /**

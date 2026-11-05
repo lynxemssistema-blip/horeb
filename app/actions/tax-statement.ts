@@ -99,12 +99,13 @@ export async function getMemberAnnualTaxStatement(
     const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
     const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
 
-    // Buscar transações de entrada associadas ao membro no ano
+    // Buscar transações de entrada CONFIRMADAS associadas ao membro no ano
     const transactions = await prisma.transaction.findMany({
       where: {
         tenantId: tenant.id,
         memberId: member.id,
         type: "INCOME",
+        status: "COMPLETED",
         createdAt: {
           gte: startDate,
           lte: endDate,
