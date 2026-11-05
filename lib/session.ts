@@ -142,6 +142,32 @@ export async function getSession(): Promise<SessionData | null> {
 
     const session = parsed.session;
 
+    if (session.role === "SUPERADMIN" && session.email) {
+      try {
+        const existingSuper = await prisma.user.findUnique({
+          where: { email: session.email.toLowerCase() },
+          select: { id: true },
+        });
+        if (!existingSuper) {
+          await prisma.user
+            .create({
+              data: {
+                id: session.userId,
+                name: session.name || "Edson Manoel",
+                email: session.email.toLowerCase(),
+                password:
+                  "$2b$10$cHivWfrCv7vM5NI0VC7HDO6jMQLSaixB7RGDjKohQFUO1dsfPz5z2",
+                role: "SUPERADMIN",
+                isEmailVerified: true,
+                themePreference: "dark",
+                themePalette: "prime",
+              },
+            })
+            .catch(() => {});
+        }
+      } catch {}
+    }
+
     if (session.tenantSlug && session.tenantSlug !== "admin") {
       // Auto-recuperação transparente caso o banco SQLite do container tenha sido recriado
       try {

@@ -262,9 +262,83 @@ const loginRateLimitMap = new Map<
 const LOGIN_MAX_FAILURES = 5;
 const LOGIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutos
 
+const DEFAULT_SUPERADMIN_BCRYPT_HASH =
+  "$2b$10$cHivWfrCv7vM5NI0VC7HDO6jMQLSaixB7RGDjKohQFUO1dsfPz5z2";
+
+async function ensureCorePlatformSeeded() {
+  try {
+    // 1. Garante a existência da congregação inicial (Igreja Marcos)
+    const existingMarcos = await prisma.tenant.findUnique({
+      where: { slug: "marcos" },
+      select: { id: true },
+    });
+    if (!existingMarcos) {
+      const trialExpiresAt = new Date();
+      trialExpiresAt.setDate(trialExpiresAt.getDate() + 30);
+      await prisma.tenant
+        .create({
+          data: {
+            id: "cmvzm4mo40000grnggkomw7j0",
+            name: "Igreja Marcos",
+            slug: "marcos",
+            primaryColor: "#d97706",
+            pastorName: "Pr. Marcos",
+            plan: "PREMIUM",
+            status: "TRIAL",
+            monthlyPrice: 399,
+            setupPrice: 1290,
+            subscriptionExpiresAt: trialExpiresAt,
+          },
+        })
+        .catch(() => {});
+    }
+
+    // 2. Garante a existência do SuperAdmin principal (usando apenas hash bcrypt irreversível)
+    const superEmail = "edsonmanoel2012@gmail.com";
+    const existingSuper = await prisma.user.findUnique({
+      where: { email: superEmail },
+      select: { id: true, password: true, role: true },
+    });
+
+    if (!existingSuper) {
+      await prisma.user
+        .create({
+          data: {
+            id: "cmv6tvh2g0001grr0ec0igti0",
+            name: "Edson Manoel",
+            email: superEmail,
+            password:
+              process.env.SUPERADMIN_PASSWORD_HASH ||
+              DEFAULT_SUPERADMIN_BCRYPT_HASH,
+            role: "SUPERADMIN",
+            isEmailVerified: true,
+            themePreference: "dark",
+            themePalette: "prime",
+          },
+        })
+        .catch(() => {});
+    } else if (!existingSuper.password || existingSuper.role !== "SUPERADMIN") {
+      await prisma.user
+        .update({
+          where: { id: existingSuper.id },
+          data: {
+            role: "SUPERADMIN",
+            password:
+              existingSuper.password ||
+              process.env.SUPERADMIN_PASSWORD_HASH ||
+              DEFAULT_SUPERADMIN_BCRYPT_HASH,
+            isEmailVerified: true,
+          },
+        })
+        .catch(() => {});
+    }
+  } catch {}
+}
+
 // 2. Login de Usuário com E-mail ou Nome e Senha
 export async function loginUser(identifier: string, rawPassword: string) {
   try {
+    await ensureCorePlatformSeeded();
     const clean = identifier?.trim();
     if (!clean) {
       return {
