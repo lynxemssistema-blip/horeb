@@ -88,6 +88,14 @@ interface SuperAdminDashboardProps {
   initialPermissions?: any[];
   initialEbooks?: any[];
   initialEbookOrders?: any[];
+  initialPersonalTools?: any[];
+  initialPersonalToolsSubscribers?: any[];
+  initialPersonalToolsMetrics?: {
+    totalActive: number;
+    totalTrial: number;
+    totalOverdue: number;
+    totalMonthlyRevenue: number;
+  };
 }
 
 export function SuperAdminDashboard({
@@ -106,6 +114,9 @@ export function SuperAdminDashboard({
   initialPermissions = [],
   initialEbooks = [],
   initialEbookOrders = [],
+  initialPersonalTools = [],
+  initialPersonalToolsSubscribers = [],
+  initialPersonalToolsMetrics,
 }: SuperAdminDashboardProps) {
   const [tenants, setTenants] = useState(initialTenants);
   const [plans, setPlans] = useState(initialPlans);
@@ -501,16 +512,16 @@ export function SuperAdminDashboard({
             <div className="flex flex-col gap-1">
               {[
                 { id: "overview", label: "Visão Geral (MRR)", icon: TrendingUp },
-                { id: "saas", label: "Gestão SaaS & Inadimplência", icon: DollarSign, badge: "ASAAS" },
-                { id: "tenants", label: "Igrejas (Assinaturas)", icon: Building2 },
-                { id: "plans", label: "Planos Comerciais", icon: Layers },
+                { id: "saas", label: "Gestão SaaS (B2B)", icon: DollarSign, badge: "ASAAS" },
+                { id: "tenants", label: "Igrejas & Ferramentas B2B", icon: Building2 },
+                { id: "plans", label: "Planos Comerciais (B2B)", icon: Layers },
+                { id: "personal-tools", label: "Minhas Ferramentas (B2C)", icon: Camera, badge: "VENDAS" },
+                { id: "ebooks", label: "Meus E-books (Asaas)", icon: BookOpen, badge: "PDF" },
                 { id: "users", label: "Usuários & Ativação", icon: Users },
                 { id: "emails", label: "Central de E-mails", icon: Mail },
                 { id: "agents", label: "Agentes de IA", icon: Bot, badge: "NOVO" },
                 { id: "permissions", label: "Controle de Acessos", icon: ShieldCheck },
                 { id: "promo", label: "Promoção Especial", icon: Gift, badge: "Dezembro" },
-                { id: "ebooks", label: "Meus E-books (Asaas)", icon: BookOpen, badge: "PDF" },
-                { id: "personal-tools", label: "Minhas Ferramentas (B2C)", icon: Camera, badge: "VENDAS" },
               ].map((tab) => {
                 const isActive = activeTab === tab.id;
                 const Icon = tab.icon;
@@ -643,44 +654,46 @@ export function SuperAdminDashboard({
 
               <div className="flex flex-wrap gap-3 pt-2">
                 <Button
-                  onClick={() => setActiveTab("agents")}
-                  className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs h-10 px-4 rounded-xl gap-2 shadow-lg shadow-amber-500/20"
+                  onClick={() => setActiveTab("personal-tools")}
+                  className="bg-gradient-to-r from-pink-500 to-rose-500 hover:brightness-110 text-white font-black text-xs h-10 px-4 rounded-xl gap-2 shadow-lg shadow-pink-500/20 cursor-pointer"
                 >
-                  <Bot className="w-4 h-4" />
-                  <span>Configurar Agentes IA</span>
+                  <Camera className="w-4 h-4" />
+                  <span>Ferramentas Pessoais (B2C)</span>
                 </Button>
+
                 <Button
                   onClick={() => setActiveTab("tenants")}
-                  className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs h-10 px-4 rounded-xl"
+                  className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs h-10 px-4 rounded-xl gap-1.5 cursor-pointer"
                 >
-                  <span>Gerenciar Assinaturas das Igrejas</span>
-                  <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                  <Building2 className="w-4 h-4" />
+                  <span>Igrejas & Ferramentas B2B</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+
+                <Button
+                  onClick={() => setActiveTab("plans")}
+                  className="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-black text-xs h-10 px-4 rounded-xl gap-1.5 cursor-pointer"
+                >
+                  <Layers className="w-4 h-4 text-amber-400" />
+                  <span>Planos Comerciais (B2B)</span>
+                </Button>
+
+                <Button
+                  onClick={() => setActiveTab("agents")}
+                  variant="outline"
+                  className="border-white/10 bg-white/[0.04] text-white hover:bg-white/10 font-bold text-xs h-10 px-4 rounded-xl gap-1.5 cursor-pointer"
+                >
+                  <Bot className="w-4 h-4 text-amber-400" />
+                  <span>Agentes de IA</span>
                 </Button>
 
                 <Button
                   onClick={() => setActiveTab("promo")}
-                  className="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-black text-xs h-10 px-4 rounded-xl gap-1.5"
+                  variant="outline"
+                  className="border-white/10 bg-white/[0.04] text-white hover:bg-white/10 font-bold text-xs h-10 px-4 rounded-xl gap-1.5 cursor-pointer"
                 >
                   <Gift className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Configurar Promoção (Dezembro)</span>
-                </Button>
-
-                <Button
-                  onClick={() => handleOpenPlanModal()}
-                  variant="outline"
-                  className="border-white/10 bg-white/[0.04] text-white hover:bg-white/10 font-bold text-xs h-10 px-4 rounded-xl"
-                >
-                  <PlusCircle className="w-3.5 h-3.5 mr-1" />
-                  <span>Criar Novo Plano Comercial</span>
-                </Button>
-
-                <Button
-                  onClick={() => setActiveTab("emails")}
-                  variant="outline"
-                  className="border-white/10 bg-white/[0.04] text-white hover:bg-white/10 font-bold text-xs h-10 px-4 rounded-xl"
-                >
-                  <Mail className="w-3.5 h-3.5 mr-1" />
-                  <span>Acessar Central de E-mails</span>
+                  <span>Promoção (Dezembro)</span>
                 </Button>
               </div>
             </div>
@@ -747,25 +760,43 @@ export function SuperAdminDashboard({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 pt-2 border-t border-white/[0.06]">
-                        <Link href={`/${t.slug}`} className="flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-white/[0.06]">
+                        <Link href={`/${t.slug}`} className="flex-1 min-w-[110px]">
                           <Button
                             size="sm"
                             className="w-full h-8 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black gap-1.5 shadow-sm"
                           >
-                            <span>Entrar no App</span>
+                            <span>App da Igreja</span>
                             <ArrowRight className="w-3 h-3" />
                           </Button>
                         </Link>
-                        <Link href={`/${t.slug}/admin/finance`} target="_blank">
+                        <Link href={`/${t.slug}/admin/finance`} title="Tesouraria & ERP Financeiro (B2B)">
                           <Button
                             size="sm"
                             variant="outline"
                             className="h-8 px-2.5 rounded-xl text-xs font-bold border-white/10 bg-white/[0.04] hover:bg-white/10 text-zinc-200 gap-1"
-                            title="Abrir ERP Financeiro"
                           >
                             <span>ERP</span>
                             <ExternalLink className="w-3 h-3" />
+                          </Button>
+                        </Link>
+                        <Link href={`/${t.slug}/admin/secretaria`} title="Secretaria & Documentos Oficiais (B2B)">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 px-2.5 rounded-xl text-xs font-bold border-white/10 bg-white/[0.04] hover:bg-white/10 text-zinc-200 gap-1"
+                          >
+                            <span>Secretaria</span>
+                          </Button>
+                        </Link>
+                        <Link href={`/${t.slug}#minhas-ferramentas`} title="Minhas Ferramentas (B2C) nesta Igreja">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 px-2.5 rounded-xl text-xs font-bold border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 gap-1"
+                          >
+                            <Camera className="w-3 h-3" />
+                            <span>B2C</span>
                           </Button>
                         </Link>
                       </div>
@@ -811,6 +842,53 @@ export function SuperAdminDashboard({
                 </Button>
               )}
             </div>
+
+            {/* Catálogo de Módulos e Ferramentas B2B (Ecossistema da Igreja) */}
+            {tenants[0] && (
+              <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-amber-500/10 via-zinc-900/90 to-zinc-950 border border-amber-500/25 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-black uppercase tracking-wider">
+                      <Sparkles className="w-3 h-3" />
+                      <span>Ecossistema B2B • Módulos da Congregação ({tenants[0].name})</span>
+                    </span>
+                    <h4 className="text-base sm:text-lg font-black text-white mt-1">
+                      Ferramentas Administrativas e Ministeriais (B2B)
+                    </h4>
+                    <p className="text-xs text-zinc-400">
+                      Acesse diretamente qualquer ferramenta de gestão eclesiástica B2B da congregação principal:
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+                  {[
+                    { label: "Tesouraria ERP", href: `/${tenants[0].slug}/admin/finance`, badge: "FINANCEIRO" },
+                    { label: "Secretaria & Atas", href: `/${tenants[0].slug}/admin/secretaria`, badge: "DOCUMENTOS" },
+                    { label: "EBD & Discipulado", href: `/${tenants[0].slug}/admin/ebd`, badge: "ENSINO" },
+                    { label: "Assembleias & Voto", href: `/${tenants[0].slug}/admin/assembleias`, badge: "QUÓRUM" },
+                    { label: "Patrimônio & Bens", href: `/${tenants[0].slug}/admin/patrimonio`, badge: "INVENTÁRIO" },
+                    { label: "Porteiro Digital", href: `/${tenants[0].slug}/admin/porteiro`, badge: "CHECK-IN" },
+                    { label: "Check-in Kids", href: `/${tenants[0].slug}/admin/checkin`, badge: "KIDS PIN" },
+                    { label: "Eventos & Lotes", href: `/${tenants[0].slug}/admin/eventos`, badge: "INGRESSOS" },
+                  ].map((mod) => (
+                    <Link
+                      key={mod.href}
+                      href={mod.href}
+                      className="p-3 rounded-2xl bg-zinc-900/90 hover:bg-amber-500/15 border border-white/10 hover:border-amber-500/40 transition-all flex flex-col justify-between gap-1.5 group"
+                    >
+                      <span className="text-[9px] font-black uppercase text-amber-400/90 tracking-wider">
+                        {mod.badge}
+                      </span>
+                      <span className="text-xs font-bold text-white group-hover:text-amber-300 flex items-center justify-between gap-1">
+                        <span className="truncate">{mod.label}</span>
+                        <ArrowRight className="w-3 h-3 shrink-0 opacity-70 group-hover:translate-x-0.5 transition-transform" />
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-2xl">
               <div className="overflow-x-auto">
@@ -1718,7 +1796,11 @@ export function SuperAdminDashboard({
           {/* TAB 10: MINHAS FERRAMENTAS (B2C)                                         */}
           {/* ========================================================================= */}
           <TabsContent value="personal-tools" className="space-y-6">
-            <SuperAdminPersonalToolsManager />
+            <SuperAdminPersonalToolsManager
+              initialTools={initialPersonalTools}
+              initialSubscribers={initialPersonalToolsSubscribers}
+              initialMetrics={initialPersonalToolsMetrics}
+            />
           </TabsContent>
 
           {/* ========================================================================= */}

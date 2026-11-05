@@ -4,6 +4,39 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 
+const DEFAULT_GLOBAL_AGENTS = [
+  {
+    name: "Orquestrador Horeb",
+    type: "ORCHESTRATOR",
+    model: "gemini-2.5-flash",
+    temperature: 0.5,
+    isActive: true,
+    tenantId: null as string | null,
+    systemPrompt:
+      "Você é o Orquestrador Central de Inteligência Artificial do Horeb. Sua missão é direcionar pedidos de oração, dúvidas bíblicas, aconselhamento pastoral e suporte de discipulado para o agente especialista ideal, sempre mantendo tom acolhedor, cristocêntrico e respeitoso.",
+  },
+  {
+    name: "Pr. Conselheiro & Devocional",
+    type: "EXPERT",
+    model: "gemini-2.5-flash",
+    temperature: 0.7,
+    isActive: true,
+    tenantId: null as string | null,
+    systemPrompt:
+      "Você é um Conselheiro Pastoral Bíblico e Mentor de Devocionais. Ofereça palavras de consolação, sabedoria fundamentada nas Escrituras Sagradas, referências bíblicas contextualizadas e orações edificantes para os membros da igreja.",
+  },
+  {
+    name: "Copiloto de Teologia & EBD",
+    type: "EXPERT",
+    model: "gemini-2.5-flash",
+    temperature: 0.6,
+    isActive: true,
+    tenantId: null as string | null,
+    systemPrompt:
+      "Você é um Especialista em Teologia Bíblica, Exegese (Hebraico e Grego) e Escola Bíblica Dominical (EBD). Auxilie pastores, professores e líderes na preparação de esboços expositivos, estudos para células e respostas teológicas profundas.",
+  },
+];
+
 export async function getAgentProfiles(tenantId?: string | null) {
   try {
     const session = await getSession();
@@ -19,7 +52,7 @@ export async function getAgentProfiles(tenantId?: string | null) {
       ? tenantId || session.tenantId || null
       : session.tenantId;
 
-    const profiles = await prisma.agentProfile.findMany({
+    let profiles = await prisma.agentProfile.findMany({
       where: effectiveTenantId
         ? {
             OR: [{ tenantId: effectiveTenantId }, { tenantId: null }],
@@ -38,9 +71,37 @@ export async function getAgentProfiles(tenantId?: string | null) {
       },
       orderBy: { createdAt: "desc" },
     });
+
+    if (!profiles || profiles.length === 0) {
+      for (const ag of DEFAULT_GLOBAL_AGENTS) {
+        try {
+          await prisma.agentProfile.create({ data: ag });
+        } catch {}
+      }
+      profiles = await prisma.agentProfile.findMany({
+        where: effectiveTenantId
+          ? {
+              OR: [{ tenantId: effectiveTenantId }, { tenantId: null }],
+            }
+          : { tenantId: null },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          model: true,
+          temperature: true,
+          isActive: true,
+          tenantId: true,
+          createdAt: true,
+          systemPrompt: isAdminOrPastor,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    }
+
     return { success: true, profiles };
   } catch (error: any) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message, profiles: [] };
   }
 }
 

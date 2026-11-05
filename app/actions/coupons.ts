@@ -15,6 +15,23 @@ async function checkSuperAdmin() {
   );
 }
 
+const INITIAL_DEFAULT_COUPONS = [
+  {
+    code: "LANCAMENTO50",
+    description: "Condição Especial Primeiras 100 Igrejas (50% OFF)",
+    discountPercent: 50,
+    maxUses: 100,
+    active: true,
+  },
+  {
+    code: "PASTOR30",
+    description: "Desconto especial para Pastores e Convenções Parceiras",
+    discountPercent: 30,
+    maxUses: null,
+    active: true,
+  },
+];
+
 /**
  * 1. Lista todos os cupons/palavras-chave cadastradas (SuperAdmin)
  */
@@ -25,9 +42,24 @@ export async function listDiscountCoupons() {
       return { success: false, error: "Acesso restrito ao Super Admin", coupons: [] };
     }
 
-    const coupons = await prisma.discountCoupon.findMany({
+    let coupons = await prisma.discountCoupon.findMany({
       orderBy: { createdAt: "desc" },
     });
+
+    if (!coupons || coupons.length === 0) {
+      for (const c of INITIAL_DEFAULT_COUPONS) {
+        try {
+          await prisma.discountCoupon.upsert({
+            where: { code: c.code },
+            update: {},
+            create: c,
+          });
+        } catch {}
+      }
+      coupons = await prisma.discountCoupon.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+    }
 
     return { success: true, coupons };
   } catch (error: any) {

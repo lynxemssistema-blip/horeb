@@ -13,6 +13,7 @@ import {
 import { getAgentProfiles } from "@/app/actions/agent";
 import { getRolePermissions } from "@/app/actions/permissions";
 import { getAdminEbooksData } from "@/app/actions/ebooks";
+import { getAllPersonalTools, getPersonalToolsSubscribers } from "@/app/actions/personal-tools";
 
 export const metadata = {
   title: "Super Admin • Horeb por Lynx EMS Sistemas",
@@ -46,24 +47,44 @@ export default async function AdminPage({
   const resolvedParams = searchParams ? await searchParams : {};
   const initialTab = resolvedParams?.tab || "overview";
 
-  const [metricsRes, tenantsRes, plansRes, usersRes, emailDataRes, promoRes, agentsRes, permissionsRes, ebooksDataRes] =
-    await Promise.all([
-      getSuperAdminMetrics().catch(() => ({ success: false, metrics: null })),
-      getAllTenants().catch(() => ({ success: false, tenants: [] })),
-      getAllPlans().catch(() => ({ success: false, plans: [] })),
-      getAllUsers().catch(() => ({ success: false, users: [] })),
-      getEmailCenterData().catch(() => ({
-        success: false,
-        logs: [],
-        inbox: [],
-        inboxTotal: 0,
-        imapConnected: false,
-      })),
-      getPromotionConfig().catch(() => ({ success: false, config: null })),
-      getAgentProfiles(null).catch(() => ({ profiles: [] })), // null = agentes globais
-      getRolePermissions().catch(() => ({ permissions: [] })),
-      getAdminEbooksData().catch(() => ({ success: false, ebooks: [], orders: [] })),
-    ]);
+  const [
+    metricsRes,
+    tenantsRes,
+    plansRes,
+    usersRes,
+    emailDataRes,
+    promoRes,
+    agentsRes,
+    permissionsRes,
+    ebooksDataRes,
+    personalToolsRes,
+    personalToolsSubsRes,
+  ] = await Promise.all([
+    getSuperAdminMetrics().catch(() => ({ success: false, metrics: null })),
+    getAllTenants().catch(() => ({ success: false, tenants: [] })),
+    getAllPlans().catch(() => ({ success: false, plans: [] })),
+    getAllUsers().catch(() => ({ success: false, users: [] })),
+    getEmailCenterData().catch(() => ({
+      success: false,
+      logs: [],
+      inbox: [],
+      inboxTotal: 0,
+      imapConnected: false,
+    })),
+    getPromotionConfig().catch(() => ({ success: false, config: null })),
+    getAgentProfiles(null).catch(() => ({ profiles: [] })), // null = agentes globais
+    getRolePermissions().catch(() => ({ permissions: [] })),
+    getAdminEbooksData().catch(() => ({ success: false, ebooks: [], orders: [] })),
+    getAllPersonalTools().catch(() => ({ success: false, tools: [] })),
+    getPersonalToolsSubscribers().catch(() => ({
+      success: false,
+      subscribers: [],
+      totalActive: 0,
+      totalTrial: 0,
+      totalOverdue: 0,
+      totalMonthlyRevenue: 0,
+    })),
+  ]);
 
   return (
     <SuperAdminDashboard
@@ -82,6 +103,14 @@ export default async function AdminPage({
       initialPermissions={safeSerialize(permissionsRes.permissions || [])}
       initialEbooks={safeSerialize(ebooksDataRes.ebooks || [])}
       initialEbookOrders={safeSerialize(ebooksDataRes.orders || [])}
+      initialPersonalTools={safeSerialize(personalToolsRes.tools || [])}
+      initialPersonalToolsSubscribers={safeSerialize(personalToolsSubsRes.subscribers || [])}
+      initialPersonalToolsMetrics={{
+        totalActive: personalToolsSubsRes.totalActive || 0,
+        totalTrial: personalToolsSubsRes.totalTrial || 0,
+        totalOverdue: personalToolsSubsRes.totalOverdue || 0,
+        totalMonthlyRevenue: personalToolsSubsRes.totalMonthlyRevenue || 0,
+      }}
     />
   );
 }

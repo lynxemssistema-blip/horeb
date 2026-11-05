@@ -76,17 +76,125 @@ function getToolIcon(iconName: string) {
   return found ? found.icon : Sparkles;
 }
 
-export function SuperAdminPersonalToolsManager() {
+const DEFAULT_CATALOG_TOOLS: PersonalToolsConfigData[] = [
+  {
+    id: "init_instagram_studio",
+    slug: "instagram-studio",
+    title: "Estúdio de Fotos & Instagram Pro",
+    badge: "MÓDULO EXCLUSIVO",
+    icon: "Camera",
+    category: "MÍDIA & SOCIAL",
+    description:
+      "Câmera do celular em alta definição com 8 filtros de cinema, ajustes finos de luz e enquadramentos de Feed (1:1), Retrato (4:5) e Stories (9:16) prontos para postagem no Instagram.",
+    monthlyPrice: 19.9,
+    annualPrice: 199.0,
+    trialDays: 30,
+    active: true,
+    actionType: "MODAL_INSTAGRAM",
+    features: [
+      "Câmera Nativa do Celular & Selfie em Alta Definição",
+      "8 Filtros de Cinema Exclusivos (Louvor Vivo, Golden Hour, B&W)",
+      "Formatos Oficiais do Instagram: 1:1 Feed, 4:5 Retrato e 9:16 Stories",
+      "Ajustes Finos de Iluminação, Contraste, Calor e Vinheta",
+      "Selos de Fé e Brasão da Igreja em Alta Resolução",
+      "Compartilhamento Direto no Feed ou Stories em 1 Toque",
+    ],
+  },
+  {
+    id: "init_ia_sermoes",
+    slug: "ia-sermoes",
+    title: "Copiloto IA para Sermões & Esboços",
+    badge: "PR. & LÍDERES",
+    icon: "Sparkles",
+    category: "TEOLOGIA & ENSINO",
+    description:
+      "Inteligência Artificial bíblica para estruturação de esboços temáticos, referências cruzadas em hebraico/grego e ilustrações para mensagens.",
+    monthlyPrice: 29.9,
+    annualPrice: 299.0,
+    trialDays: 30,
+    active: true,
+    actionType: "MODAL_SERMON_AI",
+    features: [
+      "Esboços de Mensagens Temáticas e Expositivas",
+      "Banco de Ilustrações e Aplicações Práticas",
+      "Comentários e Dicionários Bíblicos Integrados (Hebraico/Grego)",
+      "Exportação Direta para Impressão e Apresentação",
+    ],
+  },
+  {
+    id: "init_banner_designer",
+    slug: "banner-designer",
+    title: "Designer de Banners & Cultos",
+    badge: "COMUNICAÇÃO",
+    icon: "Palette",
+    category: "MÍDIA & REDES",
+    description:
+      "Crie artes de culto, convites de conferência e escalas de louvor com tipografia evangélica premium e fundos cinematográficos.",
+    monthlyPrice: 24.9,
+    annualPrice: 249.0,
+    trialDays: 30,
+    active: true,
+    actionType: "MODAL_BANNER_DESIGNER",
+    features: [
+      "Templates Oficiais de Cultos e Eventos Semanais",
+      "Inserção Automática de Tema, Data, Horário e Preletor",
+      "Formatos Prontos para WhatsApp Status (9:16), Retrato (4:5) e Feed (1:1)",
+      "Download em Alta Resolução sem marca d'água",
+    ],
+  },
+  {
+    id: "init_certificados_digitais",
+    slug: "certificados-digitais",
+    title: "Certificados & Carteirinhas Digitais",
+    badge: "SECRETARIA VIP",
+    icon: "Award",
+    category: "ADMINISTRAÇÃO",
+    description:
+      "Emissão de carteirinhas de membro com QR Code seguro de autenticação e certificados oficiais de batismo e consagração.",
+    monthlyPrice: 19.9,
+    annualPrice: 199.0,
+    trialDays: 30,
+    active: true,
+    actionType: "MODAL_CERTIFICATES",
+    features: [
+      "Carteirinha Digital 3D com QR Code de Autenticidade",
+      "Certificados Oficiais de Batismo, Apresentação de Crianças e Casamento",
+      "Personalização com Nome da Igreja e Pr. Presidente",
+      "Impressão Oficial ou Exportação Instantânea",
+    ],
+  },
+];
+
+interface SuperAdminPersonalToolsManagerProps {
+  initialTools?: PersonalToolsConfigData[];
+  initialSubscribers?: any[];
+  initialMetrics?: {
+    totalActive: number;
+    totalTrial: number;
+    totalOverdue: number;
+    totalMonthlyRevenue: number;
+  };
+}
+
+export function SuperAdminPersonalToolsManager({
+  initialTools,
+  initialSubscribers,
+  initialMetrics,
+}: SuperAdminPersonalToolsManagerProps = {}) {
   const [activeView, setActiveView] = useState<"tools" | "subscribers">("tools");
-  const [tools, setTools] = useState<PersonalToolsConfigData[]>([]);
-  const [subscribers, setSubscribers] = useState<any[]>([]);
-  const [metrics, setMetrics] = useState({
-    totalActive: 0,
-    totalTrial: 0,
-    totalOverdue: 0,
-    totalMonthlyRevenue: 0,
-  });
-  const [loading, setLoading] = useState(true);
+  const [tools, setTools] = useState<PersonalToolsConfigData[]>(
+    initialTools && initialTools.length > 0 ? initialTools : DEFAULT_CATALOG_TOOLS
+  );
+  const [subscribers, setSubscribers] = useState<any[]>(initialSubscribers || []);
+  const [metrics, setMetrics] = useState(
+    initialMetrics || {
+      totalActive: 0,
+      totalTrial: 0,
+      totalOverdue: 0,
+      totalMonthlyRevenue: 0,
+    }
+  );
+  const [loading, setLoading] = useState(false);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
 
   // Filtros de busca e status para membros
@@ -125,8 +233,10 @@ export function SuperAdminPersonalToolsManager() {
         getPersonalToolsSubscribers(),
       ]);
 
-      if (toolsRes.success && toolsRes.tools) {
+      if (toolsRes.success && toolsRes.tools && toolsRes.tools.length > 0) {
         setTools(toolsRes.tools);
+      } else {
+        setTools(DEFAULT_CATALOG_TOOLS);
       }
 
       if (subsRes.success) {

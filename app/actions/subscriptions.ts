@@ -489,9 +489,40 @@ export async function getSaaSFinancialMetrics() {
       orderBy: { createdAt: "desc" },
     });
 
-    const coupons = await prisma.discountCoupon.findMany({
+    let coupons = await prisma.discountCoupon.findMany({
       orderBy: { createdAt: "desc" },
     });
+
+    if (!coupons || coupons.length === 0) {
+      const defaultCoupons = [
+        {
+          code: "LANCAMENTO50",
+          description: "Condição Especial Primeiras 100 Igrejas (50% OFF)",
+          discountPercent: 50,
+          maxUses: 100,
+          active: true,
+        },
+        {
+          code: "PASTOR30",
+          description: "Desconto especial para Pastores e Convenções Parceiras",
+          discountPercent: 30,
+          maxUses: null,
+          active: true,
+        },
+      ];
+      for (const c of defaultCoupons) {
+        try {
+          await prisma.discountCoupon.upsert({
+            where: { code: c.code },
+            update: {},
+            create: c,
+          });
+        } catch {}
+      }
+      coupons = await prisma.discountCoupon.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+    }
 
     // Contadores por Status
     const activeTenants = tenants.filter((t) => t.status === "ACTIVE");
@@ -517,8 +548,8 @@ export async function getSaaSFinancialMetrics() {
 
     const totalOverdueAmount = overdueInvoices.reduce((acc, inv) => acc + inv.amount, 0);
 
-    // Projeções Financeiras baseadas no Ticket Médio Real (ou R$ 249 padrão)
-    const averageTicket = payingTenants.length > 0 ? Math.round(mrr / payingTenants.length) : 0;
+    // Projeções Financeiras baseadas no Ticket Médio Real (ou R$ 249 padrão quando ainda não há pagantes ativos)
+    const averageTicket = payingTenants.length > 0 ? Math.round(mrr / payingTenants.length) : 249;
 
     const projections = [
       { goal: "Primeira Meta (25 Igrejas)", churches: 25, mrr: 25 * averageTicket, arr: 25 * averageTicket * 12 },

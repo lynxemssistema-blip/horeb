@@ -120,45 +120,53 @@ const INITIAL_DEFAULT_TOOLS: Array<Omit<PersonalToolsConfigData, "id">> = [
 ];
 
 /**
- * 1. Obter Catálogo Completo de Ferramentas Pessoais (com auto-seeding se vazio)
+ * 1. Obter Catálogo Completo de Ferramentas Pessoais (com auto-seeding se vazio ou incompleto)
  */
 export async function getAllPersonalTools(): Promise<{
   success: boolean;
   tools: PersonalToolsConfigData[];
 }> {
   try {
-    const list = await (prisma as any).personalToolsConfig.findMany({
+    let list = await (prisma as any).personalToolsConfig.findMany({
       orderBy: { createdAt: "asc" },
     });
 
     if (!list || list.length === 0) {
       // Cria as ferramentas iniciais para o SuperAdmin ter o catálogo rico pronto
       for (const item of INITIAL_DEFAULT_TOOLS) {
-        await (prisma as any).personalToolsConfig.create({
-          data: {
-            slug: item.slug,
-            title: item.title,
-            badge: item.badge,
-            icon: item.icon,
-            category: item.category,
-            description: item.description,
-            monthlyPrice: item.monthlyPrice,
-            annualPrice: item.annualPrice,
-            trialDays: item.trialDays,
-            active: item.active,
-            actionType: item.actionType,
-            features: JSON.stringify(item.features),
-          },
-        });
+        try {
+          await (prisma as any).personalToolsConfig.upsert({
+            where: { slug: item.slug },
+            update: {},
+            create: {
+              slug: item.slug,
+              title: item.title,
+              badge: item.badge,
+              icon: item.icon,
+              category: item.category,
+              description: item.description,
+              monthlyPrice: item.monthlyPrice,
+              annualPrice: item.annualPrice,
+              trialDays: item.trialDays,
+              active: item.active,
+              actionType: item.actionType,
+              features: JSON.stringify(item.features),
+            },
+          });
+        } catch (seedErr) {
+          console.warn(`Aviso ao semear ferramenta ${item.slug}:`, seedErr);
+        }
       }
 
-      const refreshed = await (prisma as any).personalToolsConfig.findMany({
+      list = await (prisma as any).personalToolsConfig.findMany({
         orderBy: { createdAt: "asc" },
       });
+    }
 
+    if (!list || list.length === 0) {
       return {
         success: true,
-        tools: refreshed.map(formatToolFromDb),
+        tools: INITIAL_DEFAULT_TOOLS.map((t, idx) => ({ ...t, id: `init_${idx}` })),
       };
     }
 
@@ -281,7 +289,10 @@ export async function createOrUpdatePersonalTool(data: {
 
     const featuresJson = JSON.stringify(data.features || []);
 
-    if (data.id) {
+    const isSyntheticId =
+      data.id && (data.id.startsWith("init_") || data.id === "default");
+
+    if (data.id && !isSyntheticId) {
       const updated = await (prisma as any).personalToolsConfig.update({
         where: { id: data.id },
         data: {
@@ -305,8 +316,23 @@ export async function createOrUpdatePersonalTool(data: {
       revalidatePath("/");
       return { success: true, tool: formatToolFromDb(updated) };
     } else {
-      const created = await (prisma as any).personalToolsConfig.create({
-        data: {
+      const upserted = await (prisma as any).personalToolsConfig.upsert({
+        where: { slug: cleanSlug },
+        update: {
+          title: data.title,
+          badge: data.badge || "EXCLUSIVO",
+          icon: data.icon || "Sparkles",
+          category: data.category || "GERAL",
+          description: data.description,
+          monthlyPrice: data.monthlyPrice,
+          annualPrice: data.annualPrice,
+          trialDays: data.trialDays,
+          active: data.active,
+          features: featuresJson,
+          actionType: data.actionType || "COMING_SOON",
+          routeUrl: data.routeUrl || null,
+        },
+        create: {
           slug: cleanSlug,
           title: data.title,
           badge: data.badge || "NOVO",
@@ -325,7 +351,7 @@ export async function createOrUpdatePersonalTool(data: {
 
       revalidatePath("/admin");
       revalidatePath("/");
-      return { success: true, tool: formatToolFromDb(created) };
+      return { success: true, tool: formatToolFromDb(upserted) };
     }
   } catch (error: any) {
     return { success: false, error: error.message || "Erro ao salvar ferramenta." };
@@ -920,7 +946,8 @@ export async function getPersonalToolsSubscribers(): Promise<{
 }> {
   try {
     const session = await getSession();
-    if (!session || session.role !== "SUPERADMIN") {
+    const isSuper = session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN";
+    if (!session || !isSuper) {
       return {
         success: false,
         subscribers: [],

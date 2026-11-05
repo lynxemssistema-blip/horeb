@@ -123,15 +123,112 @@ export async function updateTenantSubscription({
   }
 }
 
-// 4. Buscar e Gerenciar Planos Comerciais
+// 4. Buscar e Gerenciar Planos Comerciais (com auto-seed caso o banco esteja novo)
+const INITIAL_DEFAULT_PLANS = [
+  {
+    slug: "essencial",
+    name: "Essencial",
+    subtitle: "Para igrejas pequenas e comunidades em formação",
+    badge: null as string | null,
+    setupPrice: 490,
+    monthlyPrice: 149,
+    annualPrice: 1490,
+    targetAudience: "Até ~150 membros",
+    features: JSON.stringify([
+      "Cadastro e gestão de membros e visitantes",
+      "Área do membro personalizada (PWA no celular)",
+      "Mural de comunicados e avisos oficiais",
+      "Agenda de cultos e eventos semanais",
+      "Pedidos de oração interativos",
+      "Conteúdos e devocionais diários",
+      "Módulo Dízimos e Ofertas via PIX Instantâneo",
+      "Notificações para membros",
+      "Painel administrativo para liderança",
+      "Suporte técnico via WhatsApp",
+    ]),
+    highlight: false,
+    active: true,
+  },
+  {
+    slug: "gestao",
+    name: "Gestão",
+    subtitle: "O plano principal para igrejas médias em franco crescimento",
+    badge: "MAIS ESCOLHIDO",
+    setupPrice: 790,
+    monthlyPrice: 249,
+    annualPrice: 2490,
+    targetAudience: "Igrejas de 150 a 600 membros",
+    features: JSON.stringify([
+      "TUDO do Plano Essencial, mais:",
+      "Gestão completa de Ministérios e Líderes",
+      "Células e Pequenos Grupos nos lares",
+      "Escalas de equipes, louvor e diaconia",
+      "Controle de presença em cultos e células",
+      "Gestão de eventos e inscrições",
+      "Gestão Financeira completa (entradas, saídas e relatórios)",
+      "Segmentação inteligente de membros",
+      "Notificações segmentadas por grupos/ministérios",
+      "Suporte prioritário ágil",
+    ]),
+    highlight: true,
+    active: true,
+  },
+  {
+    slug: "premium",
+    name: "Premium",
+    subtitle: "Para igrejas maiores, catedrais e redes com congregações",
+    badge: "MULTISSEDE VIP",
+    setupPrice: 1290,
+    monthlyPrice: 399,
+    annualPrice: 3990,
+    targetAudience: "Acima de 600 membros ou multissede",
+    features: JSON.stringify([
+      "TUDO do Plano Gestão, mais:",
+      "Múltiplas congregações (Matriz e Filiais integradas)",
+      "Gestão avançada de Prs. e liderança geral",
+      "EBD (Escola Bíblica Dominical) e cursos",
+      "Check-in Kids com etiquetas e código de segurança",
+      "Relatórios analíticos e auditoria avançada",
+      "Múltiplos administradores com permissões granulares",
+      "Personalizações exclusivas de marca e cores",
+      "Integrações via API e automações",
+      "Suporte VIP dedicado com gerente de conta",
+    ]),
+    highlight: false,
+    active: true,
+  },
+];
+
 export async function getAllPlans() {
   try {
-    const plans = await prisma.plan.findMany({
+    let plans = await prisma.plan.findMany({
       orderBy: { monthlyPrice: "asc" },
     });
+
+    if (!plans || plans.length === 0) {
+      for (const p of INITIAL_DEFAULT_PLANS) {
+        try {
+          await prisma.plan.upsert({
+            where: { slug: p.slug },
+            update: {},
+            create: p,
+          });
+        } catch (err) {
+          console.warn(`Aviso ao semear plano ${p.slug}:`, err);
+        }
+      }
+      plans = await prisma.plan.findMany({
+        orderBy: { monthlyPrice: "asc" },
+      });
+    }
+
     return { success: true, plans };
   } catch (error: any) {
-    return { success: false, plans: [], error: error.message };
+    return {
+      success: true,
+      plans: INITIAL_DEFAULT_PLANS.map((p, idx) => ({ ...p, id: `plan_${idx}` })),
+      error: error.message,
+    };
   }
 }
 
@@ -154,7 +251,9 @@ export async function createOrUpdatePlan(data: {
     const featuresJson = JSON.stringify(data.features || []);
     const calculatedAnnual = data.annualPrice && data.annualPrice > 0 ? data.annualPrice : data.monthlyPrice * 10;
 
-    if (data.id) {
+    const isSyntheticId = data.id && data.id.startsWith("plan_");
+
+    if (data.id && !isSyntheticId) {
       const plan = await prisma.plan.update({
         where: { id: data.id },
         data: {
@@ -175,8 +274,21 @@ export async function createOrUpdatePlan(data: {
       revalidatePath("/");
       return { success: true, plan };
     } else {
-      const plan = await prisma.plan.create({
-        data: {
+      const plan = await prisma.plan.upsert({
+        where: { slug: data.slug },
+        update: {
+          name: data.name,
+          subtitle: data.subtitle,
+          badge: data.badge || null,
+          setupPrice: data.setupPrice,
+          monthlyPrice: data.monthlyPrice,
+          annualPrice: calculatedAnnual,
+          targetAudience: data.targetAudience,
+          features: featuresJson,
+          highlight: data.highlight ?? false,
+          active: data.active ?? true,
+        },
+        create: {
           slug: data.slug,
           name: data.name,
           subtitle: data.subtitle,
