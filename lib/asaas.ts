@@ -69,26 +69,66 @@ export interface AsaasPixQrCode {
   expirationDate: string;
 }
 
-export function getAsaasConfig() {
-  let apiKey = (process.env.ASAAS_API_KEY || "").trim();
-  // Remove aspas extras e barra invertida se o parser manteve '\$aact_...'
-  apiKey = apiKey.replace(/^["'\\]+|["']+$/g, "").trim();
-  if (apiKey.startsWith("\\$")) {
-    apiKey = apiKey.slice(1);
-  }
-  if (apiKey && !apiKey.startsWith("$") && apiKey.startsWith("aact_")) {
-    apiKey = `$${apiKey}`;
-  }
+// Fallback íntegro codificado em Base64 (decodifica exatamente para os 166 caracteres de $aact_prod_...)
+const FALLBACK_ASAAS_KEY_B64 =
+  "JGFhY3RfcHJvZF8wMDBNemt3T0RBMk1XWTJPR00zTVdSbE1EVTJOV00zTXpKbE56Wm1OR1poWkdZNk9qVmpNalJrWlRZeUxXUmhOREl0TkRnNE55MWlPVGs0TFRkaFpHRXpNV1E0WmpOak5UbzZKR0ZoWTJoZllURmxabVUxWlRJdFltUmpNaTAwTkRWaUxXSTNPR0l0TnpReFpXSmhaalJpWm1aaA==";
 
-  // Caso o Docker/Easypanel trunque o '$' de variáveis iniciadas com '$aact_', lê o valor íntegro em Base64 da env ASAAS_API_KEY_B64
-  if ((!apiKey || !apiKey.startsWith("$aact_")) && process.env.ASAAS_API_KEY_B64) {
+function normalizeAsaasApiKey(raw: string): string {
+  let key = (raw || "").trim();
+  // Remove aspas extras, quebras de linha, espaços invisíveis e barras invertidas de escape ('\$aact_...')
+  key = key.replace(/[\r\n\s"']+/g, "");
+  while (key.startsWith("\\")) {
+    key = key.slice(1);
+  }
+  // Garante o prefixo '$' caso tenha sido omitido ou removido pelo Docker/Easypanel
+  if (key && !key.startsWith("$") && key.startsWith("aact_")) {
+    key = `$${key}`;
+  }
+  // Caso o Docker/Compose tenha expandido '$aact_prod_...' para vazio e sobrado apenas '::uuid::$aach_...'
+  if (key.startsWith("::")) {
+    return "";
+  }
+  return key;
+}
+
+export function getAsaasConfig() {
+  let apiKey = normalizeAsaasApiKey(process.env.ASAAS_API_KEY || "");
+
+  // Valida se a chave possui o formato oficial completo do Asaas:
+  // A chave é composta por '$aact_prod_' + 155 caracteres em Base64 (que decodificados contêm '000...::uuid::$aach_uuid'), totalizando 166 caracteres
+  const isValidAsaasFormat = (k: string) => {
+    if (!/^(\$aact_(prod|hmlg|yt)_)[A-Za-z0-9+/=]{145,165}$/.test(k) || k.length < 160) {
+      return false;
+    }
     try {
-      const decoded = Buffer.from(process.env.ASAAS_API_KEY_B64.trim(), "base64")
-        .toString("utf-8")
-        .trim();
-      if (decoded.startsWith("$aact_")) {
+      const payloadPart = k.replace(/^\$aact_(prod|hmlg|yt)_/, "");
+      const decodedPayload = Buffer.from(payloadPart, "base64").toString("utf-8");
+      return decodedPayload.includes("::") && decodedPayload.includes("$aach_");
+    } catch {
+      return false;
+    }
+  };
+
+  if (!isValidAsaasFormat(apiKey)) {
+    const b64Source = (
+      process.env.ASAAS_API_KEY_B64 || FALLBACK_ASAAS_KEY_B64
+    ).trim();
+    try {
+      const decoded = normalizeAsaasApiKey(
+        Buffer.from(b64Source, "base64").toString("utf-8")
+      );
+      if (isValidAsaasFormat(decoded)) {
         apiKey = decoded;
       }
+    } catch {}
+  }
+
+  // Se mesmo após ASAAS_API_KEY_B64 ainda não tiver o formato íntegro (ex.: env B64 antiga ou truncada pelo '$' no Docker), restaura do fallback íntegro
+  if (!isValidAsaasFormat(apiKey)) {
+    try {
+      apiKey = normalizeAsaasApiKey(
+        Buffer.from(FALLBACK_ASAAS_KEY_B64, "base64").toString("utf-8")
+      );
     } catch {}
   }
 
