@@ -569,12 +569,15 @@ export async function createBranchChurch(params: CreateBranchParams) {
   }
 }
 
+const resetFailedAttempts = new Map<string, { count: number; lastAttemptAt: number }>();
+const MAX_RESET_ATTEMPTS = 5;
+
 // 4. Solicitar Recuperação de Senha (Esqueci minha senha)
 export async function requestPasswordReset(identifier: string) {
   try {
     const clean = identifier?.trim();
-    if (!clean) {
-      return { success: false, error: "Informe seu e-mail ou nome de usuário cadastrado." };
+    if (!clean || clean.length < 3) {
+      return { success: false, error: "Informe seu e-mail completo ou nome de usuário cadastrado." };
     }
 
     const cleanLower = clean.toLowerCase();
@@ -584,7 +587,6 @@ export async function requestPasswordReset(identifier: string) {
         OR: [
           { email: cleanLower },
           { name: { equals: clean } },
-          { name: { contains: clean } },
         ],
       },
       include: { tenant: true },
@@ -599,6 +601,7 @@ export async function requestPasswordReset(identifier: string) {
 
     const code = generateActivationCode();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+    resetFailedAttempts.delete(user.email.toLowerCase());
 
     await prisma.user.update({
       where: { id: user.id },
@@ -691,6 +694,22 @@ export async function resetPasswordWithCode(params: {
       return { success: false, error: "Conta não encontrada." };
     }
 
+    const attemptRecord = resetFailedAttempts.get(cleanEmail) || { count: 0, lastAttemptAt: Date.now() };
+    if (attemptRecord.count >= MAX_RESET_ATTEMPTS) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { verificationCode: null, codeExpiresAt: null },
+      });
+      await prisma.activationCode.updateMany({
+        where: { email: cleanEmail, used: false },
+        data: { used: true },
+      });
+      return {
+        success: false,
+        error: "Limite de tentativas excedido por segurança. Solicite um novo código de recuperação.",
+      };
+    }
+
     let isValid = false;
     if (user.verificationCode && user.verificationCode === cleanCode) {
       if (!user.codeExpiresAt || user.codeExpiresAt > new Date()) {
@@ -719,11 +738,29 @@ export async function resetPasswordWithCode(params: {
     }
 
     if (!isValid) {
+      const nextCount = attemptRecord.count + 1;
+      resetFailedAttempts.set(cleanEmail, { count: nextCount, lastAttemptAt: Date.now() });
+      if (nextCount >= MAX_RESET_ATTEMPTS) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { verificationCode: null, codeExpiresAt: null },
+        });
+        await prisma.activationCode.updateMany({
+          where: { email: cleanEmail, used: false },
+          data: { used: true },
+        });
+        return {
+          success: false,
+          error: "Código invalidado após múltiplas tentativas incorretas. Solicite um novo código.",
+        };
+      }
       return {
         success: false,
         error: "Código inválido ou expirado. Solicite um novo código.",
       };
     }
+
+    resetFailedAttempts.delete(cleanEmail);
 
     const hashedPassword = await bcrypt.hash(rawPassword, 10);
 

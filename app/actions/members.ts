@@ -122,7 +122,7 @@ export async function getChurchNetworkMembers(churchSlug: string) {
       });
     }
 
-    // Buscar todos os usuários desta rede (seja igreja principal ou acessos secundários)
+    // Buscar todos os usuários desta rede (seja igreja principal ou acessos secundários, sem carregar hash de senha)
     const users = await prisma.user.findMany({
       where: {
         OR: [
@@ -130,11 +130,32 @@ export async function getChurchNetworkMembers(churchSlug: string) {
           { churchAccesses: { some: { tenantId: { in: networkTenantIds } } } },
         ],
       },
-      include: {
-        tenant: true,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatarUrl: true,
+        role: true,
+        isEmailVerified: true,
+        createdAt: true,
+        tenant: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            primaryColor: true,
+          },
+        },
         churchAccesses: {
           include: {
-            tenant: true,
+            tenant: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                primaryColor: true,
+              },
+            },
           },
         },
       },

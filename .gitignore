@@ -35,6 +35,15 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# sqlite databases & local temp artifacts
+prisma/*.db
+prisma/*.db-journal
+prisma/*.db-wal
+prisma/*.db-shm
+*.png
+!public/**/*.png
+!app/**/*.png
+
 # vercel
 .vercel
 

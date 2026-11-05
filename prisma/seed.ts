@@ -133,7 +133,8 @@ async function main() {
   });
 
   // 4. CRIAR SUPER ADMIN MASTER: Edson Manoel
-  const superAdminPassword = await bcrypt.hash("10207597Rdv*", 10);
+  const initialAdminSecret = process.env.SUPERADMIN_INITIAL_PASSWORD || process.env.SMTP_PASS || "change-me-on-first-login";
+  const superAdminPassword = await bcrypt.hash(initialAdminSecret, 10);
   const superAdmin = await prisma.user.upsert({
     where: { email: "edsonmanoel2012@gmail.com" },
     update: {

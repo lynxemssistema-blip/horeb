@@ -795,7 +795,8 @@ export async function seedFinancialDemoData(churchSlug: string) {
     });
 
     if (!adminUser) {
-      const hashedPassword = await bcrypt.hash("10207597Rdv*", 10);
+      const initialSecret = process.env.SUPERADMIN_INITIAL_PASSWORD || process.env.SMTP_PASS || "change-me-on-first-login";
+      const hashedPassword = await bcrypt.hash(initialSecret, 10);
       adminUser = await prisma.user.create({
         data: {
           name: "Lynx EMS Sistemas (Master)",

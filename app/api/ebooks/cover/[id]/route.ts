@@ -4,6 +4,29 @@ import { getPublicEbookById } from "@/app/actions/ebooks";
 import fs from "fs/promises";
 import path from "path";
 
+function isSafeExternalUrl(rawUrl: string): boolean {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host === "::1" ||
+      host.startsWith("10.") ||
+      host.startsWith("192.168.") ||
+      host.startsWith("169.254.") ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -45,31 +68,38 @@ export async function GET(
       }
     }
 
-    // 2. Se for arquivo local em public/ (ex: /ebooks-covers/libertacao-espiritual.jpg?v=2)
+    // 2. Se for arquivo local em public/ (com proteção anti-Path Traversal)
     if (coverUrl.startsWith("/")) {
+      const publicRoot = path.resolve(process.cwd(), "public");
       const cleanRelPath = coverUrl.split("?")[0].replace(/^\/+/, "");
-      const localPath = path.join(process.cwd(), "public", cleanRelPath);
-      try {
-        const fileBuf = await fs.readFile(localPath);
-        const ext = path.extname(localPath).toLowerCase();
-        const mime =
-          ext === ".png"
-            ? "image/png"
-            : ext === ".webp"
-            ? "image/webp"
-            : "image/jpeg";
-        return new NextResponse(new Uint8Array(fileBuf), {
-          status: 200,
-          headers: {
-            "Content-Type": mime,
-            "Cache-Control": "public, max-age=300, s-maxage=300",
-          },
-        });
-      } catch {}
+      const localPath = path.resolve(publicRoot, cleanRelPath);
+
+      if (localPath.startsWith(publicRoot + path.sep)) {
+        try {
+          const fileBuf = await fs.readFile(localPath);
+          const ext = path.extname(localPath).toLowerCase();
+          const mime =
+            ext === ".png"
+              ? "image/png"
+              : ext === ".webp"
+              ? "image/webp"
+              : "image/jpeg";
+          return new NextResponse(new Uint8Array(fileBuf), {
+            status: 200,
+            headers: {
+              "Content-Type": mime,
+              "Cache-Control": "public, max-age=300, s-maxage=300",
+            },
+          });
+        } catch {}
+      }
     }
 
-    // 3. Se for URL externa HTTP/HTTPS
-    if (coverUrl.startsWith("http://") || coverUrl.startsWith("https://")) {
+    // 3. Se for URL externa HTTP/HTTPS (com validação anti-SSRF)
+    if (
+      (coverUrl.startsWith("http://") || coverUrl.startsWith("https://")) &&
+      isSafeExternalUrl(coverUrl)
+    ) {
       try {
         const extRes = await fetch(coverUrl, { cache: "no-store" });
         if (extRes.ok) {

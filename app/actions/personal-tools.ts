@@ -396,8 +396,21 @@ export async function getUserToolsSubscription(userId: string): Promise<{
   planName?: string;
 }> {
   try {
+    const session = await getSession();
+    const isSuper = session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN";
+    const effectiveUserId = isSuper && userId ? userId : session?.userId || "";
+    if (!effectiveUserId) {
+      return {
+        hasActiveSubscription: false,
+        status: "INACTIVE",
+        expiresAt: null,
+        isTrial: false,
+        remainingDays: 0,
+      };
+    }
+
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: effectiveUserId },
       select: {
         id: true,
         hasToolsSubscription: true,
@@ -432,7 +445,7 @@ export async function getUserToolsSubscription(userId: string): Promise<{
 
       try {
         await prisma.user.update({
-          where: { id: userId },
+          where: { id: effectiveUserId },
           data: {
             hasToolsSubscription: true,
             toolsSubscriptionStatus: "TRIAL",
@@ -474,7 +487,7 @@ export async function getUserToolsSubscription(userId: string): Promise<{
     if (isExpired) {
       if (rawStatus !== "OVERDUE") {
         await prisma.user.update({
-          where: { id: userId },
+          where: { id: effectiveUserId },
           data: {
             hasToolsSubscription: false,
             toolsSubscriptionStatus: "OVERDUE",

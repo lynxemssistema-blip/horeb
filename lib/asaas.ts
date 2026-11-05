@@ -69,11 +69,6 @@ export interface AsaasPixQrCode {
   expirationDate: string;
 }
 
-const DEFAULT_ASAAS_PROD_KEY = [
-  "$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6Oj",
-  "VjMjRkZTYyLWRhNDItNDg4Ny1iOTk4LTdhZGEzMWQ4ZjNjNTo6JGFhY2hfYTFlZmU1ZTItYmRjMi00NDViLWI3OGItNzQxZWJhZjRiZmZh",
-].join("");
-
 export function getAsaasConfig() {
   let apiKey = (process.env.ASAAS_API_KEY || "").trim();
   // Remove aspas extras e barra invertida se o parser manteve '\$aact_...'
@@ -84,15 +79,17 @@ export function getAsaasConfig() {
   if (apiKey && !apiKey.startsWith("$") && apiKey.startsWith("aact_")) {
     apiKey = `$${apiKey}`;
   }
-  // Garante rigorosamente a chave completa de 166 caracteres caso o Docker/Easypanel tenha uma chave antiga ou truncada
-  if (
-    !apiKey ||
-    apiKey.length !== 166 ||
-    !apiKey.startsWith("$aact_prod_") ||
-    !apiKey.includes("ZGY6OjVjMjRk") ||
-    !apiKey.includes("YTFlZmU1ZTIt")
-  ) {
-    apiKey = DEFAULT_ASAAS_PROD_KEY;
+
+  // Caso o Docker/Easypanel trunque o '$' de variáveis iniciadas com '$aact_', lê o valor íntegro em Base64 da env ASAAS_API_KEY_B64
+  if ((!apiKey || !apiKey.startsWith("$aact_")) && process.env.ASAAS_API_KEY_B64) {
+    try {
+      const decoded = Buffer.from(process.env.ASAAS_API_KEY_B64.trim(), "base64")
+        .toString("utf-8")
+        .trim();
+      if (decoded.startsWith("$aact_")) {
+        apiKey = decoded;
+      }
+    } catch {}
   }
 
   const env = (process.env.ASAAS_ENVIRONMENT || "production").split("#")[0].trim().toLowerCase();

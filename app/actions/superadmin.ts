@@ -23,10 +23,11 @@ export async function getSuperAdminMetrics() {
   try {
     await requireSuperAdmin();
     const tenants = await prisma.tenant.findMany({
-      include: {
-        users: true,
-        transactions: true,
-        branches: true,
+      select: {
+        id: true,
+        status: true,
+        asaasSubscriptionId: true,
+        monthlyPrice: true,
       },
     });
 
@@ -210,12 +211,21 @@ export async function deletePlan(planId: string) {
   }
 }
 
-// 5. Gestão Global de Usuários
+// 5. Gestão Global de Usuários (sem expor hashes de senha ou códigos de segurança)
 export async function getAllUsers() {
   try {
     await requireSuperAdmin();
     const users = await prisma.user.findMany({
-      include: {
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatarUrl: true,
+        cpf: true,
+        role: true,
+        isEmailVerified: true,
+        tenantId: true,
+        createdAt: true,
         tenant: { select: { id: true, name: true, slug: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -235,6 +245,13 @@ export async function manuallyVerifyUser(userId: string) {
         isEmailVerified: true,
         verificationCode: null,
         codeExpiresAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isEmailVerified: true,
       },
     });
 

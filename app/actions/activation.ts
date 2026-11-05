@@ -9,6 +9,9 @@ interface VerifyCodeParams {
   code: string;
 }
 
+const activationFailedAttempts = new Map<string, number>();
+const MAX_ACTIVATION_ATTEMPTS = 5;
+
 export async function verifyActivationCode({ email, code }: VerifyCodeParams) {
   try {
     const cleanEmail = email.trim().toLowerCase();
@@ -34,6 +37,22 @@ export async function verifyActivationCode({ email, code }: VerifyCodeParams) {
         success: true,
         message: "Sua conta já está ativada!",
         redirectUrl: user.role === "SUPERADMIN" ? "/admin" : `/${user.tenant?.slug || "admin"}`,
+      };
+    }
+
+    const attempts = activationFailedAttempts.get(cleanEmail) || 0;
+    if (attempts >= MAX_ACTIVATION_ATTEMPTS) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { verificationCode: null, codeExpiresAt: null },
+      });
+      await prisma.activationCode.updateMany({
+        where: { email: cleanEmail, used: false },
+        data: { used: true },
+      });
+      return {
+        success: false,
+        error: "Limite de tentativas excedido por segurança. Clique em 'Reenviar Código'.",
       };
     }
 
@@ -68,11 +87,25 @@ export async function verifyActivationCode({ email, code }: VerifyCodeParams) {
     }
 
     if (!isValid) {
+      const nextAttempts = attempts + 1;
+      activationFailedAttempts.set(cleanEmail, nextAttempts);
+      if (nextAttempts >= MAX_ACTIVATION_ATTEMPTS) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { verificationCode: null, codeExpiresAt: null },
+        });
+        await prisma.activationCode.updateMany({
+          where: { email: cleanEmail, used: false },
+          data: { used: true },
+        });
+      }
       return {
         success: false,
         error: "Código de ativação inválido ou expirado. Clique em 'Reenviar Código'.",
       };
     }
+
+    activationFailedAttempts.delete(cleanEmail);
 
     // 3. Ativar o usuário
     await prisma.user.update({

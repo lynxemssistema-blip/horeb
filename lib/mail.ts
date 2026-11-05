@@ -3,7 +3,7 @@ import nodemailer from "nodemailer";
 const smtpHost = process.env.SMTP_HOST || "smtp.hostinger.com";
 const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
 const smtpUser = (process.env.SMTP_USER || "suporte@lynxems.com.br").trim().toLowerCase();
-const smtpPass = process.env.SMTP_PASS || "10207597Rdv*";
+const smtpPass = (process.env.SMTP_PASS || "").trim();
 
 // Extração robusta do nome de exibição, blindando contra qualquer valor malformatado em SMTP_FROM no Easypanel/VPS
 function getSenderDisplayName(fallbackName = "Horeb Tecnologia"): string {

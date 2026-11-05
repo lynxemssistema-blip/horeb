@@ -9,25 +9,28 @@ export async function POST(req: NextRequest) {
     const payload = await req.json();
     const { event, payment } = payload;
 
-    // 1. Validação do Token do Webhook do Asaas (com fallback oficial e verificação direta na API do Asaas)
-    const webhookSecret =
-      process.env.ASAAS_WEBHOOK_SECRET ||
-      "whsec_8cF0O_ooeVkaJq8CVfEtL0SwqEIHDa9LK1DT7KcAdCs";
-    const incomingToken = req.headers.get("asaas-access-token");
+    // 1. Validação do Token do Webhook do Asaas (com comparação timing-safe e verificação direta na API do Asaas)
+    const webhookSecret = (process.env.ASAAS_WEBHOOK_SECRET || "").trim();
+    const incomingToken = (req.headers.get("asaas-access-token") || "").trim();
 
-    if (
-      webhookSecret &&
-      incomingToken !== webhookSecret &&
-      incomingToken !== "whsec_8cF0O_ooeVkaJq8CVfEtL0SwqEIHDa9LK1DT7KcAdCs"
-    ) {
+    let tokenMatches = false;
+    if (webhookSecret && incomingToken) {
+      const a = Buffer.from(incomingToken);
+      const b = Buffer.from(webhookSecret);
+      if (a.length === b.length && crypto.timingSafeEqual(a, b)) {
+        tokenMatches = true;
+      }
+    }
+
+    if (!tokenMatches) {
       if (payment?.id) {
         const verifyRes = await getAsaasPayment(payment.id);
         if (!verifyRes.success || !verifyRes.payment) {
-          console.warn("[Asaas Webhook] Token divergente e pagamento não encontrado na API do Asaas.");
+          console.warn("[Asaas Webhook] Token ausente/divergente e pagamento não encontrado na API do Asaas.");
           return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
       } else {
-        console.warn("[Asaas Webhook] Token de autorização divergente sem ID de pagamento.");
+        console.warn("[Asaas Webhook] Token de autorização inválido sem ID de pagamento verificável.");
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }

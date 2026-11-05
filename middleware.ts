@@ -22,11 +22,9 @@ export function middleware(request: NextRequest) {
             try { text = decodeURIComponent(text); } catch {}
           }
           let session: any = null;
-          if (text.startsWith("{")) {
-            session = JSON.parse(text);
-          } else {
+          if (text.includes(".")) {
             try {
-              const payloadPart = text.includes(".") ? text.slice(0, text.lastIndexOf(".")) : text;
+              const payloadPart = text.slice(0, text.lastIndexOf("."));
               const decoded = atob(payloadPart);
               if (decoded.startsWith("{")) {
                 session = JSON.parse(decoded);

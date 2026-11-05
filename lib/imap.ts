@@ -4,7 +4,7 @@ import { simpleParser } from "mailparser";
 const imapHost = process.env.IMAP_HOST || "imap.hostinger.com";
 const imapPort = parseInt(process.env.IMAP_PORT || "993", 10);
 const imapUser = process.env.IMAP_USER || "suporte@lynxems.com.br";
-const imapPass = process.env.IMAP_PASS || "10207597Rdv*";
+const imapPass = (process.env.IMAP_PASS || "").trim();
 
 export interface ParsedEmailMessage {
   id: string;

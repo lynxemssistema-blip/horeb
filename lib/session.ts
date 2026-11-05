@@ -26,13 +26,16 @@ export type AppRole =
   | (string & {});
 
 const SESSION_COOKIE_NAME = "horeb_auth_session";
+const EPHEMERAL_FALLBACK_SECRET = crypto.randomBytes(32).toString("hex");
 
 function getSessionSecret(): string {
   return (
     process.env.AUTH_SECRET ||
     process.env.NEXTAUTH_SECRET ||
     process.env.ASAAS_API_KEY ||
-    "horeb-lynx-ems-hmac-secret-2026-v1"
+    process.env.ASAAS_API_KEY_B64 ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    EPHEMERAL_FALLBACK_SECRET
   );
 }
 
@@ -66,32 +69,25 @@ function decodeSessionCookie(raw: string): { session: SessionData; isSigned: boo
       } catch {}
     }
 
-    // 1. Verificar formato assinado: "<base64Payload>.<hmacSignature>"
-    if (text.includes(".")) {
-      const lastDotIdx = text.lastIndexOf(".");
-      const payloadPart = text.slice(0, lastDotIdx);
-      const sigPart = text.slice(lastDotIdx + 1);
-      const expectedSig = signPayload(payloadPart);
-
-      const sigBuf = Buffer.from(sigPart);
-      const expectedBuf = Buffer.from(expectedSig);
-      if (sigBuf.length === expectedBuf.length && crypto.timingSafeEqual(sigBuf, expectedBuf)) {
-        const decoded = Buffer.from(payloadPart, "base64").toString("utf-8");
-        if (decoded.startsWith("{")) {
-          return { session: JSON.parse(decoded) as SessionData, isSigned: true };
-        }
-      }
+    // Exige estritamente o formato assinado HMAC-SHA256: "<base64Payload>.<hmacSignature>"
+    if (!text.includes(".")) {
       return null;
     }
 
-    // 2. Fallback para cookies legados sem assinatura (serão validados contra o banco em getSession)
-    if (text.startsWith("{")) {
-      return { session: JSON.parse(text) as SessionData, isSigned: false };
-    }
+    const lastDotIdx = text.lastIndexOf(".");
+    const payloadPart = text.slice(0, lastDotIdx);
+    const sigPart = text.slice(lastDotIdx + 1);
+    if (!payloadPart || !sigPart) return null;
 
-    const decoded = Buffer.from(text, "base64").toString("utf-8");
-    if (decoded.startsWith("{")) {
-      return { session: JSON.parse(decoded) as SessionData, isSigned: false };
+    const expectedSig = signPayload(payloadPart);
+    const sigBuf = Buffer.from(sigPart);
+    const expectedBuf = Buffer.from(expectedSig);
+
+    if (sigBuf.length === expectedBuf.length && crypto.timingSafeEqual(sigBuf, expectedBuf)) {
+      const decoded = Buffer.from(payloadPart, "base64").toString("utf-8");
+      if (decoded.startsWith("{")) {
+        return { session: JSON.parse(decoded) as SessionData, isSigned: true };
+      }
     }
 
     return null;
@@ -142,37 +138,11 @@ export async function getSession(): Promise<SessionData | null> {
     const cookie = cookieStore.get(SESSION_COOKIE_NAME);
     if (!cookie?.value) return null;
     const parsed = decodeSessionCookie(cookie.value);
-    if (!parsed || !parsed.session?.userId) return null;
+    if (!parsed || !parsed.isSigned || !parsed.session?.userId) return null;
 
-    let session = parsed.session;
+    const session = parsed.session;
 
-    // Se for um cookie legado sem assinatura HMAC, valida estritamente no banco de dados contra falsificação
-    if (!parsed.isSigned) {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: session.userId },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          avatarUrl: true,
-          role: true,
-          tenantId: true,
-          tenant: { select: { slug: true } },
-        },
-      });
-      if (!dbUser || dbUser.email.toLowerCase() !== session.email?.toLowerCase()) {
-        return null;
-      }
-      session = {
-        userId: dbUser.id,
-        email: dbUser.email,
-        name: dbUser.name,
-        avatarUrl: dbUser.avatarUrl,
-        role: dbUser.role,
-        tenantId: dbUser.tenantId || session.tenantId || "",
-        tenantSlug: dbUser.tenant?.slug || session.tenantSlug || "admin",
-      };
-    } else if (session.tenantSlug && session.tenantSlug !== "admin") {
+    if (session.tenantSlug && session.tenantSlug !== "admin") {
       // Auto-recuperação transparente caso o banco SQLite do container tenha sido recriado
       try {
         const existingTenant = await prisma.tenant.findUnique({
