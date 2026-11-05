@@ -69,6 +69,7 @@ async function ensureInitialEbooksSeeded() {
       const ebooksDir = path.join(process.cwd(), "Ebooks");
       const defaultItems = [
         {
+          fixedId: "cmvze2dwf0004grus70x124s9",
           matchTitle: "Libertação Espiritual",
           title: "Libertação Espiritual — Restaurando a Ordem e o Equilíbrio",
           subtitle:
@@ -88,6 +89,7 @@ async function ensureInitialEbooksSeeded() {
           featured: true,
         },
         {
+          fixedId: "cmvzcozhp0000grbsql5wh0jd",
           matchTitle: "Os Seis Instintos da Alma",
           title: "Os Seis Instintos da Alma",
           subtitle: "O que é pecado e o que não é: estudo bíblico sobre santidade e equilíbrio",
@@ -106,6 +108,7 @@ async function ensureInitialEbooksSeeded() {
           featured: true,
         },
         {
+          fixedId: "cmvzcozir0001grbsmbyp93cq",
           matchTitle: "Batalha Invisível",
           title: "Batalha Invisível — Batalha Espiritual",
           subtitle: "A verdade que o inimigo não quer que você saiba sobre autoridade em Cristo",
@@ -128,9 +131,14 @@ async function ensureInitialEbooksSeeded() {
       for (const item of defaultItems) {
         const matches = await prisma.ebookProduct.findMany({
           where: {
-            title: {
-              contains: item.matchTitle,
-            },
+            OR: [
+              { id: item.fixedId },
+              {
+                title: {
+                  contains: item.matchTitle,
+                },
+              },
+            ],
           },
           select: {
             id: true,
@@ -145,16 +153,17 @@ async function ensureInitialEbooksSeeded() {
           orderBy: { createdAt: "asc" },
         });
 
-        // Remove duplicatas sem pedidos caso existam
+        // Remove duplicatas mantendo preferencialmente o registro com o fixedId canônico
         if (matches.length > 1) {
-          for (let i = 1; i < matches.length; i++) {
-            if (matches[i]._count.orders === 0) {
-              await prisma.ebookProduct.delete({ where: { id: matches[i].id } }).catch(() => {});
+          for (const m of matches) {
+            if (m.id !== item.fixedId && m._count.orders === 0) {
+              await prisma.ebookProduct.delete({ where: { id: m.id } }).catch(() => {});
             }
           }
         }
 
-        const found = matches[0];
+        const canonicalRecord = matches.find((m) => m.id === item.fixedId);
+        const found = canonicalRecord || matches[0];
 
         let pdfDataUri = `Ebooks/${item.relativePdfPath}`;
         try {
@@ -162,26 +171,34 @@ async function ensureInitialEbooksSeeded() {
           pdfDataUri = `data:application/pdf;base64,${fileBuf.toString("base64")}`;
         } catch {}
 
-        if (!found) {
-          await prisma.ebookProduct.create({
-            data: {
-              title: item.title,
-              subtitle: item.subtitle,
-              author: item.author,
-              description: item.description,
-              price: item.price,
-              originalPrice: item.originalPrice,
-              coverUrl: item.coverUrl,
-              pdfUrl: pdfDataUri,
-              pdfFileName: item.fileName,
-              badge: item.badge,
-              pagesCount: item.pagesCount,
-              category: item.category,
-              active: true,
-              featured: item.featured,
-            },
-          });
-        } else {
+        if (!canonicalRecord) {
+          await prisma.ebookProduct
+            .create({
+              data: {
+                id: item.fixedId,
+                title: item.title,
+                subtitle: item.subtitle,
+                author: item.author,
+                description: item.description,
+                price: item.price,
+                originalPrice: item.originalPrice,
+                coverUrl: item.coverUrl,
+                pdfUrl: pdfDataUri,
+                pdfFileName: item.fileName,
+                badge: item.badge,
+                pagesCount: item.pagesCount,
+                category: item.category,
+                active: true,
+                featured: item.featured,
+              },
+            })
+            .catch(() => {});
+
+          // Se existia um registro com ID aleatório e sem pedidos, remove para não duplicar na vitrine
+          if (found && found.id !== item.fixedId && found._count.orders === 0) {
+            await prisma.ebookProduct.delete({ where: { id: found.id } }).catch(() => {});
+          }
+        } else if (found) {
           // Atualiza se a capa ainda for antiga sem ?v=2 (exceto capas customizadas data: enviadas pelo Super Admin)
           const needsCoverUpdate =
             !found.coverUrl ||
@@ -400,27 +417,45 @@ function maskEmailAddress(email?: string | null): string {
 export async function getPublicEbookById(ebookId: string, orderId?: string) {
   try {
     await ensureInitialEbooksSeeded();
-    const ebook = await prisma.ebookProduct.findUnique({
+    const selectFields = {
+      id: true,
+      title: true,
+      subtitle: true,
+      author: true,
+      description: true,
+      price: true,
+      originalPrice: true,
+      coverUrl: true,
+      pdfFileName: true,
+      badge: true,
+      pagesCount: true,
+      category: true,
+      active: true,
+      featured: true,
+      salesCount: true,
+      createdAt: true,
+    };
+
+    let ebook = await prisma.ebookProduct.findUnique({
       where: { id: ebookId },
-      select: {
-        id: true,
-        title: true,
-        subtitle: true,
-        author: true,
-        description: true,
-        price: true,
-        originalPrice: true,
-        coverUrl: true,
-        pdfFileName: true,
-        badge: true,
-        pagesCount: true,
-        category: true,
-        active: true,
-        featured: true,
-        salesCount: true,
-        createdAt: true,
-      },
+      select: selectFields,
     });
+
+    // Fallback resiliente caso o link seja acessado por slug, título parcial ou ID legado
+    if (!ebook) {
+      const legacyTitleMap: Record<string, string> = {
+        cmvzcozhp0000grbsql5wh0jd: "Os Seis Instintos da Alma",
+        cmvzcozir0001grbsmbyp93cq: "Batalha Invisível",
+        cmvze2dwf0004grus70x124s9: "Libertação Espiritual",
+      };
+      const targetTitle = legacyTitleMap[ebookId] || ebookId;
+      ebook = await prisma.ebookProduct.findFirst({
+        where: {
+          title: { contains: targetTitle },
+        },
+        select: selectFields,
+      });
+    }
 
     if (!ebook) {
       return { success: false, error: "E-book não encontrado." };
