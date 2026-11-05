@@ -111,12 +111,57 @@ export default async function EbookProductPage({
     notFound();
   }
 
+  const ebook = res.ebook;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://horeb.lynxems.com.br";
+  const coverImageUrl = `${baseUrl}/api/ebooks/cover/${ebook.id}.jpg`;
+  const pageUrl = `${baseUrl}/ebooks/${ebook.id}`;
+
+  const ebookJsonLd = {
+    "@context": "https://schema.org",
+    "@type": ["Book", "Product"],
+    "@id": pageUrl,
+    name: ebook.title,
+    headline: ebook.subtitle || ebook.title,
+    description: ebook.description,
+    bookFormat: "https://schema.org/EBook",
+    inLanguage: "pt-BR",
+    numberOfPages: ebook.pagesCount || 12,
+    image: coverImageUrl,
+    url: pageUrl,
+    author: {
+      "@type": "Person",
+      name: ebook.author || "Pr. Luan Demattos",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Biblioteca Digital Horeb",
+      url: baseUrl,
+    },
+    offers: {
+      "@type": "Offer",
+      url: pageUrl,
+      priceCurrency: "BRL",
+      price: Number(ebook.price || 9.9).toFixed(2),
+      availability: "https://schema.org/InStock",
+      seller: {
+        "@type": "Organization",
+        name: "Biblioteca Digital Horeb",
+      },
+    },
+  };
+
   return (
-    <EbookProductLanding
-      ebook={JSON.parse(JSON.stringify(res.ebook))}
-      initialOrder={res.initialOrder ? JSON.parse(JSON.stringify(res.initialOrder)) : null}
-      isSuperAdmin={isSuperAdmin}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ebookJsonLd) }}
+      />
+      <EbookProductLanding
+        ebook={JSON.parse(JSON.stringify(res.ebook))}
+        initialOrder={res.initialOrder ? JSON.parse(JSON.stringify(res.initialOrder)) : null}
+        isSuperAdmin={isSuperAdmin}
+      />
+    </>
   );
 }
 

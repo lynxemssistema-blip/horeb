@@ -1,0 +1,43 @@
+# Horeb SaaS • Plataforma Completa de Gestão Eclesiástica e Biblioteca Cristã Digital
+
+> A Horeb (desenvolvida pela Lynx EMS Sistemas) é uma plataforma SaaS White-Label e Mobile-First (PWA) para igrejas, ministérios e lideranças cristãs no Brasil. Oferece gestão de membros, células, EBD, check-in Kids com QR Code, assembleias digitais, secretaria eclesiástica, financeiro com PIX instantâneo, gabinete pastoral com IA e biblioteca de E-books cristãos.
+
+## Informações Oficiais
+- **URL Principal**: https://horeb.lynxems.com.br
+- **Desenvolvedor**: Lynx EMS Sistemas (https://horeb.lynxems.com.br)
+- **Idioma**: Português (pt-BR)
+- **Modelo de Teste**: 30 dias de degustação 100% gratuita no Plano Horeb Prime (sem necessidade de cartão de crédito).
+
+## Módulos Principais da Plataforma Horeb para Igrejas
+1. **Gestão de Membros, Células e Pequenos Grupos**: Cadastro completo, carteirinha digital 3D com QR Code, acompanhamento de células e frequência.
+2. **Dízimos, Ofertas e Tesouraria (ERP Eclesiástico)**: PIX Fricção Zero (padrão EMVCo Banco Central direto para a conta da igreja), conciliação financeira e Informe Anual de Rendimentos (IRPF) para membros.
+3. **Gabinete Pastoral & Copiloto Teológico IA**: Agendamento pastoral presencial/online, triagem inteligente de pedidos de oração, devocionais diários e Copiloto IA para elaboração de esboços de sermões com referências em hebraico e grego.
+4. **Eventos, Ingressos com QR Code & Check-in Kids**: Emissão de ingressos nominais, validador de portaria antifraude e etiquetas de segurança para o departamento infantil.
+5. **Secretaria Eclesiástica, EBD e Assembleias Digitais**: Certificados de batismo, apresentação de crianças, cartas de transferência, chamadas da Escola Bíblica Dominical e votações digitais (abertas ou secretas).
+6. **Arquitetura Multissede (Matriz e Filiais)**: Visão consolidada para igrejas sede e autonomia operacional para congregações filiais com personalização White-Label de cores e logotipo.
+
+## Planos Comerciais (SaaS para Igrejas)
+- **Plano Essencial**: R$ 149/mês (Ideal para igrejas de até ~150 membros).
+- **Plano Gestão (Mais Escolhido)**: R$ 249/mês (Para igrejas de 150 a 600 membros, inclui células, escalas, ministérios e gestão financeira completa).
+- **Plano Horeb Prime / Premium**: R$ 399/mês (Para igrejas maiores ou multissede, com Matriz + Filiais ilimitadas, EBD, Check-in Kids, Assembleias e IA Pastoral).
+
+## Biblioteca Digital Horeb • E-books Oficiais em PDF (Autor: Pr. Luan Demattos)
+Todos os E-books possuem entrega imediata em PDF no e-mail do comprador + download direto após confirmação via PIX ou Cartão:
+
+1. **Os Seis Instintos da Alma**
+   - **Subtítulo**: O que é pecado e o que não é: estudo bíblico sobre santidade e equilíbrio (Aquisição, Alimentação, Reprodução, Autoproteção, Domínio Próprio e Comunhão).
+   - **Autor**: Pr. Luan Demattos
+   - **Valor Promocional**: De R$ 29,90 por R$ 9,90
+   - **Link Oficial de Compra**: https://horeb.lynxems.com.br/ebooks/cmvzcozhp0000grbsql5wh0jd
+
+2. **Batalha Invisível — Batalha Espiritual**
+   - **Subtítulo**: A verdade que o inimigo não quer que você saiba sobre autoridade em Cristo, regiões celestiais e ferramentas espirituais do cristão.
+   - **Autor**: Pr. Luan Demattos
+   - **Valor Promocional**: De R$ 29,90 por R$ 9,90
+   - **Link Oficial de Compra**: https://horeb.lynxems.com.br/ebooks/cmvzcozir0001grbsmbyp93cq
+
+3. **Libertação Espiritual — Restaurando a Ordem e o Equilíbrio**
+   - **Subtítulo**: A verdadeira vitória não está nos gritos, mas no alinhamento do espírito, alma e corpo com a soberania de Cristo.
+   - **Autor**: Pr. Luan Demattos
+   - **Valor Promocional**: De R$ 29,90 por R$ 9,90
+   - **Link Oficial de Compra**: https://horeb.lynxems.com.br/ebooks/cmvze2dwf0004grus70x124s9
