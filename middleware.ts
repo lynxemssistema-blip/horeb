@@ -1,48 +1,67 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+function parseSignedCookiePayload(rawValue?: string): any | null {
+  if (!rawValue) return null;
+  try {
+    let text = rawValue.trim();
+    if (text.includes("%")) {
+      try {
+        text = decodeURIComponent(text);
+      } catch {}
+    }
+    // Exige estrutura assinada "<base64Payload>.<hmacSignature>"
+    if (!text.includes(".")) return null;
+    const lastDotIdx = text.lastIndexOf(".");
+    const payloadPart = text.slice(0, lastDotIdx);
+    const sigPart = text.slice(lastDotIdx + 1);
+    if (!payloadPart || sigPart.length < 16) return null;
+
+    const decoded = atob(payloadPart);
+    if (decoded.startsWith("{")) {
+      return JSON.parse(decoded);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
+  const sessionCookie = request.cookies.get("horeb_auth_session");
+  const session = parseSignedCookiePayload(sessionCookie?.value);
 
-  // Intercepta o acesso à raiz "/" para redirecionar instantaneamente usuários conectados
+  // 1. Proteção de Perímetro no Painel Global Super Admin (/admin)
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    const isSuperAdmin =
+      session &&
+      (session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN");
+    if (!isSuperAdmin) {
+      const loginUrl = new URL("/?auth=login", request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // 2. Intercepta o acesso à raiz "/" para redirecionar instantaneamente usuários conectados
   if (pathname === "/") {
     const hasAuthParam = searchParams.has("auth");
-    const hasSwitchParam = searchParams.has("switch") || searchParams.has("select");
+    const hasSwitchParam =
+      searchParams.has("switch") || searchParams.has("select");
     const hasLogoutParam = searchParams.has("logout");
-
     const hasHomeParam = searchParams.has("home");
 
-    // Se o usuário não estiver executando uma troca de igreja ou navegando explicitamente
-    if (!hasAuthParam && !hasSwitchParam && !hasLogoutParam && !hasHomeParam) {
-      const sessionCookie = request.cookies.get("horeb_auth_session");
-      if (sessionCookie?.value) {
-        try {
-          let text = sessionCookie.value.trim();
-          if (text.includes("%")) {
-            try { text = decodeURIComponent(text); } catch {}
-          }
-          let session: any = null;
-          if (text.includes(".")) {
-            try {
-              const payloadPart = text.slice(0, text.lastIndexOf("."));
-              const decoded = atob(payloadPart);
-              if (decoded.startsWith("{")) {
-                session = JSON.parse(decoded);
-              }
-            } catch {}
-          }
-
-          if (session && session.tenantSlug) {
-            // Super Admin tem permissão para visualizar e gerenciar a página inicial livremente
-            if (session.role === "SUPERADMIN") {
-              // Não força redirecionamento para /admin, permitindo visualizar a home
-            } else {
-              return NextResponse.redirect(new URL(`/${session.tenantSlug}`, request.url));
-            }
-          }
-        } catch {
-          // Em caso de falha de decodificação do cookie, segue para a página normalmente
-        }
+    if (
+      !hasAuthParam &&
+      !hasSwitchParam &&
+      !hasLogoutParam &&
+      !hasHomeParam &&
+      session?.tenantSlug
+    ) {
+      if (session.role !== "SUPERADMIN") {
+        return NextResponse.redirect(
+          new URL(`/${session.tenantSlug}`, request.url)
+        );
       }
     }
   }

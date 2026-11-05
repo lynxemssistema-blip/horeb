@@ -65,17 +65,26 @@ export async function getMinistryWorkspace(ministryId: string) {
       return { success: false, error: "Acesso negado a esta congregação." };
     }
 
-    const churchUsers = await prisma.user.findMany({
-      where: { tenantId: ministry.tenantId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        avatarUrl: true,
-      },
-      orderBy: { name: "asc" },
-    });
+    const isMinistryLeader =
+      ministry.leaderId === access.user.userId ||
+      ministry.members.some((m) => m.user.id === access.user.userId && m.role === "LEADER");
+    const canManageMinistry =
+      ["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole) ||
+      isMinistryLeader;
+
+    const churchUsers = canManageMinistry
+      ? await prisma.user.findMany({
+          where: { tenantId: ministry.tenantId },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            avatarUrl: true,
+          },
+          orderBy: { name: "asc" },
+        })
+      : [];
 
     return {
       success: true,
@@ -182,13 +191,19 @@ export async function saveMeetingMinute(meetingId: string, content: string) {
 
     const existingMeeting = await prisma.ministryMeeting.findUnique({
       where: { id: meetingId },
-      include: { ministry: { select: { tenantId: true } } },
+      include: { ministry: { select: { tenantId: true, leaderId: true } } },
     });
     if (!existingMeeting) {
       return { success: false, error: "Reunião não encontrada." };
     }
     if (session.role !== "SUPERADMIN" && existingMeeting.ministry.tenantId !== session.tenantId) {
       return { success: false, error: "Acesso negado a esta congregação." };
+    }
+    if (
+      !["ADMIN", "PASTOR", "LEADER", "SECRETARIA", "SUPERADMIN"].includes(session.role) &&
+      existingMeeting.ministry.leaderId !== session.userId
+    ) {
+      return { success: false, error: "Apenas a liderança do ministério pode registrar atas." };
     }
 
     const minute = await prisma.meetingMinute.upsert({
@@ -245,6 +260,12 @@ export async function createTask(params: {
     });
     if (!ministry) {
       return { success: false, error: "Ministério não encontrado nesta congregação." };
+    }
+    if (
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole) &&
+      ministry.leaderId !== access.user.userId
+    ) {
+      return { success: false, error: "Apenas a liderança do ministério pode criar tarefas." };
     }
 
     const task = await prisma.ministryTask.create({
@@ -303,10 +324,16 @@ export async function updateTask(params: {
 
     const existing = await prisma.ministryTask.findUnique({
       where: { id: params.taskId },
-      include: { ministry: { select: { tenantId: true } } },
+      include: { ministry: { select: { tenantId: true, leaderId: true } } },
     });
     if (!existing || existing.ministry.tenantId !== access.targetTenantId) {
       return { success: false, error: "Tarefa não encontrada nesta congregação." };
+    }
+    if (
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole) &&
+      existing.ministry.leaderId !== access.user.userId
+    ) {
+      return { success: false, error: "Apenas a liderança do ministério pode editar tarefas." };
     }
 
     const task = await prisma.ministryTask.update({
@@ -358,10 +385,16 @@ export async function deleteTask(taskId: string, slug: string) {
 
     const existing = await prisma.ministryTask.findUnique({
       where: { id: taskId },
-      include: { ministry: { select: { tenantId: true } } },
+      include: { ministry: { select: { tenantId: true, leaderId: true } } },
     });
     if (!existing || existing.ministry.tenantId !== access.targetTenantId) {
       return { success: false, error: "Tarefa não encontrada nesta congregação." };
+    }
+    if (
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole) &&
+      existing.ministry.leaderId !== access.user.userId
+    ) {
+      return { success: false, error: "Apenas a liderança do ministério pode excluir tarefas." };
     }
 
     const task = await prisma.ministryTask.delete({
@@ -398,6 +431,12 @@ export async function createMeeting(params: {
     });
     if (!ministry) {
       return { success: false, error: "Ministério não encontrado nesta congregação." };
+    }
+    if (
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole) &&
+      ministry.leaderId !== access.user.userId
+    ) {
+      return { success: false, error: "Apenas a liderança do ministério pode agendar reuniões." };
     }
 
     const meeting = await prisma.ministryMeeting.create({
@@ -440,10 +479,16 @@ export async function deleteMeeting(meetingId: string, slug: string) {
 
     const existing = await prisma.ministryMeeting.findUnique({
       where: { id: meetingId },
-      include: { ministry: { select: { tenantId: true } } },
+      include: { ministry: { select: { tenantId: true, leaderId: true } } },
     });
     if (!existing || existing.ministry.tenantId !== access.targetTenantId) {
       return { success: false, error: "Reunião não encontrada nesta congregação." };
+    }
+    if (
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole) &&
+      existing.ministry.leaderId !== access.user.userId
+    ) {
+      return { success: false, error: "Apenas a liderança do ministério pode excluir reuniões." };
     }
 
     const meeting = await prisma.ministryMeeting.delete({
@@ -480,6 +525,12 @@ export async function addMinistryMember(params: {
     });
     if (!ministry) {
       return { success: false, error: "Ministério não encontrado nesta congregação." };
+    }
+    if (
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole) &&
+      ministry.leaderId !== access.user.userId
+    ) {
+      return { success: false, error: "Apenas a liderança do ministério pode adicionar membros." };
     }
 
     const member = await prisma.ministryMember.upsert({
@@ -537,10 +588,16 @@ export async function updateMinistryMemberFunction(params: {
 
     const existing = await prisma.ministryMember.findUnique({
       where: { id: params.memberId },
-      include: { ministry: { select: { tenantId: true } } },
+      include: { ministry: { select: { tenantId: true, leaderId: true } } },
     });
     if (!existing || existing.ministry.tenantId !== access.targetTenantId) {
       return { success: false, error: "Membro não encontrado neste ministério." };
+    }
+    if (
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole) &&
+      existing.ministry.leaderId !== access.user.userId
+    ) {
+      return { success: false, error: "Apenas a liderança do ministério pode alterar funções." };
     }
 
     const member = await prisma.ministryMember.update({
@@ -582,10 +639,16 @@ export async function removeMinistryMember(memberId: string, slug: string) {
 
     const existing = await prisma.ministryMember.findUnique({
       where: { id: memberId },
-      include: { ministry: { select: { tenantId: true } } },
+      include: { ministry: { select: { tenantId: true, leaderId: true } } },
     });
     if (!existing || existing.ministry.tenantId !== access.targetTenantId) {
       return { success: false, error: "Membro não encontrado neste ministério." };
+    }
+    if (
+      !["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(access.effectiveRole) &&
+      existing.ministry.leaderId !== access.user.userId
+    ) {
+      return { success: false, error: "Apenas a liderança do ministério pode remover membros." };
     }
 
     const member = await prisma.ministryMember.delete({

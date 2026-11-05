@@ -115,6 +115,102 @@ function getHeaders(apiKey: string) {
   };
 }
 
+export function maskEmailForLog(email?: string | null): string {
+  if (!email || !email.includes("@")) return "***";
+  const [local, domain] = email.trim().split("@");
+  const safeLocal =
+    local.length <= 2 ? `${local[0] || "*"}***` : `${local.slice(0, 2)}***`;
+  return `${safeLocal}@${domain}`;
+}
+
+/**
+ * Cliente HTTP resiliente (Fail-Safe) para a API v3 do Asaas:
+ * - Timeout explícito de 12s via AbortSignal.timeout
+ * - Retry automático com Exponential Backoff + Jitter para Rate Limiting (HTTP 429) e instabilidades (502/503/504)
+ * - Parse seguro de JSON (evita crash quando gateways retornam HTML em erros 502/504)
+ * - Isolamento de credenciais (nunca expõe access_token em stack traces ou logs)
+ */
+export async function asaasFetch<T = any>(
+  url: string,
+  options: RequestInit & { timeoutMs?: number; maxRetries?: number } = {}
+): Promise<{ ok: boolean; status: number; data: T | null; error?: string }> {
+  const { timeoutMs = 12000, maxRetries = 2, ...fetchOptions } = options;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        ...fetchOptions,
+        cache: "no-store",
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+
+      // Tratamento de Rate Limit (429) e Bad Gateway/Unavailable (502, 503, 504)
+      if (
+        (response.status === 429 ||
+          response.status === 502 ||
+          response.status === 503 ||
+          response.status === 504) &&
+        attempt < maxRetries
+      ) {
+        const retryAfterHeader = response.headers.get("Retry-After");
+        const baseDelay = retryAfterHeader
+          ? Math.min(Number(retryAfterHeader) * 1000, 5000)
+          : 600 * Math.pow(2, attempt);
+        const jitter = Math.floor(Math.random() * 200);
+        await new Promise((r) => setTimeout(r, baseDelay + jitter));
+        continue;
+      }
+
+      const rawText = await response.text();
+      let parsed: any = null;
+      if (rawText) {
+        try {
+          parsed = JSON.parse(rawText);
+        } catch {
+          parsed = null;
+        }
+      }
+
+      if (!response.ok) {
+        const apiError =
+          parsed?.errors?.[0]?.description ||
+          `Erro HTTP ${response.status} na comunicação com o gateway de pagamento`;
+        return {
+          ok: false,
+          status: response.status,
+          data: parsed,
+          error: apiError,
+        };
+      }
+
+      return { ok: true, status: response.status, data: parsed as T };
+    } catch (err: any) {
+      const isTimeout =
+        err?.name === "TimeoutError" || err?.name === "AbortError";
+      if (attempt < maxRetries) {
+        const backoff = 500 * Math.pow(2, attempt);
+        await new Promise((r) => setTimeout(r, backoff));
+        continue;
+      }
+      return {
+        ok: false,
+        status: isTimeout ? 408 : 503,
+        data: null,
+        error: isTimeout
+          ? "Tempo limite excedido ao comunicar com o Asaas (Timeout)"
+          : "Instabilidade temporária de conexão com o gateway Asaas",
+      };
+    }
+  }
+
+  return {
+    ok: false,
+    status: 503,
+    data: null,
+    error: "Serviço de pagamentos temporariamente indisponível",
+  };
+}
+
 /**
  * 1. Busca ou Cria Cliente no Asaas vinculado ao Grupo da Igreja (Church = Group, User = Customer)
  */
@@ -140,34 +236,30 @@ export async function getOrCreateAsaasCustomer(data: {
 
     // 1. Tenta buscar cliente já existente: primeiro por CPF/CNPJ (se informado), senão por e-mail
     if (cleanDoc && cleanDoc.length >= 11) {
-      const searchUrl = `${baseUrl}/customers?cpfCnpj=${cleanDoc}`;
-      const searchRes = await fetch(searchUrl, {
+      const searchUrl = `${baseUrl}/customers?cpfCnpj=${encodeURIComponent(cleanDoc)}`;
+      const searchRes = await asaasFetch<{ data?: AsaasCustomer[] }>(searchUrl, {
         method: "GET",
         headers: getHeaders(apiKey),
-        cache: "no-store",
       });
 
-      if (searchRes.ok) {
-        const searchData = await searchRes.json();
-        if (searchData.data && searchData.data.length > 0) {
-          existingCustomer = searchData.data[0];
-        }
+      if (searchRes.ok && searchRes.data?.data && searchRes.data.data.length > 0) {
+        existingCustomer = searchRes.data.data[0];
       }
     }
 
     if (!existingCustomer && cleanEmail) {
       const searchEmailUrl = `${baseUrl}/customers?email=${encodeURIComponent(cleanEmail)}`;
-      const searchEmailRes = await fetch(searchEmailUrl, {
+      const searchEmailRes = await asaasFetch<{ data?: AsaasCustomer[] }>(searchEmailUrl, {
         method: "GET",
         headers: getHeaders(apiKey),
-        cache: "no-store",
       });
 
-      if (searchEmailRes.ok) {
-        const searchEmailData = await searchEmailRes.json();
-        if (searchEmailData.data && searchEmailData.data.length > 0) {
-          existingCustomer = searchEmailData.data[0];
-        }
+      if (
+        searchEmailRes.ok &&
+        searchEmailRes.data?.data &&
+        searchEmailRes.data.data.length > 0
+      ) {
+        existingCustomer = searchEmailRes.data.data[0];
       }
     }
 
@@ -175,30 +267,37 @@ export async function getOrCreateAsaasCustomer(data: {
     if (existingCustomer) {
       if (groupName || data.externalReference) {
         try {
-          const updateRes = await fetch(`${baseUrl}/customers/${existingCustomer.id}`, {
-            method: "POST",
-            headers: getHeaders(apiKey),
-            body: JSON.stringify({
-              groupName: groupName || undefined,
-              externalReference: data.externalReference || existingCustomer.externalReference,
-              mobilePhone: data.phone ? data.phone.replace(/\D/g, "") : existingCustomer.mobilePhone,
-              cpfCnpj: cleanDoc && cleanDoc.length >= 11 ? cleanDoc : existingCustomer.cpfCnpj,
-            }),
-            cache: "no-store",
-          });
-          if (updateRes.ok) {
-            const updated = await updateRes.json();
-            return { success: true, customer: updated };
+          const updateRes = await asaasFetch<AsaasCustomer>(
+            `${baseUrl}/customers/${encodeURIComponent(existingCustomer.id)}`,
+            {
+              method: "POST",
+              headers: getHeaders(apiKey),
+              body: JSON.stringify({
+                groupName: groupName || undefined,
+                externalReference:
+                  data.externalReference || existingCustomer.externalReference,
+                mobilePhone: data.phone
+                  ? data.phone.replace(/\D/g, "")
+                  : existingCustomer.mobilePhone,
+                cpfCnpj:
+                  cleanDoc && cleanDoc.length >= 11
+                    ? cleanDoc
+                    : existingCustomer.cpfCnpj,
+              }),
+            }
+          );
+          if (updateRes.ok && updateRes.data) {
+            return { success: true, customer: updateRes.data };
           }
-        } catch (updErr) {
-          console.warn("Aviso ao atualizar grupo do cliente no Asaas:", updErr);
+        } catch {
+          console.warn("[Asaas] Aviso ao atualizar grupo do cliente no Asaas");
         }
       }
       return { success: true, customer: existingCustomer };
     }
 
     // 2. Se não existir, cria um novo cliente vinculado ao Grupo da Igreja
-    const createRes = await fetch(`${baseUrl}/customers`, {
+    const createRes = await asaasFetch<AsaasCustomer>(`${baseUrl}/customers`, {
       method: "POST",
       headers: getHeaders(apiKey),
       body: JSON.stringify({
@@ -210,17 +309,16 @@ export async function getOrCreateAsaasCustomer(data: {
         externalReference: data.externalReference,
         notificationDisabled: false,
       }),
-      cache: "no-store",
     });
 
-    const createData = await createRes.json();
-
-    if (!createRes.ok) {
-      const msg = createData?.errors?.[0]?.description || "Falha ao criar cliente no Asaas";
-      return { success: false, error: msg };
+    if (!createRes.ok || !createRes.data) {
+      return {
+        success: false,
+        error: createRes.error || "Falha ao criar cliente no Asaas",
+      };
     }
 
-    return { success: true, customer: createData };
+    return { success: true, customer: createRes.data };
   } catch (error: any) {
     return { success: false, error: error.message || "Erro de conexão com o Asaas" };
   }
@@ -259,7 +357,10 @@ export async function syncUserToAsaasHoreb(userData: {
 
     return { success: false, error: res.error || "Erro ao sincronizar usuário no Asaas" };
   } catch (error: any) {
-    console.error(`[Asaas Sync Error - User ${userData.email}]:`, error);
+    console.error(
+      `[Asaas Sync Error - User ${maskEmailForLog(userData.email)}]:`,
+      error?.message || "Erro interno"
+    );
     return { success: false, error: error?.message || "Falha na sincronização Asaas" };
   }
 }
@@ -281,29 +382,28 @@ export async function createAsaasSubscription(data: {
   }
 
   try {
-    const res = await fetch(`${baseUrl}/subscriptions`, {
+    const res = await asaasFetch<AsaasSubscription>(`${baseUrl}/subscriptions`, {
       method: "POST",
       headers: getHeaders(apiKey),
       body: JSON.stringify({
         customer: data.customerId,
-        billingType: data.billingType || "UNDEFINED", // UNDEFINED permite o cliente pagar no PIX, Boleto ou Cartão
+        billingType: data.billingType || "UNDEFINED",
         value: data.value,
         nextDueDate: data.nextDueDate,
         cycle: data.cycle || "MONTHLY",
         description: data.description,
-        maxPayments: null, // Sem limite de ciclos (renova até cancelamento)
+        maxPayments: null,
       }),
-      cache: "no-store",
     });
 
-    const subData = await res.json();
-
-    if (!res.ok) {
-      const msg = subData?.errors?.[0]?.description || "Falha ao criar assinatura no Asaas";
-      return { success: false, error: msg };
+    if (!res.ok || !res.data) {
+      return {
+        success: false,
+        error: res.error || "Falha ao criar assinatura no Asaas",
+      };
     }
 
-    return { success: true, subscription: subData };
+    return { success: true, subscription: res.data };
   } catch (error: any) {
     return { success: false, error: error.message || "Erro de conexão ao criar assinatura" };
   }
@@ -321,19 +421,19 @@ export async function listAsaasSubscriptionPayments(
   }
 
   try {
-    const res = await fetch(`${baseUrl}/subscriptions/${subscriptionId}/payments`, {
-      method: "GET",
-      headers: getHeaders(apiKey),
-      cache: "no-store",
-    });
+    const res = await asaasFetch<{ data?: AsaasPayment[] }>(
+      `${baseUrl}/subscriptions/${encodeURIComponent(subscriptionId)}/payments`,
+      {
+        method: "GET",
+        headers: getHeaders(apiKey),
+      }
+    );
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      return { success: false, error: data?.errors?.[0]?.description || "Erro ao buscar faturas" };
+    if (!res.ok || !res.data) {
+      return { success: false, error: res.error || "Erro ao buscar faturas" };
     }
 
-    return { success: true, payments: data.data || [] };
+    return { success: true, payments: res.data.data || [] };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -351,24 +451,24 @@ export async function getAsaasPaymentPixQrCode(
   }
 
   try {
-    const res = await fetch(`${baseUrl}/payments/${paymentId}/pixQrCode`, {
-      method: "GET",
-      headers: getHeaders(apiKey),
-      cache: "no-store",
-    });
+    const res = await asaasFetch<AsaasPixQrCode>(
+      `${baseUrl}/payments/${encodeURIComponent(paymentId)}/pixQrCode`,
+      {
+        method: "GET",
+        headers: getHeaders(apiKey),
+      }
+    );
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      return { success: false, error: data?.errors?.[0]?.description || "Erro ao obter PIX do Asaas" };
+    if (!res.ok || !res.data) {
+      return { success: false, error: res.error || "Erro ao obter PIX do Asaas" };
     }
 
     return {
       success: true,
       pix: {
-        encodedImage: data.encodedImage,
-        payload: data.payload,
-        expirationDate: data.expirationDate,
+        encodedImage: res.data.encodedImage,
+        payload: res.data.payload,
+        expirationDate: res.data.expirationDate,
       },
     };
   } catch (error: any) {
@@ -388,16 +488,16 @@ export async function cancelAsaasSubscription(
   }
 
   try {
-    const res = await fetch(`${baseUrl}/subscriptions/${subscriptionId}`, {
-      method: "DELETE",
-      headers: getHeaders(apiKey),
-      cache: "no-store",
-    });
-
-    const data = await res.json();
+    const res = await asaasFetch(
+      `${baseUrl}/subscriptions/${encodeURIComponent(subscriptionId)}`,
+      {
+        method: "DELETE",
+        headers: getHeaders(apiKey),
+      }
+    );
 
     if (!res.ok) {
-      return { success: false, error: data?.errors?.[0]?.description || "Erro ao cancelar assinatura" };
+      return { success: false, error: res.error || "Erro ao cancelar assinatura" };
     }
 
     return { success: true };
@@ -418,19 +518,19 @@ export async function getAsaasPayment(
   }
 
   try {
-    const res = await fetch(`${baseUrl}/payments/${paymentId}`, {
-      method: "GET",
-      headers: getHeaders(apiKey),
-      cache: "no-store",
-    });
+    const res = await asaasFetch<AsaasPayment>(
+      `${baseUrl}/payments/${encodeURIComponent(paymentId)}`,
+      {
+        method: "GET",
+        headers: getHeaders(apiKey),
+      }
+    );
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      return { success: false, error: data?.errors?.[0]?.description || "Erro ao buscar pagamento" };
+    if (!res.ok || !res.data) {
+      return { success: false, error: res.error || "Erro ao buscar pagamento" };
     }
 
-    return { success: true, payment: data };
+    return { success: true, payment: res.data };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -438,10 +538,6 @@ export async function getAsaasPayment(
 
 /**
  * 7. Cria uma Cobrança Avulsa (Pagamento Único) no Asaas — ideal para venda de E-books / Produtos Digitais
- * Nota importante da API do Asaas:
- * - Quando `billingType` é `"UNDEFINED"` ("Pergunte ao Cliente"), a fatura oficial do Asaas (`invoiceUrl`)
- *   habilita TODAS as formas de pagamento para o comprador escolher na tela: Cartão de Crédito, PIX e Boleto!
- * - Além disso, mesmo com `billingType: "UNDEFINED"`, o endpoint `/pixQrCode` continua gerando o QR Code PIX imediato!
  */
 export async function createAsaasPayment(data: {
   customerId: string;
@@ -457,7 +553,7 @@ export async function createAsaasPayment(data: {
   }
 
   try {
-    const res = await fetch(`${baseUrl}/payments`, {
+    const res = await asaasFetch<AsaasPayment>(`${baseUrl}/payments`, {
       method: "POST",
       headers: getHeaders(apiKey),
       body: JSON.stringify({
@@ -468,17 +564,16 @@ export async function createAsaasPayment(data: {
         description: data.description,
         externalReference: data.externalReference,
       }),
-      cache: "no-store",
     });
 
-    const payData = await res.json();
-
-    if (!res.ok) {
-      const msg = payData?.errors?.[0]?.description || "Falha ao criar cobrança no Asaas";
-      return { success: false, error: msg };
+    if (!res.ok || !res.data) {
+      return {
+        success: false,
+        error: res.error || "Falha ao criar cobrança no Asaas",
+      };
     }
 
-    return { success: true, payment: payData };
+    return { success: true, payment: res.data };
   } catch (error: any) {
     return { success: false, error: error.message || "Erro de conexão ao criar cobrança" };
   }

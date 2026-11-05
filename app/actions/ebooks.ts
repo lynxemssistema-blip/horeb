@@ -42,7 +42,11 @@ async function resolvePdfBuffer(pdfUrl: string): Promise<Buffer | null> {
       return Buffer.from(arr);
     }
     // Se for caminho local relativo ao projeto (ex: "Ebooks/Os Seis Instintos da Alma.pdf")
-    const localPath = path.join(process.cwd(), pdfUrl.replace(/^\/+/, ""));
+    const projectRoot = path.resolve(process.cwd());
+    const localPath = path.resolve(projectRoot, pdfUrl.replace(/^\/+/, ""));
+    if (!localPath.startsWith(projectRoot + path.sep)) {
+      return null;
+    }
     return await fs.readFile(localPath);
   } catch (err) {
     console.warn("[resolvePdfBuffer Warning]:", err);
@@ -302,9 +306,12 @@ async function syncRecentAsaasEbookOrdersInternal() {
 
       if (!buyerEmail) continue;
 
-      // Usa o próprio ID da cobrança do Asaas (pay_...) como downloadToken determinístico quando sincronizado da API,
-      // garantindo que mesmo se o container reiniciar, o link enviado por e-mail continue funcionando até ser usado 1 única vez!
-      const deterministicToken = String(p.id || crypto.randomBytes(24).toString("hex"));
+      // Gera um downloadToken determinístico criptográfico (HMAC-SHA256) a partir do ID da cobrança
+      const tokenSecret =
+        process.env.AUTH_SECRET || process.env.ASAAS_WEBHOOK_SECRET || "horeb-ebook-hmac";
+      const deterministicToken = p.id
+        ? crypto.createHmac("sha256", tokenSecret).update(String(p.id)).digest("hex")
+        : crypto.randomBytes(32).toString("hex");
 
       order = await prisma.ebookOrder.create({
         data: {
@@ -379,6 +386,14 @@ export async function getPublicEbooks() {
   }
 }
 
+function maskEmailAddress(email?: string | null): string {
+  if (!email || !email.includes("@")) return "";
+  const [local, domain] = email.trim().split("@");
+  if (!local || !domain) return "";
+  const visible = local.slice(0, Math.min(2, local.length));
+  return `${visible}${"*".repeat(Math.max(3, local.length - visible.length))}@${domain}`;
+}
+
 /**
  * 1.1 Busca um E-book específico para sua Página Exclusiva de Venda (/ebooks/[id])
  */
@@ -417,10 +432,11 @@ export async function getPublicEbookById(ebookId: string, orderId?: string) {
         where: { id: orderId },
       });
       if (ord && ord.ebookId === ebook.id) {
+        const firstNameOnly = (ord.buyerName || "").trim().split(/\s+/)[0] || "Cliente";
         initialOrder = {
           id: ord.id,
-          buyerName: ord.buyerName,
-          buyerEmail: ord.buyerEmail,
+          buyerName: firstNameOnly,
+          buyerEmail: maskEmailAddress(ord.buyerEmail),
           status: ord.status,
           amount: ord.amount,
           invoiceUrl: ord.invoiceUrl,
@@ -932,7 +948,10 @@ export async function resendPaidEbookEmailAction(orderId: string) {
       };
     }
 
-    const res = await triggerSingleUseEbookDeliveryEmail(order.id, true);
+    const session = await getSession();
+    const isSuper = session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN";
+
+    const res = await triggerSingleUseEbookDeliveryEmail(order.id, isSuper);
     if (!res.emailSent) {
       return {
         success: false,
@@ -943,8 +962,8 @@ export async function resendPaidEbookEmailAction(orderId: string) {
     revalidatePath("/admin");
     return {
       success: true,
-      singleUseDownloadUrl: res.singleUseDownloadUrl,
-      buyerEmail: order.buyerEmail,
+      singleUseDownloadUrl: isSuper ? res.singleUseDownloadUrl : undefined,
+      buyerEmail: isSuper ? order.buyerEmail : maskEmailAddress(order.buyerEmail),
     };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -1002,12 +1021,10 @@ export async function checkEbookOrderStatusAction(orderId: string) {
     }
 
     const isPaid = currentStatus === "RECEIVED" || currentStatus === "CONFIRMED";
-    let singleUseDownloadUrl: string | null = null;
     let deliveryEmailSent = order.deliveryEmailSent;
 
     if (isPaid) {
       const delivery = await triggerSingleUseEbookDeliveryEmail(order.id);
-      singleUseDownloadUrl = !order.downloadUsed ? delivery.singleUseDownloadUrl : null;
       deliveryEmailSent = delivery.emailSent;
     }
 
@@ -1015,14 +1032,14 @@ export async function checkEbookOrderStatusAction(orderId: string) {
       success: true,
       status: currentStatus,
       isPaid,
-      buyerEmail: order.buyerEmail,
+      buyerEmail: maskEmailAddress(order.buyerEmail),
       deliveryEmailSent,
       downloadUsed: order.downloadUsed,
       invoiceUrl: order.invoiceUrl,
       ebookTitle: order.ebook.title,
       pdfFileName: order.ebook.pdfFileName,
-      // Aponta para o link de uso único (se ainda não utilizado)
-      pdfUrl: isPaid && !order.downloadUsed ? singleUseDownloadUrl : null,
+      // Por segurança, o token de download de uso único é enviado exclusivamente ao e-mail do comprador (nunca exposto na API pública)
+      pdfUrl: null as string | null,
     };
   } catch (error: any) {
     return { success: false, error: error.message };

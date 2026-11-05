@@ -57,6 +57,10 @@ export async function getChurchMinistries(churchSlug: string) {
       return { success: false, error: "Igreja não encontrada." };
     }
 
+    const canManageMinistries = ["ADMIN", "PASTOR", "LEADER", "SUPERADMIN"].includes(
+      access.effectiveRole
+    );
+
     return {
       success: true,
       tenant: {
@@ -90,7 +94,7 @@ export async function getChurchMinistries(churchSlug: string) {
           leader: leaderMembers[0] || null,
         };
       }),
-      potentialLeaders: tenant.users,
+      potentialLeaders: canManageMinistries ? tenant.users : [],
     };
   } catch (error: any) {
     console.error("Erro ao buscar ministérios:", error);

@@ -113,8 +113,12 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
       },
     });
 
-    // 2. Criar o Usuário Master da Igreja (já nasce ativo e autenticado como Administrador/Master no tema Horeb Prime)
-    const isSuperAdmin = cleanEmail === "edsonmanoel2012@gmail.com" || cleanEmail === "lynxemssistema@gmail.com";
+    // 2. Criar o Usuário Master da Igreja (usa lista de SUPERADMIN_EMAILS do ambiente, sem hardcode no código)
+    const allowedSuperAdmins = (process.env.SUPERADMIN_EMAILS || "")
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    const isSuperAdmin = allowedSuperAdmins.includes(cleanEmail);
 
     const user = await prisma.user.create({
       data: {
@@ -223,8 +227,22 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
       success: true,
       requiresActivation: false,
       email: cleanEmail,
-      tenant,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, tenantSlug: tenant.slug },
+      tenant: {
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug,
+        primaryColor: tenant.primaryColor,
+        logoUrl: tenant.logoUrl,
+        plan: tenant.plan,
+        status: tenant.status,
+      },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        tenantSlug: tenant.slug,
+      },
       redirectUrl: isSuperAdmin ? "/admin" : `/${slug}`,
     };
   } catch (error: any) {
@@ -236,12 +254,23 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
   }
 }
 
+// Proteção contra Brute-Force no Login (janela de 15 minutos, bloqueio após 5 falhas consecutivas)
+const loginRateLimitMap = new Map<
+  string,
+  { failures: number; lockedUntil: number; lastAttemptAt: number }
+>();
+const LOGIN_MAX_FAILURES = 5;
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutos
+
 // 2. Login de Usuário com E-mail ou Nome e Senha
 export async function loginUser(identifier: string, rawPassword: string) {
   try {
     const clean = identifier?.trim();
     if (!clean) {
-      return { success: false, error: "Informe seu e-mail ou nome de usuário." };
+      return {
+        success: false,
+        error: "Informe seu e-mail ou nome de usuário.",
+      };
     }
 
     if (!rawPassword) {
@@ -249,28 +278,62 @@ export async function loginUser(identifier: string, rawPassword: string) {
     }
 
     const cleanLower = clean.toLowerCase();
+    const now = Date.now();
 
-    // Busca usuário por e-mail ou por nome (flexível para facilitar login móvel no Safari)
-    let user = await prisma.user.findFirst({
+    // Verifica bloqueio temporário por força bruta
+    const rateRecord = loginRateLimitMap.get(cleanLower);
+    if (rateRecord && rateRecord.lockedUntil > now) {
+      const remainingMinutes = Math.ceil(
+        (rateRecord.lockedUntil - now) / 60000
+      );
+      return {
+        success: false,
+        error: `Muitas tentativas incorretas. Conta protegida temporariamente — aguarde ${remainingMinutes} min ou redefina sua senha.`,
+      };
+    }
+
+    // Busca usuário apenas por correspondência EXATA de e-mail ou nome (impede colisão por substring 'contains')
+    const user = await prisma.user.findFirst({
       where: {
-        OR: [
-          { email: cleanLower },
-          { name: { equals: clean } },
-          { name: { contains: clean } },
-        ],
+        OR: [{ email: cleanLower }, { name: { equals: clean } }],
       },
       include: { tenant: true },
     });
 
     if (!user || !user.password) {
+      const prev =
+        rateRecord && now - rateRecord.lastAttemptAt < LOGIN_LOCKOUT_MS
+          ? rateRecord.failures
+          : 0;
+      const failures = prev + 1;
+      loginRateLimitMap.set(cleanLower, {
+        failures,
+        lastAttemptAt: now,
+        lockedUntil:
+          failures >= LOGIN_MAX_FAILURES ? now + LOGIN_LOCKOUT_MS : 0,
+      });
       return { success: false, error: "E-mail/usuário ou senha incorretos." };
     }
 
     const passwordMatches = await bcrypt.compare(rawPassword, user.password);
 
     if (!passwordMatches) {
+      const prev =
+        rateRecord && now - rateRecord.lastAttemptAt < LOGIN_LOCKOUT_MS
+          ? rateRecord.failures
+          : 0;
+      const failures = prev + 1;
+      loginRateLimitMap.set(cleanLower, {
+        failures,
+        lastAttemptAt: now,
+        lockedUntil:
+          failures >= LOGIN_MAX_FAILURES ? now + LOGIN_LOCKOUT_MS : 0,
+      });
       return { success: false, error: "E-mail/usuário ou senha incorretos." };
     }
+
+    // Limpa contador de falhas após autenticação legítima
+    loginRateLimitMap.delete(cleanLower);
 
 
     // Garante obrigatoriamente que qualquer usuário autenticado esteja registrado no Asaas Grupo 'Horeb'
@@ -569,25 +632,58 @@ export async function createBranchChurch(params: CreateBranchParams) {
   }
 }
 
-const resetFailedAttempts = new Map<string, { count: number; lastAttemptAt: number }>();
+const resetFailedAttempts = new Map<
+  string,
+  { count: number; lastAttemptAt: number }
+>();
+const resetRequestCooldownMap = new Map<
+  string,
+  { requests: number; windowStart: number; lastSentAt: number }
+>();
 const MAX_RESET_ATTEMPTS = 5;
+const RESET_COOLDOWN_MS = 60 * 1000; // 60s mínimo entre disparos de e-mail
+const RESET_WINDOW_MS = 15 * 60 * 1000; // Janela de 15 min
+const MAX_RESET_REQUESTS_PER_WINDOW = 3;
 
 // 4. Solicitar Recuperação de Senha (Esqueci minha senha)
 export async function requestPasswordReset(identifier: string) {
   try {
     const clean = identifier?.trim();
     if (!clean || clean.length < 3) {
-      return { success: false, error: "Informe seu e-mail completo ou nome de usuário cadastrado." };
+      return {
+        success: false,
+        error: "Informe seu e-mail completo ou nome de usuário cadastrado.",
+      };
     }
 
     const cleanLower = clean.toLowerCase();
+    const now = Date.now();
+
+    // Rate limiting contra abuso de disparo de e-mails (Email Bombing) e bypass de contador OTP
+    const cooldownRec = resetRequestCooldownMap.get(cleanLower);
+    if (cooldownRec) {
+      if (now - cooldownRec.lastSentAt < RESET_COOLDOWN_MS) {
+        return {
+          success: false,
+          error:
+            "Aguarde 60 segundos antes de solicitar um novo código de recuperação.",
+        };
+      }
+      if (
+        now - cooldownRec.windowStart < RESET_WINDOW_MS &&
+        cooldownRec.requests >= MAX_RESET_REQUESTS_PER_WINDOW
+      ) {
+        return {
+          success: false,
+          error:
+            "Limite de solicitações de recuperação atingido. Aguarde 15 minutos e tente novamente.",
+        };
+      }
+    }
 
     const user = await prisma.user.findFirst({
       where: {
-        OR: [
-          { email: cleanLower },
-          { name: { equals: clean } },
-        ],
+        OR: [{ email: cleanLower }, { name: { equals: clean } }],
       },
       include: { tenant: true },
     });
@@ -599,9 +695,24 @@ export async function requestPasswordReset(identifier: string) {
       };
     }
 
+    const targetEmail = user.email.toLowerCase();
+    const prevWindow = resetRequestCooldownMap.get(targetEmail);
+    const isSameWindow =
+      prevWindow && now - prevWindow.windowStart < RESET_WINDOW_MS;
+    resetRequestCooldownMap.set(targetEmail, {
+      requests: isSameWindow ? prevWindow.requests + 1 : 1,
+      windowStart: isSameWindow ? prevWindow.windowStart : now,
+      lastSentAt: now,
+    });
+    resetRequestCooldownMap.set(cleanLower, {
+      requests: isSameWindow ? prevWindow.requests + 1 : 1,
+      windowStart: isSameWindow ? prevWindow.windowStart : now,
+      lastSentAt: now,
+    });
+
     const code = generateActivationCode();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
-    resetFailedAttempts.delete(user.email.toLowerCase());
+    resetFailedAttempts.delete(targetEmail);
 
     await prisma.user.update({
       where: { id: user.id },

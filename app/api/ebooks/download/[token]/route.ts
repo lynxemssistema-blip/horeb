@@ -17,7 +17,11 @@ async function resolvePdfBuffer(pdfUrl: string): Promise<Buffer | null> {
       const arr = await res.arrayBuffer();
       return Buffer.from(arr);
     }
-    const localPath = path.join(process.cwd(), pdfUrl.replace(/^\/+/, ""));
+    const projectRoot = path.resolve(process.cwd());
+    const localPath = path.resolve(projectRoot, pdfUrl.replace(/^\/+/, ""));
+    if (!localPath.startsWith(projectRoot + path.sep)) {
+      return null;
+    }
     return await fs.readFile(localPath);
   } catch {
     return null;

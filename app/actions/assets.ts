@@ -14,8 +14,13 @@ export async function getChurchAssets(
 ) {
   try {
     const access = await checkChurchAccess(slug);
-    if (!access.authorized) {
-      return { success: false, error: "Acesso não autorizado a esta congregação." };
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "FINANCIAL", "SECRETARIA", "SUPERADMIN"].includes(
+        access.effectiveRole
+      )
+    ) {
+      return { success: false, error: "Acesso restrito à administração e gestão patrimonial." };
     }
     const session = access.user;
 

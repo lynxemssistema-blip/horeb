@@ -87,38 +87,64 @@ export async function createTenantSubscription(params: {
     }
 
     const activePlan = params.planSlug || tenant.plan || "GESTAO";
-    const cycle = params.billingCycle || (tenant.billingCycle as "MONTHLY" | "YEARLY") || "MONTHLY";
+    const cycle =
+      params.billingCycle ||
+      (tenant.billingCycle as "MONTHLY" | "YEARLY") ||
+      "MONTHLY";
 
-    // 1. Definição do Preço Base (Mensal ou Anual)
-    let basePrice = params.monthlyPrice || tenant.monthlyPrice || 249;
-    
+    // 1. Definição do Preço Base estritamente no Servidor (Prevenção contra Parameter Tampering)
+    const isSuperAdmin =
+      auth.session?.role === "SUPERADMIN" ||
+      auth.session?.originalRole === "SUPERADMIN";
+    const dbPlan = await prisma.plan
+      .findUnique({ where: { slug: activePlan } })
+      .catch(() => null);
+
+    let basePrice = dbPlan?.monthlyPrice || tenant.monthlyPrice || 249;
+    if (
+      isSuperAdmin &&
+      typeof params.monthlyPrice === "number" &&
+      params.monthlyPrice > 0
+    ) {
+      basePrice = params.monthlyPrice;
+    }
+
     // Se for Anual, calcula o valor do plano anual (10 meses em vez de 12 = 2 meses grátis)
-    let finalPrice = cycle === "YEARLY" ? basePrice * 10 : basePrice;
+    let finalPrice =
+      cycle === "YEARLY"
+        ? dbPlan?.annualPrice || basePrice * 10
+        : basePrice;
 
-    // 2. Aplicação de Palavra-chave / Cupom de Desconto (se fornecido)
+    // 2. Validação de Palavra-chave / Cupom de Desconto (consumo atômico após criação no Asaas)
     let appliedCoupon: string | null = null;
+    let appliedCouponId: string | null = null;
+    let appliedCouponMaxUses: number | null = null;
     let appliedDiscountPercent = 0;
 
     if (params.couponCode?.trim()) {
-      const cleanCode = params.couponCode.trim().toUpperCase().replace(/\s+/g, "");
+      const cleanCode = params.couponCode
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, "");
       const coupon = await prisma.discountCoupon.findUnique({
         where: { code: cleanCode },
       });
 
       if (coupon && coupon.active) {
-        const notExpired = !coupon.validUntil || new Date(coupon.validUntil).getTime() > Date.now();
+        const notExpired =
+          !coupon.validUntil ||
+          new Date(coupon.validUntil).getTime() > Date.now();
         const hasUses = !coupon.maxUses || coupon.usedCount < coupon.maxUses;
 
         if (notExpired && hasUses) {
           appliedCoupon = coupon.code;
+          appliedCouponId = coupon.id;
+          appliedCouponMaxUses = coupon.maxUses;
           appliedDiscountPercent = coupon.discountPercent;
-          finalPrice = Math.round(finalPrice * (1 - coupon.discountPercent / 100));
-
-          // Incrementa uso do cupom
-          await prisma.discountCoupon.update({
-            where: { id: coupon.id },
-            data: { usedCount: { increment: 1 } },
-          });
+          finalPrice = Math.max(
+            5,
+            Math.round(finalPrice * (1 - coupon.discountPercent / 100))
+          );
         }
       }
     }
@@ -136,54 +162,37 @@ export async function createTenantSubscription(params: {
     if (!customerRes.success || !customerRes.customer) {
       return {
         success: false,
-        error: customerRes.error || "Não foi possível criar o cliente no Asaas",
+        error:
+          customerRes.error || "Não foi possível criar o cliente no Asaas",
       };
     }
 
     const asaasCustomer = customerRes.customer;
+    const previousSubscriptionId = tenant.asaasSubscriptionId;
 
-    // Atualiza o Tenant com o ID do cliente Asaas, Plano, Ciclo e Desconto
-    await prisma.tenant.update({
-      where: { id: tenant.id },
-      data: {
-        asaasCustomerId: asaasCustomer.id,
-        billingType: params.billingType || "UNDEFINED",
-        plan: activePlan,
-        billingCycle: cycle,
-        monthlyPrice: cycle === "MONTHLY" ? finalPrice : Math.round(finalPrice / 12),
-        couponCode: appliedCoupon,
-        discountPercent: appliedDiscountPercent,
-      },
-    });
-
-    // 4. Se já tinha uma assinatura ativa anterior, cancela no Asaas antes de criar a nova
-    if (tenant.asaasSubscriptionId) {
-      try {
-        await cancelAsaasSubscription(tenant.asaasSubscriptionId);
-      } catch (err) {
-        console.warn("Aviso ao cancelar assinatura anterior:", err);
-      }
-    }
-
-    // 5. Define a data do primeiro vencimento respeitando a degustação gratuita de 30 dias
+    // 4. Define a data do primeiro vencimento respeitando a degustação gratuita de 30 dias
     const now = new Date();
     let dueDate = new Date();
 
-    if (tenant.subscriptionExpiresAt && new Date(tenant.subscriptionExpiresAt) > now) {
-      // Se ainda está no período de teste, a 1ª fatura no Asaas só vence no término do teste
+    if (
+      tenant.subscriptionExpiresAt &&
+      new Date(tenant.subscriptionExpiresAt) > now
+    ) {
       dueDate = new Date(tenant.subscriptionExpiresAt);
     } else {
-      // Degustação de 30 dias gratuitos a partir de agora sem cobrança imediata
       dueDate.setDate(now.getDate() + 30);
     }
 
     const dueDateStr = dueDate.toISOString().split("T")[0];
 
     const cycleLabel = cycle === "YEARLY" ? "ANUAL" : "MENSAL";
-    const discountLabel = appliedDiscountPercent > 0 ? ` (${appliedDiscountPercent}% OFF - ${appliedCoupon})` : "";
+    const discountLabel =
+      appliedDiscountPercent > 0
+        ? ` (${appliedDiscountPercent}% OFF - ${appliedCoupon})`
+        : "";
     const description = `Assinatura ${cycleLabel} Horeb Sistema Eclesiástico - Plano ${activePlan}${discountLabel} (${tenant.name})`;
 
-    // 6. Cria a assinatura recorrente no Asaas (Mensal ou Anual)
+    // 5. Cria a NOVA assinatura recorrente no Asaas ANTES de cancelar a anterior (Fail-Safe)
     const subRes = await createAsaasSubscription({
       customerId: asaasCustomer.id,
       value: finalPrice,
@@ -202,12 +211,43 @@ export async function createTenantSubscription(params: {
 
     const subscription = subRes.subscription;
 
-    // Salva o ID da nova assinatura no Tenant e atualiza a validade do período
+    // 6. Agora que a nova assinatura está garantida no Asaas, cancela a anterior (se existia) e persiste atomicamente no banco
+    if (
+      previousSubscriptionId &&
+      previousSubscriptionId !== subscription.id
+    ) {
+      await cancelAsaasSubscription(previousSubscriptionId).catch(() => {
+        console.warn(
+          "[Asaas] Aviso ao cancelar assinatura anterior após substituição."
+        );
+      });
+    }
+
+    if (appliedCouponId) {
+      await prisma.discountCoupon.updateMany({
+        where: {
+          id: appliedCouponId,
+          ...(appliedCouponMaxUses
+            ? { usedCount: { lt: appliedCouponMaxUses } }
+            : {}),
+        },
+        data: { usedCount: { increment: 1 } },
+      });
+    }
+
     await prisma.tenant.update({
       where: { id: tenant.id },
       data: {
+        asaasCustomerId: asaasCustomer.id,
         asaasSubscriptionId: subscription.id,
         subscriptionExpiresAt: dueDate,
+        billingType: params.billingType || "UNDEFINED",
+        plan: activePlan,
+        billingCycle: cycle,
+        monthlyPrice:
+          cycle === "MONTHLY" ? finalPrice : Math.round(finalPrice / 12),
+        couponCode: appliedCoupon,
+        discountPercent: appliedDiscountPercent,
       },
     });
 

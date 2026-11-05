@@ -121,8 +121,11 @@ function itemEnrichment(items: any[], currentUserId: string) {
     const totalVotes = yesCount + noCount + abstainCount;
     const isApproved = totalVotes > 0 && yesCount > noCount;
 
+    // Remove o array bruto `votes` para jamais expor em que cada usuário votou (especialmente em votações SECRET)
+    const { votes: _rawVotes, ...safeItem } = item;
+
     return {
-      ...item,
+      ...safeItem,
       totalVotes,
       yesCount,
       noCount,

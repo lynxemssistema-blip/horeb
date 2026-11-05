@@ -1,20 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { triggerSingleUseEbookDeliveryEmail } from "@/app/actions/ebooks";
-import { getAsaasPayment, getAsaasConfig } from "@/lib/asaas";
+import {
+  getAsaasPayment,
+  getAsaasConfig,
+  asaasFetch,
+  maskEmailForLog,
+} from "@/lib/asaas";
 import crypto from "crypto";
+
+// Cache em memória de eventos de webhook processados (Proteção Anti-Replay e Idempotência em rajadas concorrentes)
+const processedWebhookEvents = new Map<string, number>();
+const WEBHOOK_TTL_MS = 15 * 60 * 1000; // 15 minutos
+
+function isDuplicateOrReplayEvent(eventKey: string): boolean {
+  const now = Date.now();
+  if (processedWebhookEvents.size > 2000) {
+    for (const [k, ts] of processedWebhookEvents.entries()) {
+      if (now - ts > WEBHOOK_TTL_MS) processedWebhookEvents.delete(k);
+    }
+  }
+  const existing = processedWebhookEvents.get(eventKey);
+  if (existing && now - existing < WEBHOOK_TTL_MS) {
+    return true;
+  }
+  processedWebhookEvents.set(eventKey, now);
+  return false;
+}
 
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
-    const { event, payment } = payload;
+    const { event } = payload;
+    let payment = payload.payment;
 
-    // 1. Validação do Token do Webhook do Asaas (com comparação timing-safe e verificação direta na API do Asaas)
+    // 1. Validação Estrita do Token do Webhook do Asaas (Comparação Timing-Safe)
     const webhookSecret = (process.env.ASAAS_WEBHOOK_SECRET || "").trim();
     const incomingToken = (req.headers.get("asaas-access-token") || "").trim();
 
+    if (!webhookSecret) {
+      console.error(
+        "[Asaas Webhook] CRÍTICO: ASAAS_WEBHOOK_SECRET não está configurado no servidor."
+      );
+      return NextResponse.json(
+        { error: "Webhook secret not configured" },
+        { status: 500 }
+      );
+    }
+
     let tokenMatches = false;
-    if (webhookSecret && incomingToken) {
+    if (incomingToken) {
       const a = Buffer.from(incomingToken);
       const b = Buffer.from(webhookSecret);
       if (a.length === b.length && crypto.timingSafeEqual(a, b)) {
@@ -23,28 +58,63 @@ export async function POST(req: NextRequest) {
     }
 
     if (!tokenMatches) {
-      if (payment?.id) {
-        const verifyRes = await getAsaasPayment(payment.id);
-        if (!verifyRes.success || !verifyRes.payment) {
-          console.warn("[Asaas Webhook] Token ausente/divergente e pagamento não encontrado na API do Asaas.");
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-      } else {
-        console.warn("[Asaas Webhook] Token de autorização inválido sem ID de pagamento verificável.");
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+      console.warn(
+        "[Asaas Webhook] Tentativa bloqueada: Header asaas-access-token inválido ou ausente."
+      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log(`[Asaas Webhook] Evento recebido: ${event}`, {
+    // 1B. Proteção contra Replay Attack (Deduplicação por ID de evento do Asaas ou chave composta)
+    const deduplicationKey =
+      payload.id ||
+      `${event}:${payment?.id || payload.subscription?.id || "none"}:${payment?.status || ""}`;
+    if (isDuplicateOrReplayEvent(deduplicationKey)) {
+      return NextResponse.json({
+        success: true,
+        received: true,
+        idempotentSkip: true,
+      });
+    }
+
+    // 1C. Verificação Server-to-Server na API Oficial do Asaas (Fonte da Verdade)
+    // Nunca confiamos cegamente nos valores de `status` ou `value` vindos do JSON do request:
+    if (payment?.id) {
+      const verifyRes = await getAsaasPayment(payment.id);
+      if (!verifyRes.success || !verifyRes.payment) {
+        console.warn(
+          `[Asaas Webhook] Pagamento ${payment.id} não encontrado na API oficial do Asaas.`
+        );
+        return NextResponse.json(
+          { error: "Unverified payment resource" },
+          { status: 400 }
+        );
+      }
+      // Sobrescreve os dados críticos com o registro oficial retornado diretamente pela API do Asaas
+      payment = {
+        ...payment,
+        status: verifyRes.payment.status,
+        value: verifyRes.payment.value,
+        customer: verifyRes.payment.customer,
+        subscription: verifyRes.payment.subscription || payment.subscription,
+        billingType: verifyRes.payment.billingType || payment.billingType,
+        dueDate: verifyRes.payment.dueDate || payment.dueDate,
+        invoiceUrl: verifyRes.payment.invoiceUrl || payment.invoiceUrl,
+        bankSlipUrl: verifyRes.payment.bankSlipUrl || payment.bankSlipUrl,
+      };
+    }
+
+    console.log(`[Asaas Webhook] Evento autenticado: ${event}`, {
+      eventId: payload.id,
       paymentId: payment?.id,
       subscriptionId: payment?.subscription,
-      customer: payment?.customer,
-      value: payment?.value,
       status: payment?.status,
     });
 
     if (!payment && !payload.subscription) {
-      return NextResponse.json({ received: true, note: "Sem dados de pagamento/assinatura" });
+      return NextResponse.json({
+        received: true,
+        note: "Sem dados de pagamento/assinatura",
+      });
     }
 
     const customerId = payment?.customer || payload.subscription?.customer;
@@ -65,12 +135,17 @@ export async function POST(req: NextRequest) {
         String(payment.description || "").toLowerCase().includes("e-book"))
     ) {
       const allEbooks = await prisma.ebookProduct.findMany();
-      const refId = String(payment.externalReference || "").replace("EBOOK_", "").trim();
+      const refId = String(payment.externalReference || "")
+        .replace("EBOOK_", "")
+        .trim();
       let matchedEbook = allEbooks.find((e) => e.id === refId);
       if (!matchedEbook) {
         matchedEbook = allEbooks.find((e) => {
           const cleanTitle = e.title.split("—")[0].trim().toLowerCase();
-          return cleanTitle && String(payment.description || "").toLowerCase().includes(cleanTitle);
+          return (
+            cleanTitle &&
+            String(payment.description || "").toLowerCase().includes(cleanTitle)
+          );
         });
       }
       if (!matchedEbook && allEbooks.length > 0) {
@@ -79,34 +154,37 @@ export async function POST(req: NextRequest) {
 
       if (matchedEbook && payment.customer) {
         const { apiKey, baseUrl } = getAsaasConfig();
-        const custRes = await fetch(`${baseUrl}/customers/${payment.customer}`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json", access_token: apiKey },
-          cache: "no-store",
-        });
-        if (custRes.ok) {
-          const cust = await custRes.json();
-          if (cust?.email) {
-            ebookOrder = await prisma.ebookOrder.create({
-              data: {
-                ebookId: matchedEbook.id,
-                buyerName: cust.name || "Cliente Horeb",
-                buyerEmail: String(cust.email).trim().toLowerCase(),
-                buyerCpf: cust.cpfCnpj || "00000000000",
-                buyerPhone: cust.mobilePhone || cust.phone || null,
-                amount: Number(payment.value || matchedEbook.price || 9.9),
-                billingType: payment.billingType || "PIX",
-                status: payment.status || "PENDING",
-                asaasCustomerId: payment.customer,
-                asaasPaymentId: payment.id,
-                invoiceUrl: payment.invoiceUrl || null,
-                downloadToken: crypto.randomBytes(24).toString("hex"),
-                downloadUsed: false,
-                deliveryEmailSent: false,
-              },
-              include: { ebook: true },
-            });
+        const custRes = await asaasFetch<any>(
+          `${baseUrl}/customers/${encodeURIComponent(payment.customer)}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              access_token: apiKey,
+            },
           }
+        );
+        if (custRes.ok && custRes.data?.email) {
+          const cust = custRes.data;
+          ebookOrder = await prisma.ebookOrder.create({
+            data: {
+              ebookId: matchedEbook.id,
+              buyerName: cust.name || "Cliente Horeb",
+              buyerEmail: String(cust.email).trim().toLowerCase(),
+              buyerCpf: cust.cpfCnpj || "00000000000",
+              buyerPhone: cust.mobilePhone || cust.phone || null,
+              amount: Number(payment.value || matchedEbook.price || 9.9),
+              billingType: payment.billingType || "PIX",
+              status: "PENDING",
+              asaasCustomerId: payment.customer,
+              asaasPaymentId: payment.id,
+              invoiceUrl: payment.invoiceUrl || null,
+              downloadToken: crypto.randomBytes(24).toString("hex"),
+              downloadUsed: false,
+              deliveryEmailSent: false,
+            },
+            include: { ebook: true },
+          });
         }
       }
     }
@@ -114,37 +192,51 @@ export async function POST(req: NextRequest) {
     if (ebookOrder && payment) {
       const rawDate = payment.paymentDate || payment.clientPaymentDate;
       const paymentDate = rawDate ? new Date(rawDate) : new Date();
-      const wasPaid =
-        ebookOrder.status === "RECEIVED" || ebookOrder.status === "CONFIRMED";
       const isNowPaid =
-        event === "PAYMENT_CONFIRMED" ||
-        event === "PAYMENT_RECEIVED" ||
-        payment.status === "RECEIVED" ||
-        payment.status === "CONFIRMED";
-
-      await prisma.ebookOrder.update({
-        where: { id: ebookOrder.id },
-        data: {
-          status: payment.status || ebookOrder.status,
-          paidAt: isNowPaid ? ebookOrder.paidAt || paymentDate : ebookOrder.paidAt,
-          invoiceUrl: payment.invoiceUrl || ebookOrder.invoiceUrl,
-        },
-      });
-
-      if (isNowPaid && !wasPaid) {
-        await prisma.ebookProduct.update({
-          where: { id: ebookOrder.ebookId },
-          data: { salesCount: { increment: 1 } },
-        });
-      }
+        (event === "PAYMENT_CONFIRMED" ||
+          event === "PAYMENT_RECEIVED" ||
+          payment.status === "RECEIVED" ||
+          payment.status === "CONFIRMED") &&
+        (payment.status === "RECEIVED" || payment.status === "CONFIRMED");
 
       if (isNowPaid) {
+        // Transição Atômica Idempotente (Garante que apenas 1 webhook concorrente faça a baixa e incremente salesCount)
+        const atomicTransition = await prisma.ebookOrder.updateMany({
+          where: {
+            id: ebookOrder.id,
+            status: { notIn: ["RECEIVED", "CONFIRMED"] },
+          },
+          data: {
+            status: payment.status,
+            paidAt: ebookOrder.paidAt || paymentDate,
+            invoiceUrl: payment.invoiceUrl || ebookOrder.invoiceUrl,
+          },
+        });
+
+        if (atomicTransition.count > 0) {
+          await prisma.ebookProduct.update({
+            where: { id: ebookOrder.ebookId },
+            data: { salesCount: { increment: 1 } },
+          });
+        }
+
         await triggerSingleUseEbookDeliveryEmail(ebookOrder.id).catch((err) => {
-          console.error("[Asaas Webhook] Erro ao enviar e-mail de download único:", err);
+          console.error(
+            "[Asaas Webhook] Erro ao enviar e-mail de download único:",
+            err?.message || "Erro de envio"
+          );
         });
         console.log(
-          `[Asaas Webhook] Venda de E-book '${ebookOrder.ebook.title}' CONFIRMADA para ${ebookOrder.buyerEmail}. Link de download de uso único enviado por e-mail!`
+          `[Asaas Webhook] Venda de E-book '${ebookOrder.ebook.title}' CONFIRMADA para ${maskEmailForLog(ebookOrder.buyerEmail)}.`
         );
+      } else {
+        await prisma.ebookOrder.update({
+          where: { id: ebookOrder.id },
+          data: {
+            status: payment.status || ebookOrder.status,
+            invoiceUrl: payment.invoiceUrl || ebookOrder.invoiceUrl,
+          },
+        });
       }
 
       return NextResponse.json({
@@ -193,6 +285,14 @@ export async function POST(req: NextRequest) {
 
       // 3A. Se for Igreja (Tenant - B2B SaaS)
       if (tenant) {
+        // Verifica estado anterior da fatura para garantir idempotência (evita ativar 2x em PAYMENT_CONFIRMED + PAYMENT_RECEIVED)
+        const existingInvoice = await prisma.subscriptionInvoice.findUnique({
+          where: { asaasPaymentId: payment.id },
+        });
+        const invoiceAlreadySettled =
+          existingInvoice?.status === "RECEIVED" ||
+          existingInvoice?.status === "CONFIRMED";
+
         // Upsert no histórico de faturas
         await prisma.subscriptionInvoice.upsert({
           where: { asaasPaymentId: payment.id },
@@ -219,16 +319,21 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // Lógica de Ativação / Confirmação de Pagamento (Mensal ou Anual)
-        if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
+        // Lógica de Ativação / Confirmação de Pagamento (Mensal ou Anual) — Idempotente por Fatura
+        if (
+          (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") &&
+          (payment.status === "CONFIRMED" || payment.status === "RECEIVED") &&
+          !invoiceAlreadySettled
+        ) {
           const isYearly =
             tenant.billingCycle === "YEARLY" ||
-            payload.subscription?.cycle === "YEARLY" ||
-            (payment.value && payment.value >= 1000);
+            payload.subscription?.cycle === "YEARLY";
           const daysToAdd = isYearly ? 370 : 32;
 
           const baseDate = new Date(payment.dueDate);
-          const nextExpiry = new Date(baseDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+          const nextExpiry = new Date(
+            baseDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000
+          );
 
           const finalExpiry =
             nextExpiry.getTime() > Date.now()
@@ -249,7 +354,9 @@ export async function POST(req: NextRequest) {
             `[Asaas Webhook] Igreja '${tenant.name}' ATIVADA (${isYearly ? "ANUAL" : "MENSAL"}) até ${finalExpiry.toISOString()}`
           );
         } else if (event === "PAYMENT_OVERDUE") {
-          console.warn(`[Asaas Webhook] Cobrança vencida para igreja '${tenant.name}'`);
+          console.warn(
+            `[Asaas Webhook] Cobrança vencida para igreja '${tenant.name}'`
+          );
           if (
             tenant.subscriptionExpiresAt &&
             new Date(tenant.subscriptionExpiresAt).getTime() < Date.now()
@@ -260,13 +367,25 @@ export async function POST(req: NextRequest) {
             });
           }
         } else if (event === "PAYMENT_REFUNDED") {
-          console.warn(`[Asaas Webhook] Pagamento estornado para igreja '${tenant.name}'`);
+          console.warn(
+            `[Asaas Webhook] Pagamento estornado para igreja '${tenant.name}'`
+          );
         }
       }
 
       // 3B. Se for Usuário Membro (B2C - Minhas Ferramentas / Instagram Studio)
       if (user) {
+        let b2cAlreadySettled = false;
         try {
+          const existingB2cInvoice = await (
+            prisma as any
+          ).personalToolInvoice.findUnique({
+            where: { asaasPaymentId: payment.id },
+          });
+          b2cAlreadySettled =
+            existingB2cInvoice?.status === "RECEIVED" ||
+            existingB2cInvoice?.status === "CONFIRMED";
+
           await (prisma as any).personalToolInvoice.upsert({
             where: { asaasPaymentId: payment.id },
             create: {
@@ -289,15 +408,32 @@ export async function POST(req: NextRequest) {
               invoiceUrl: payment.invoiceUrl || undefined,
             },
           });
-        } catch (invoiceErr) {
-          console.warn("[Asaas Webhook] Aviso ao registrar PersonalToolInvoice:", invoiceErr);
+        } catch (invoiceErr: any) {
+          console.warn(
+            "[Asaas Webhook] Aviso ao registrar PersonalToolInvoice:",
+            invoiceErr?.message
+          );
         }
 
-        if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
-          // Determina se é plano anual pelo valor (> R$ 100) ou ciclo
-          const isYearly = payload.subscription?.cycle === "YEARLY" || (payment.value && payment.value > 100);
+        if (
+          (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") &&
+          (payment.status === "CONFIRMED" || payment.status === "RECEIVED") &&
+          !b2cAlreadySettled
+        ) {
+          const isYearly =
+            payload.subscription?.cycle === "YEARLY" ||
+            (payment.value && payment.value >= 180);
           const daysToAdd = isYearly ? 370 : 32;
-          const finalExpiry = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
+          const baseDate = payment.dueDate
+            ? new Date(payment.dueDate)
+            : new Date();
+          const candidateExpiry = new Date(
+            baseDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000
+          );
+          const finalExpiry =
+            candidateExpiry.getTime() > Date.now()
+              ? candidateExpiry
+              : new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
 
           await prisma.user.update({
             where: { id: user.id },
@@ -309,13 +445,16 @@ export async function POST(req: NextRequest) {
           });
 
           console.log(
-            `[Asaas Webhook] Usuário '${user.name}' ATIVADO no módulo B2C até ${finalExpiry.toISOString()}`
+            `[Asaas Webhook] Usuário ID '${user.id}' ATIVADO no módulo B2C até ${finalExpiry.toISOString()}`
           );
         } else if (event === "PAYMENT_OVERDUE") {
-          console.warn(`[Asaas Webhook] Fatura B2C vencida para o usuário '${user.name}'`);
+          console.warn(
+            `[Asaas Webhook] Fatura B2C vencida para o usuário ID '${user.id}'`
+          );
           if (
             (user as any).toolsSubscriptionExpiresAt &&
-            new Date((user as any).toolsSubscriptionExpiresAt).getTime() < Date.now()
+            new Date((user as any).toolsSubscriptionExpiresAt).getTime() <
+              Date.now()
           ) {
             await prisma.user.update({
               where: { id: user.id },
@@ -330,7 +469,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Processamento de Eventos de Assinatura (Cancelamento / Inativação)
-    if (event === "SUBSCRIPTION_INACTIVATED" || event === "SUBSCRIPTION_DELETED") {
+    if (
+      event === "SUBSCRIPTION_INACTIVATED" ||
+      event === "SUBSCRIPTION_DELETED"
+    ) {
       if (tenant) {
         await prisma.tenant.update({
           where: { id: tenant.id },
@@ -338,7 +480,9 @@ export async function POST(req: NextRequest) {
             status: "CANCELLED",
           },
         });
-        console.log(`[Asaas Webhook] Assinatura da igreja '${tenant.name}' cancelada/inativada.`);
+        console.log(
+          `[Asaas Webhook] Assinatura da igreja '${tenant.name}' cancelada/inativada.`
+        );
       }
 
       if (user) {
@@ -349,15 +493,20 @@ export async function POST(req: NextRequest) {
             toolsSubscriptionStatus: "CANCELLED",
           } as any,
         });
-        console.log(`[Asaas Webhook] Assinatura B2C do usuário '${user.name}' cancelada/inativada.`);
+        console.log(
+          `[Asaas Webhook] Assinatura B2C do usuário ID '${user.id}' cancelada/inativada.`
+        );
       }
     }
 
     return NextResponse.json({ success: true, received: true });
   } catch (error: any) {
-    console.error("[Asaas Webhook Error]:", error);
+    console.error(
+      "[Asaas Webhook Error]:",
+      error?.message || "Erro interno no webhook"
+    );
     return NextResponse.json(
-      { error: error.message || "Erro interno processando webhook" },
+      { error: "Internal Server Error" },
       { status: 500 }
     );
   }

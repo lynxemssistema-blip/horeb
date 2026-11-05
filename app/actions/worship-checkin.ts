@@ -9,8 +9,13 @@ import { ptBR } from "date-fns/locale";
 export async function getWorshipServices(slug: string) {
   try {
     const access = await checkChurchAccess(slug);
-    if (!access.authorized) {
-      return { success: false, error: "Acesso não autorizado a esta congregação." };
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SECRETARIA", "PORTEIRO", "KIDS", "SUPERADMIN"].includes(
+        access.effectiveRole
+      )
+    ) {
+      return { success: false, error: "Acesso restrito à equipe de portaria e liderança." };
     }
     const session = access.user;
 
@@ -173,8 +178,13 @@ export async function validateAndCheckinMember(
 ) {
   try {
     const access = await checkChurchAccess(slug);
-    if (!access.authorized) {
-      return { success: false, error: "Acesso negado a esta congregação." };
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SECRETARIA", "PORTEIRO", "KIDS", "SUPERADMIN"].includes(
+        access.effectiveRole
+      )
+    ) {
+      return { success: false, error: "Apenas a equipe de portaria e liderança pode registrar presença." };
     }
     const session = access.user;
 

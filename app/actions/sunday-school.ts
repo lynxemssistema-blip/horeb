@@ -7,8 +7,11 @@ import { revalidatePath } from "next/cache";
 export async function getSundaySchoolDashboard(slug: string) {
   try {
     const access = await checkChurchAccess(slug);
-    if (!access.authorized) {
-      return { success: false, error: "Acesso não autorizado a esta congregação." };
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SECRETARIA", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Acesso restrito à liderança e secretaria da EBD." };
     }
     const session = access.user;
 
@@ -219,8 +222,11 @@ export async function recordSundaySchoolAttendance(
 ) {
   try {
     const access = await checkChurchAccess(slug);
-    if (!access.authorized) {
-      return { success: false, error: "Acesso não autorizado a esta congregação." };
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SECRETARIA", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Apenas professores e líderes podem registrar relatórios da EBD." };
     }
     const session = access.user;
 
@@ -269,8 +275,11 @@ export async function enrollMemberInDiscipleship(
 ) {
   try {
     const access = await checkChurchAccess(slug);
-    if (!access.authorized) {
-      return { success: false, error: "Acesso não autorizado a esta congregação." };
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SECRETARIA", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Apenas a liderança pode matricular discípulos." };
     }
 
     const track = await prisma.discipleshipTrack.findFirst({
@@ -325,8 +334,11 @@ export async function updateDiscipleshipProgress(
 ) {
   try {
     const access = await checkChurchAccess(slug);
-    if (!access.authorized) {
-      return { success: false, error: "Acesso não autorizado a esta congregação." };
+    if (
+      !access.authorized ||
+      !["ADMIN", "PASTOR", "LEADER", "SECRETARIA", "SUPERADMIN"].includes(access.effectiveRole)
+    ) {
+      return { success: false, error: "Apenas a liderança pode atualizar o progresso do discipulado." };
     }
 
     const existing = await prisma.memberDiscipleshipProgress.findUnique({

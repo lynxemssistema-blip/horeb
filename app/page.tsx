@@ -82,10 +82,22 @@ export default async function HomePage(props: {
 
   const [tenants, promoRes, ebooksRes] = await Promise.all([
     prisma.tenant.findMany({
-      include: {
-        parent: true,
-        branches: true,
-        cellGroups: true,
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        primaryColor: true,
+        logoUrl: true,
+        parentId: true,
+        parent: {
+          select: { id: true, name: true, slug: true },
+        },
+        branches: {
+          select: { id: true, name: true, slug: true, primaryColor: true },
+        },
+        cellGroups: {
+          select: { id: true, name: true },
+        },
       },
     }),
     getPromotionConfig(),
