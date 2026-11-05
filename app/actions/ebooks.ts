@@ -14,6 +14,10 @@ import {
   getAsaasPayment,
 } from "@/lib/asaas";
 import { sendEbookOfferEmail, sendEbookSingleUseDownloadEmail } from "@/lib/mail";
+import {
+  capturePurchaseLeadAction,
+  markPurchaseLeadPaidByPaymentId,
+} from "@/app/actions/leads";
 
 async function requireSuperAdmin() {
   const session = await getSession();
@@ -762,12 +766,27 @@ export async function purchaseEbookAction(params: {
       };
     }
 
-    // 2. Criar cobrança avulsa no Asaas com billingType "UNDEFINED" por padrão
-    // Isso garante que a Fatura do Asaas (invoiceUrl) exiba Cartão de Crédito, PIX e Boleto para o cliente escolher!
+    // 2. Criar cobrança avulsa no Asaas com billingType "PIX" por padrão (ou "CREDIT_CARD" quando selecionado)
     const todayStr = new Date().toISOString().split("T")[0];
-    const selectedMethod = params.billingType || "UNDEFINED";
-    // Enviamos "UNDEFINED" ao Asaas exceto se for explicitamente CREDIT_CARD, para nunca bloquear a aba de Cartão de Crédito na fatura!
-    const asaasBillingType = selectedMethod === "CREDIT_CARD" ? "CREDIT_CARD" : "UNDEFINED";
+    const selectedMethod = params.billingType === "CREDIT_CARD" ? "CREDIT_CARD" : "PIX";
+    const asaasBillingType = selectedMethod === "CREDIT_CARD" ? "CREDIT_CARD" : "PIX";
+
+    // Registra/atualiza o Lead na lista "Página de Compras" (visível exclusivamente ao Super Admin)
+    await capturePurchaseLeadAction({
+      leadName: params.buyerName.trim(),
+      leadEmail: params.buyerEmail.trim().toLowerCase(),
+      leadCpfCnpj: cleanCpf,
+      leadPhone: params.buyerPhone?.trim() || null,
+      productType: "EBOOK",
+      productId: ebook.id,
+      productName: ebook.title,
+      amount: Number(ebook.price),
+      billingType: selectedMethod,
+      billingCycle: "SINGLE",
+      status: "CHECKOUT_STARTED",
+      sourceUrl: `/ebooks/${ebook.id}`,
+      asaasCustomerId: customerRes.customer.id,
+    }).catch(() => {});
 
     const paymentRes = await createAsaasPayment({
       customerId: customerRes.customer.id,
@@ -840,6 +859,25 @@ export async function purchaseEbookAction(params: {
         deliveryEmailSent: false,
       },
     });
+
+    // Atualiza o Lead com o ID de pagamento e link da fatura Asaas
+    await capturePurchaseLeadAction({
+      leadName: params.buyerName.trim(),
+      leadEmail: params.buyerEmail.trim().toLowerCase(),
+      leadCpfCnpj: cleanCpf,
+      leadPhone: params.buyerPhone?.trim() || null,
+      productType: "EBOOK",
+      productId: ebook.id,
+      productName: ebook.title,
+      amount: Number(ebook.price),
+      billingType: selectedMethod,
+      billingCycle: "SINGLE",
+      status: "CHECKOUT_STARTED",
+      sourceUrl: `/ebooks/${ebook.id}`,
+      asaasCustomerId: customerRes.customer.id,
+      asaasPaymentId: payment.id,
+      invoiceUrl: payment.invoiceUrl || null,
+    }).catch(() => {});
 
     revalidatePath("/admin");
 
@@ -1059,6 +1097,10 @@ export async function checkEbookOrderStatusAction(orderId: string) {
     let deliveryEmailSent = order.deliveryEmailSent;
 
     if (isPaid) {
+      await markPurchaseLeadPaidByPaymentId(
+        order.asaasPaymentId,
+        order.buyerEmail
+      ).catch(() => {});
       const delivery = await triggerSingleUseEbookDeliveryEmail(order.id);
       deliveryEmailSent = delivery.emailSent;
     }
@@ -1137,7 +1179,7 @@ export async function dispatchEbookOfferByAdminAction(params: {
         buyerEmail: fallbackEmail,
         buyerCpf: cleanCpf,
         buyerPhone: params.recipientPhone?.trim(),
-        billingType: params.billingType || "UNDEFINED",
+        billingType: params.billingType || "PIX",
       });
 
       if (!pubRes.success || !pubRes.order) {
@@ -1234,7 +1276,7 @@ export async function dispatchEbookOfferByAdminAction(params: {
       `📥 *Entrega Automática:* Assim que o pagamento é confirmado, você recebe o arquivo PDF anexado no seu E-mail + Link de Download Imediato!`,
       ``,
       asaasInvoiceUrl
-        ? `💳 *Link Direto de Pagamento no Asaas (PIX / Cartão / Boleto + PDF):*\n${asaasInvoiceUrl}\n`
+        ? `💳 *Link Direto de Pagamento no Asaas (PIX Instantâneo / Cartão + PDF):*\n${asaasInvoiceUrl}\n`
         : "",
       `👉 *Página Oficial do E-book:*\n${productPageUrl}`,
     ].filter(Boolean);

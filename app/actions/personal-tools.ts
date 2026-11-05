@@ -9,6 +9,7 @@ import {
   getAsaasPaymentPixQrCode,
   getAsaasConfig,
 } from "@/lib/asaas";
+import { capturePurchaseLeadAction } from "@/app/actions/leads";
 
 export interface PersonalToolsConfigData {
   id: string;
@@ -659,16 +660,33 @@ export async function subscribePersonalToolsAsaas(data: {
     // 2. Data de Vencimento (Hoje para liberação imediata)
     const today = new Date().toISOString().split("T")[0];
 
-    // 3. Criar Assinatura Recorrente no Asaas
+    // 3. Criar Assinatura Recorrente no Asaas (Padrão: PIX Instantâneo ou Cartão de Crédito)
     const description = `Horeb B2C: ${config.title} (${data.cycle === "YEARLY" ? "Anual" : "Mensal"}) - ${customerName}`;
+    const asaasBillingType = data.billingType === "CREDIT_CARD" ? "CREDIT_CARD" : "PIX";
+
+    // Registra o Lead na lista "Página de Compras" (visível exclusivamente ao Super Admin)
+    await capturePurchaseLeadAction({
+      leadName: customerName,
+      leadEmail: customerEmail,
+      leadCpfCnpj: data.cpfCnpj,
+      leadPhone: data.phone || null,
+      productType: "B2C_TOOL",
+      productId: config.slug,
+      productName: config.title,
+      amount: Number(amount),
+      billingType: asaasBillingType,
+      billingCycle: data.cycle,
+      status: "CHECKOUT_STARTED",
+      sourceUrl: data.churchSlug ? `/${data.churchSlug}/minhas-ferramentas` : "/minhas-ferramentas",
+      asaasCustomerId: asaasCustomer.id,
+    }).catch(() => {});
 
     const subRes = await createAsaasSubscription({
       customerId: asaasCustomer.id,
       value: amount,
       nextDueDate: today,
       description,
-      // UNDEFINED habilita Cartão de Crédito, PIX e Boleto na fatura oficial do Asaas!
-      billingType: data.billingType === "CREDIT_CARD" ? "CREDIT_CARD" : "UNDEFINED",
+      billingType: asaasBillingType,
       cycle: data.cycle,
     });
 
@@ -755,9 +773,33 @@ export async function subscribePersonalToolsAsaas(data: {
       }
     }
 
+    if (firstPayment) {
+      await capturePurchaseLeadAction({
+        leadName: customerName,
+        leadEmail: customerEmail,
+        leadCpfCnpj: data.cpfCnpj,
+        leadPhone: data.phone || null,
+        productType: "B2C_TOOL",
+        productId: config.slug,
+        productName: config.title,
+        amount: Number(amount),
+        billingType: asaasBillingType,
+        billingCycle: data.cycle,
+        status:
+          firstPayment.status === "CONFIRMED" || firstPayment.status === "RECEIVED"
+            ? "PAID"
+            : "CHECKOUT_STARTED",
+        sourceUrl: data.churchSlug ? `/${data.churchSlug}/minhas-ferramentas` : "/minhas-ferramentas",
+        asaasCustomerId: asaasCustomer.id,
+        asaasPaymentId: firstPayment.id,
+        invoiceUrl: firstPayment.invoiceUrl || null,
+      }).catch(() => {});
+    }
+
     if (data.churchSlug) {
       revalidatePath(`/${data.churchSlug}`);
     }
+    revalidatePath("/admin");
 
     return {
       success: true,

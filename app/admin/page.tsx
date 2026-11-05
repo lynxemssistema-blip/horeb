@@ -14,6 +14,7 @@ import { getAgentProfiles } from "@/app/actions/agent";
 import { getRolePermissions } from "@/app/actions/permissions";
 import { getAdminEbooksData } from "@/app/actions/ebooks";
 import { getAllPersonalTools, getPersonalToolsSubscribers } from "@/app/actions/personal-tools";
+import { getSuperAdminPurchaseLeads } from "@/app/actions/leads";
 
 export const metadata = {
   title: "Super Admin • Horeb por Lynx EMS Sistemas",
@@ -59,6 +60,7 @@ export default async function AdminPage({
     ebooksDataRes,
     personalToolsRes,
     personalToolsSubsRes,
+    purchaseLeadsRes,
   ] = await Promise.all([
     getSuperAdminMetrics().catch(() => ({ success: false, metrics: null })),
     getAllTenants().catch(() => ({ success: false, tenants: [] })),
@@ -83,6 +85,18 @@ export default async function AdminPage({
       totalTrial: 0,
       totalOverdue: 0,
       totalMonthlyRevenue: 0,
+    })),
+    getSuperAdminPurchaseLeads().catch(() => ({
+      success: false,
+      leads: [],
+      metrics: {
+        totalLeads: 0,
+        totalCapturedOnly: 0,
+        totalCheckoutStarted: 0,
+        totalPaid: 0,
+        totalPotentialAmount: 0,
+        totalConvertedAmount: 0,
+      },
     })),
   ]);
 
@@ -111,6 +125,8 @@ export default async function AdminPage({
         totalOverdue: personalToolsSubsRes.totalOverdue || 0,
         totalMonthlyRevenue: personalToolsSubsRes.totalMonthlyRevenue || 0,
       }}
+      initialPurchaseLeads={safeSerialize(purchaseLeadsRes.leads || [])}
+      initialPurchaseLeadsMetrics={safeSerialize(purchaseLeadsRes.metrics)}
     />
   );
 }

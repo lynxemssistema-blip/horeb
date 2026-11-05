@@ -27,6 +27,7 @@ import {
   checkEbookOrderStatusAction,
   getPublicEbooks,
 } from "@/app/actions/ebooks";
+import { capturePurchaseLeadAction } from "@/app/actions/leads";
 
 interface EbooksStoreSectionProps {
   ebooks: any[];
@@ -43,7 +44,7 @@ export function EbooksStoreSection({
   const [buyerEmail, setBuyerEmail] = useState("");
   const [buyerCpf, setBuyerCpf] = useState("");
   const [buyerPhone, setBuyerPhone] = useState("");
-  const [billingType, setBillingType] = useState<"UNDEFINED" | "CREDIT_CARD" | "PIX">("UNDEFINED");
+  const [billingType, setBillingType] = useState<"PIX" | "CREDIT_CARD">("PIX");
 
   const [activeOrder, setActiveOrder] = useState<any | null>(null);
   const [isPaid, setIsPaid] = useState(false);
@@ -116,6 +117,35 @@ export function EbooksStoreSection({
     setIsPaid(false);
     setUnlockedPdfUrl(null);
   };
+
+  // Salva/atualiza automaticamente o Lead ("Página de Compras") assim que informa os dados pessoais
+  useEffect(() => {
+    if (!selectedEbook) return;
+    const hasEmailOrPhone =
+      (buyerEmail && buyerEmail.includes("@") && buyerEmail.includes(".")) ||
+      buyerPhone.replace(/\D/g, "").length >= 10 ||
+      buyerCpf.replace(/\D/g, "").length >= 11;
+    if (!buyerName.trim() && !hasEmailOrPhone) return;
+
+    const timer = setTimeout(() => {
+      capturePurchaseLeadAction({
+        leadName: buyerName,
+        leadEmail: buyerEmail,
+        leadCpfCnpj: buyerCpf,
+        leadPhone: buyerPhone,
+        productType: "EBOOK",
+        productId: selectedEbook.id,
+        productName: selectedEbook.title,
+        amount: Number(selectedEbook.price || 9.9),
+        billingType,
+        billingCycle: "SINGLE",
+        status: "CAPTURED",
+        sourceUrl: "/#ebooks",
+      }).catch(() => {});
+    }, 900);
+
+    return () => clearTimeout(timer);
+  }, [selectedEbook, buyerName, buyerEmail, buyerCpf, buyerPhone, billingType]);
 
   const handleCheckoutSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -322,7 +352,7 @@ export function EbooksStoreSection({
                     </div>
 
                     <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
-                      PIX • Cartão • Boleto
+                      PIX Instantâneo • Cartão
                     </span>
                   </div>
 
@@ -442,18 +472,18 @@ export function EbooksStoreSection({
                   <label className="text-xs font-bold text-zinc-300">
                     Forma de Pagamento no Asaas
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => setBillingType("UNDEFINED")}
+                      onClick={() => setBillingType("PIX")}
                       className={`p-2.5 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
-                        billingType === "UNDEFINED"
-                          ? "bg-amber-500/20 border-amber-500 text-amber-300"
+                        billingType === "PIX"
+                          ? "bg-emerald-500/20 border-emerald-500 text-emerald-300"
                           : "bg-zinc-900 border-white/10 text-zinc-400"
                       }`}
                     >
-                      <Sparkles className="w-4 h-4" />
-                      <span>PIX + Cartão + Boleto</span>
+                      <QrCode className="w-4 h-4" />
+                      <span>PIX Instantâneo</span>
                     </button>
 
                     <button
@@ -467,19 +497,6 @@ export function EbooksStoreSection({
                     >
                       <CreditCard className="w-4 h-4" />
                       <span>Cartão de Crédito</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setBillingType("PIX")}
-                      className={`p-2.5 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
-                        billingType === "PIX"
-                          ? "bg-emerald-500/20 border-emerald-500 text-emerald-300"
-                          : "bg-zinc-900 border-white/10 text-zinc-400"
-                      }`}
-                    >
-                      <QrCode className="w-4 h-4" />
-                      <span>PIX Instantâneo</span>
                     </button>
                   </div>
                 </div>
@@ -555,7 +572,7 @@ export function EbooksStoreSection({
                       >
                         <Button className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-black font-black text-xs gap-2 shadow-xl cursor-pointer">
                           <CreditCard className="w-4 h-4" />
-                          <span>Pagar com Cartão de Crédito / Boleto / PIX no Asaas</span>
+                          <span>Pagar com PIX Instantâneo ou Cartão no Asaas</span>
                           <ExternalLink className="w-3.5 h-3.5" />
                         </Button>
                       </a>

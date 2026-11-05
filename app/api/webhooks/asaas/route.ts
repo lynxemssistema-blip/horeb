@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { triggerSingleUseEbookDeliveryEmail } from "@/app/actions/ebooks";
+import { markPurchaseLeadPaidByPaymentId } from "@/app/actions/leads";
 import {
   getAsaasPayment,
   getAsaasConfig,
@@ -219,6 +220,11 @@ export async function POST(req: NextRequest) {
             data: { salesCount: { increment: 1 } },
           });
         }
+
+        await markPurchaseLeadPaidByPaymentId(
+          payment.id,
+          ebookOrder.buyerEmail
+        ).catch(() => {});
 
         await triggerSingleUseEbookDeliveryEmail(ebookOrder.id).catch((err) => {
           console.error(

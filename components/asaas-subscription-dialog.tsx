@@ -28,6 +28,7 @@ import {
   getAsaasIntegrationStatus,
 } from "@/app/actions/subscriptions";
 import { validateDiscountCoupon } from "@/app/actions/coupons";
+import { capturePurchaseLeadAction } from "@/app/actions/leads";
 
 interface AsaasSubscriptionDialogProps {
   tenant: any;
@@ -53,9 +54,7 @@ export function AsaasSubscriptionDialog({
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [billingType, setBillingType] = useState<"UNDEFINED" | "PIX" | "BOLETO" | "CREDIT_CARD">(
-    "UNDEFINED"
-  );
+  const [billingType, setBillingType] = useState<"PIX" | "CREDIT_CARD">("PIX");
   const [selectedPlan, setSelectedPlan] = useState<string>("GESTAO");
   const [selectedPrice, setSelectedPrice] = useState<number>(249);
   const [billingCycle, setBillingCycle] = useState<"MONTHLY" | "YEARLY">("MONTHLY");
@@ -109,6 +108,36 @@ export function AsaasSubscriptionDialog({
 
     loadData();
   }, [isOpen, tenant]);
+
+  // Salva/atualiza automaticamente o Lead ("Página de Compras") assim que informa os dados
+  useEffect(() => {
+    if (!isOpen || !tenant) return;
+    const hasContact =
+      (customerEmail && customerEmail.includes("@")) ||
+      cpfCnpj.replace(/\D/g, "").length >= 11 ||
+      customerPhone.replace(/\D/g, "").length >= 10;
+    if (!hasContact) return;
+
+    const timer = setTimeout(() => {
+      const amount = billingCycle === "YEARLY" ? selectedPrice * 10 : selectedPrice;
+      capturePurchaseLeadAction({
+        leadName: tenant.pastorName ? `${tenant.pastorName} (${tenant.name})` : tenant.name,
+        leadEmail: customerEmail,
+        leadCpfCnpj: cpfCnpj,
+        leadPhone: customerPhone,
+        productType: "B2B_PLAN",
+        productId: selectedPlan,
+        productName: `Plano SaaS B2B: ${selectedPlan} (${billingCycle === "YEARLY" ? "Anual" : "Mensal"})`,
+        amount: Number(amount || 249),
+        billingType,
+        billingCycle,
+        status: "CAPTURED",
+        sourceUrl: `/${tenant.slug}/admin`,
+      }).catch(() => {});
+    }, 900);
+
+    return () => clearTimeout(timer);
+  }, [isOpen, tenant, customerEmail, cpfCnpj, customerPhone, selectedPlan, selectedPrice, billingCycle, billingType]);
 
   if (!isOpen || !tenant) return null;
 
@@ -406,7 +435,7 @@ export function AsaasSubscriptionDialog({
                     </div>
                   )}
 
-                  {/* Links da Fatura e Boleto */}
+                  {/* Link da Fatura */}
                   <div className="flex flex-wrap gap-2 pt-1">
                     {latestInvoice.invoiceUrl && (
                       <a
@@ -417,17 +446,6 @@ export function AsaasSubscriptionDialog({
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         <span>Abrir Link da Fatura no Asaas</span>
-                      </a>
-                    )}
-                    {latestInvoice.bankSlipUrl && (
-                      <a
-                        href={latestInvoice.bankSlipUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-300 hover:text-white bg-muted/60 hover:bg-muted px-3 py-1.5 rounded-lg border border-border transition-colors"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>Baixar Boleto PDF</span>
                       </a>
                     )}
                   </div>
@@ -547,7 +565,7 @@ export function AsaasSubscriptionDialog({
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   Ao gerar a assinatura, o Asaas criará o cliente, gerará a primeira cobrança com PIX
-                  instantâneo e boleto, e enviará as faturas mensais por e-mail automaticamente.
+                  Instantâneo ou Cartão de Crédito, e enviará as faturas mensais por e-mail automaticamente.
                 </p>
               </div>
 
@@ -673,20 +691,18 @@ export function AsaasSubscriptionDialog({
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-foreground">
-                    Forma de Pagamento Preferencial
+                    Forma de Pagamento no Asaas
                   </label>
                   <select
                     value={billingType}
                     onChange={(e: any) => setBillingType(e.target.value)}
                     className="w-full bg-card border border-border rounded-lg px-3 py-2 text-xs text-foreground font-semibold outline-none focus:ring-1 focus:ring-amber-500"
                   >
-                    <option value="UNDEFINED">Qualquer Forma (PIX, Boleto ou Cartão)</option>
-                    <option value="PIX">Somente PIX Instantâneo</option>
-                    <option value="BOLETO">Somente Boleto Bancário</option>
+                    <option value="PIX">PIX Instantâneo (Padrão)</option>
                     <option value="CREDIT_CARD">Cartão de Crédito</option>
                   </select>
                   <span className="text-[10px] text-muted-foreground">
-                    O Pr. poderá escolher a forma desejada na fatura do Asaas.
+                    PIX Instantâneo com QR Code Copia-e-Cola ou Cartão de Crédito.
                   </span>
                 </div>
               </div>

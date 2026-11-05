@@ -32,6 +32,7 @@ import {
   getPublicEbookById,
   resendPaidEbookEmailAction,
 } from "@/app/actions/ebooks";
+import { capturePurchaseLeadAction } from "@/app/actions/leads";
 
 interface EbookProductLandingProps {
   ebook: any;
@@ -49,7 +50,7 @@ export function EbookProductLanding({
   const [buyerEmail, setBuyerEmail] = useState(initialOrder?.buyerEmail || "");
   const [buyerCpf, setBuyerCpf] = useState("");
   const [buyerPhone, setBuyerPhone] = useState("");
-  const [billingType, setBillingType] = useState<"UNDEFINED" | "CREDIT_CARD" | "PIX">("UNDEFINED");
+  const [billingType, setBillingType] = useState<"PIX" | "CREDIT_CARD">("PIX");
 
   useEffect(() => {
     setEbook(initialEbook);
@@ -79,6 +80,35 @@ export function EbookProductLanding({
   const [copiedPageUrl, setCopiedPageUrl] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // Salva/atualiza automaticamente o Lead ("Página de Compras") assim que o visitante informa os dados pessoais
+  useEffect(() => {
+    if (!ebook?.id) return;
+    const hasEmailOrPhone =
+      (buyerEmail && buyerEmail.includes("@") && buyerEmail.includes(".")) ||
+      buyerPhone.replace(/\D/g, "").length >= 10 ||
+      buyerCpf.replace(/\D/g, "").length >= 11;
+    if (!buyerName.trim() && !hasEmailOrPhone) return;
+
+    const timer = setTimeout(() => {
+      capturePurchaseLeadAction({
+        leadName: buyerName,
+        leadEmail: buyerEmail,
+        leadCpfCnpj: buyerCpf,
+        leadPhone: buyerPhone,
+        productType: "EBOOK",
+        productId: ebook.id,
+        productName: ebook.title,
+        amount: Number(ebook.price || 9.9),
+        billingType,
+        billingCycle: "SINGLE",
+        status: "CAPTURED",
+        sourceUrl: `/ebooks/${ebook.id}`,
+      }).catch(() => {});
+    }, 900);
+
+    return () => clearTimeout(timer);
+  }, [ebook?.id, ebook?.title, ebook?.price, buyerName, buyerEmail, buyerCpf, buyerPhone, billingType]);
 
   // Polling automático a cada 6 segundos se houver uma cobrança ativa aguardando pagamento
   useEffect(() => {
@@ -392,7 +422,7 @@ export function EbookProductLanding({
                 <div className="text-right">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black">
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>PIX • Cartão • Boleto</span>
+                    <span>PIX Instantâneo • Cartão</span>
                   </span>
                 </div>
               </div>
@@ -426,7 +456,7 @@ export function EbookProductLanding({
                       <span>PIX ou Cartão</span>
                     </div>
                     <p className="text-[11px] text-zinc-400 leading-snug">
-                      Pague com PIX Copia-e-Cola com liberação em segundos ou use Cartão/Boleto.
+                      Pague com PIX Instantâneo Copia-e-Cola com liberação em segundos ou use Cartão de Crédito.
                     </p>
                   </div>
 
@@ -541,18 +571,18 @@ export function EbookProductLanding({
                     <label className="text-xs font-bold text-zinc-300">
                       Escolha Como Pagar no Asaas
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={() => setBillingType("UNDEFINED")}
+                        onClick={() => setBillingType("PIX")}
                         className={`p-2.5 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
-                          billingType === "UNDEFINED"
-                            ? "bg-amber-500/20 border-amber-500 text-amber-300"
+                          billingType === "PIX"
+                            ? "bg-emerald-500/20 border-emerald-500 text-emerald-300"
                             : "bg-zinc-900 border-white/10 text-zinc-400"
                         }`}
                       >
-                        <Sparkles className="w-4 h-4" />
-                        <span>PIX + Cartão + Boleto</span>
+                        <QrCode className="w-4 h-4" />
+                        <span>PIX Instantâneo</span>
                       </button>
 
                       <button
@@ -566,19 +596,6 @@ export function EbookProductLanding({
                       >
                         <CreditCard className="w-4 h-4" />
                         <span>Cartão de Crédito</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setBillingType("PIX")}
-                        className={`p-2.5 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
-                          billingType === "PIX"
-                            ? "bg-emerald-500/20 border-emerald-500 text-emerald-300"
-                            : "bg-zinc-900 border-white/10 text-zinc-400"
-                        }`}
-                      >
-                        <QrCode className="w-4 h-4" />
-                        <span>PIX Instantâneo</span>
                       </button>
                     </div>
                   </div>
@@ -689,7 +706,7 @@ export function EbookProductLanding({
                         >
                           <Button className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-black font-black text-xs gap-2 shadow-xl cursor-pointer">
                             <CreditCard className="w-4 h-4" />
-                            <span>Pagar com Cartão de Crédito / Boleto / PIX no Asaas</span>
+                            <span>Pagar com PIX Instantâneo ou Cartão no Asaas</span>
                             <ExternalLink className="w-3.5 h-3.5" />
                           </Button>
                         </a>

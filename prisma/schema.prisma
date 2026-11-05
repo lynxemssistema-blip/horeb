@@ -901,3 +901,38 @@ model EbookOrder {
   @@index([status])
   @@index([downloadToken])
 }
+
+// ==========================================
+// 9. CADASTRO DE LEADS DA PÁGINA DE COMPRAS (EXCLUSIVO SUPER ADMIN)
+// ==========================================
+model PurchaseLead {
+  id              String    @id @default(cuid())
+  classification  String    @default("Página de Compras") // Classificação oficial do Lead
+  leadName        String
+  leadEmail       String
+  leadCpfCnpj     String?
+  leadPhone       String?
+  productType     String    @default("EBOOK") // EBOOK, B2C_TOOL, B2B_PLAN
+  productId       String?
+  productName     String
+  amount          Float
+  billingType     String    @default("PIX") // PIX, CREDIT_CARD
+  billingCycle    String?   @default("SINGLE") // SINGLE, MONTHLY, YEARLY
+  status          String    @default("CAPTURED") // CAPTURED, CHECKOUT_STARTED, PAID, FAILED
+  sourceUrl       String?   // ex: "/ebooks/...", "/#ebooks", "/[slug]/minhas-ferramentas"
+  asaasCustomerId String?
+  asaasPaymentId  String?
+  invoiceUrl      String?
+  notes           String?
+  convertedAt     DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([classification])
+  @@index([leadEmail])
+  @@index([status])
+  @@index([productType])
+  @@index([createdAt])
+}
+

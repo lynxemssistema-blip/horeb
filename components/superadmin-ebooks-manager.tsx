@@ -108,7 +108,7 @@ export function SuperAdminEbooksManager({
   const [recipientEmail, setRecipientEmail] = useState("");
   const [recipientCpf, setRecipientCpf] = useState("");
   const [generateAsaasPayment, setGenerateAsaasPayment] = useState(true);
-  const [dispatchBillingType, setDispatchBillingType] = useState<"PIX" | "UNDEFINED">("UNDEFINED");
+  const [dispatchBillingType, setDispatchBillingType] = useState<"PIX" | "UNDEFINED">("PIX");
   const [sendEmailFlag, setSendEmailFlag] = useState(true);
   const [customMessage, setCustomMessage] = useState("");
   const [dispatchResult, setDispatchResult] = useState<any | null>(null);
@@ -136,7 +136,7 @@ export function SuperAdminEbooksManager({
     setRecipientEmail("");
     setRecipientCpf("");
     setGenerateAsaasPayment(true);
-    setDispatchBillingType("UNDEFINED");
+    setDispatchBillingType("PIX");
     setSendEmailFlag(true);
     setCustomMessage("");
     setDispatchResult(null);

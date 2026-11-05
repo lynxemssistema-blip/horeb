@@ -34,6 +34,7 @@ import {
   startPersonalToolsTrial,
   PersonalToolsConfigData,
 } from "@/app/actions/personal-tools";
+import { capturePurchaseLeadAction } from "@/app/actions/leads";
 
 interface PersonalToolsCheckoutDialogProps {
   config: PersonalToolsConfigData;
@@ -76,6 +77,35 @@ export function PersonalToolsCheckoutDialog({
   const [copiedPix, setCopiedPix] = useState(false);
 
   const priceToPay = cycle === "YEARLY" ? config.annualPrice : config.monthlyPrice;
+
+  // Salva/atualiza automaticamente o Lead ("Página de Compras") quando abre o checkout ou informa CPF/WhatsApp
+  React.useEffect(() => {
+    if (!open) return;
+    const hasContact =
+      Boolean(user.email) ||
+      cpfCnpj.replace(/\D/g, "").length >= 11 ||
+      phone.replace(/\D/g, "").length >= 10;
+    if (!hasContact) return;
+
+    const timer = setTimeout(() => {
+      capturePurchaseLeadAction({
+        leadName: user.name || "Membro Horeb",
+        leadEmail: user.email || "",
+        leadCpfCnpj: cpfCnpj,
+        leadPhone: phone,
+        productType: "B2C_TOOL",
+        productId: config.slug,
+        productName: config.title,
+        amount: Number(priceToPay || 19.9),
+        billingType,
+        billingCycle: cycle,
+        status: "CAPTURED",
+        sourceUrl: `/${churchSlug}/minhas-ferramentas`,
+      }).catch(() => {});
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [open, user.name, user.email, cpfCnpj, phone, config.slug, config.title, priceToPay, billingType, cycle, churchSlug]);
 
   // Iniciar Degustação Gratuita
   const handleStartTrial = async () => {

@@ -71,6 +71,7 @@ import { AsaasSubscriptionDialog } from "@/components/asaas-subscription-dialog"
 import { SaasBillingManager } from "@/components/saas-billing-manager";
 import { SuperAdminPersonalToolsManager } from "@/components/superadmin-personal-tools-manager";
 import { SuperAdminEbooksManager } from "@/components/superadmin-ebooks-manager";
+import { SuperAdminLeadsManager } from "@/components/superadmin-leads-manager";
 
 interface SuperAdminDashboardProps {
   initialTab?: string;
@@ -96,6 +97,15 @@ interface SuperAdminDashboardProps {
     totalOverdue: number;
     totalMonthlyRevenue: number;
   };
+  initialPurchaseLeads?: any[];
+  initialPurchaseLeadsMetrics?: {
+    totalLeads: number;
+    totalCapturedOnly: number;
+    totalCheckoutStarted: number;
+    totalPaid: number;
+    totalPotentialAmount: number;
+    totalConvertedAmount: number;
+  };
 }
 
 export function SuperAdminDashboard({
@@ -117,6 +127,8 @@ export function SuperAdminDashboard({
   initialPersonalTools = [],
   initialPersonalToolsSubscribers = [],
   initialPersonalToolsMetrics,
+  initialPurchaseLeads = [],
+  initialPurchaseLeadsMetrics,
 }: SuperAdminDashboardProps) {
   const [tenants, setTenants] = useState(initialTenants);
   const [plans, setPlans] = useState(initialPlans);
@@ -517,6 +529,7 @@ export function SuperAdminDashboard({
                 { id: "plans", label: "Planos Comerciais (B2B)", icon: Layers },
                 { id: "personal-tools", label: "Minhas Ferramentas (B2C)", icon: Camera, badge: "VENDAS" },
                 { id: "ebooks", label: "Meus E-books (Asaas)", icon: BookOpen, badge: "PDF" },
+                { id: "leads", label: "Leads (Página de Compras)", icon: Users, badge: "LEADS" },
                 { id: "users", label: "Usuários & Ativação", icon: Users },
                 { id: "emails", label: "Central de E-mails", icon: Mail },
                 { id: "agents", label: "Agentes de IA", icon: Bot, badge: "NOVO" },
@@ -1812,6 +1825,16 @@ export function SuperAdminDashboard({
               initialOrders={ebookOrdersList}
               onEbooksChange={setEbooksList}
               onOrdersChange={setEbookOrdersList}
+            />
+          </TabsContent>
+
+          {/* ========================================================================= */}
+          {/* TAB 12: LEADS (PÁGINA DE COMPRAS - EXCLUSIVO SUPER ADMIN)                 */}
+          {/* ========================================================================= */}
+          <TabsContent value="leads" className="space-y-6">
+            <SuperAdminLeadsManager
+              initialLeads={initialPurchaseLeads}
+              initialMetrics={initialPurchaseLeadsMetrics}
             />
           </TabsContent>
         </Tabs>

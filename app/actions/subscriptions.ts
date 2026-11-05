@@ -11,6 +11,7 @@ import {
   cancelAsaasSubscription,
 } from "@/lib/asaas";
 import { revalidatePath } from "next/cache";
+import { capturePurchaseLeadAction } from "@/app/actions/leads";
 
 /**
  * Validação de permissão para gerenciamento de assinaturas da igreja
@@ -192,13 +193,33 @@ export async function createTenantSubscription(params: {
         : "";
     const description = `Assinatura ${cycleLabel} Horeb Sistema Eclesiástico - Plano ${activePlan}${discountLabel} (${tenant.name})`;
 
+    const effectiveBillingType =
+      params.billingType === "CREDIT_CARD" ? "CREDIT_CARD" : "PIX";
+
+    // Registra o Lead na lista "Página de Compras" (visível exclusivamente ao Super Admin)
+    await capturePurchaseLeadAction({
+      leadName: tenant.pastorName ? `${tenant.pastorName} (${tenant.name})` : tenant.name,
+      leadEmail: params.customerEmail,
+      leadCpfCnpj: params.cpfCnpj,
+      leadPhone: params.customerPhone || tenant.phone || null,
+      productType: "B2B_PLAN",
+      productId: activePlan,
+      productName: `Plano SaaS B2B: ${activePlan} (${cycleLabel})`,
+      amount: Number(finalPrice),
+      billingType: effectiveBillingType,
+      billingCycle: cycle,
+      status: "CHECKOUT_STARTED",
+      sourceUrl: `/${tenant.slug}/admin`,
+      asaasCustomerId: asaasCustomer.id,
+    }).catch(() => {});
+
     // 5. Cria a NOVA assinatura recorrente no Asaas ANTES de cancelar a anterior (Fail-Safe)
     const subRes = await createAsaasSubscription({
       customerId: asaasCustomer.id,
       value: finalPrice,
       nextDueDate: dueDateStr,
       description,
-      billingType: params.billingType || "UNDEFINED",
+      billingType: effectiveBillingType,
       cycle: cycle === "YEARLY" ? "YEARLY" : "MONTHLY",
     });
 
@@ -241,7 +262,7 @@ export async function createTenantSubscription(params: {
         asaasCustomerId: asaasCustomer.id,
         asaasSubscriptionId: subscription.id,
         subscriptionExpiresAt: dueDate,
-        billingType: params.billingType || "UNDEFINED",
+        billingType: effectiveBillingType,
         plan: activePlan,
         billingCycle: cycle,
         monthlyPrice:
