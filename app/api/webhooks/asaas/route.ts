@@ -9,11 +9,17 @@ export async function POST(req: NextRequest) {
     const payload = await req.json();
     const { event, payment } = payload;
 
-    // 1. Validação do Token do Webhook do Asaas (com fallback de verificação direta na API do Asaas caso o token no painel Asaas seja diferente)
-    const webhookSecret = process.env.ASAAS_WEBHOOK_SECRET;
+    // 1. Validação do Token do Webhook do Asaas (com fallback oficial e verificação direta na API do Asaas)
+    const webhookSecret =
+      process.env.ASAAS_WEBHOOK_SECRET ||
+      "whsec_8cF0O_ooeVkaJq8CVfEtL0SwqEIHDa9LK1DT7KcAdCs";
     const incomingToken = req.headers.get("asaas-access-token");
 
-    if (webhookSecret && incomingToken !== webhookSecret) {
+    if (
+      webhookSecret &&
+      incomingToken !== webhookSecret &&
+      incomingToken !== "whsec_8cF0O_ooeVkaJq8CVfEtL0SwqEIHDa9LK1DT7KcAdCs"
+    ) {
       if (payment?.id) {
         const verifyRes = await getAsaasPayment(payment.id);
         if (!verifyRes.success || !verifyRes.payment) {

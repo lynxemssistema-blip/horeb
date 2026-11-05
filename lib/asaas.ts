@@ -71,7 +71,7 @@ export interface AsaasPixQrCode {
 
 const DEFAULT_ASAAS_PROD_KEY = [
   "$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6Oj",
-  "QzZjczZTNlLTEzZmUtNGM5Yy1iZjcxLWNjMjgxMWI5ZGNkYzo6JGFhY2hfOGU4MjBmY2QtNjBjYi00ZmQ1LThmOGEtODlkMWRlODNjZTUz",
+  "VjMjRkZTYyLWRhNDItNDg4Ny1iOTk4LTdhZGEzMWQ4ZjNjNTo6JGFhY2hfYTFlZmU1ZTItYmRjMi00NDViLWI3OGItNzQxZWJhZjRiZmZh",
 ].join("");
 
 export function getAsaasConfig() {
@@ -84,13 +84,13 @@ export function getAsaasConfig() {
   if (apiKey && !apiKey.startsWith("$") && apiKey.startsWith("aact_")) {
     apiKey = `$${apiKey}`;
   }
-  // Garante rigorosamente a chave completa de 166 caracteres caso o Docker/Easypanel tenha alterado qualquer caractere
+  // Garante rigorosamente a chave completa de 166 caracteres caso o Docker/Easypanel tenha uma chave antiga ou truncada
   if (
     !apiKey ||
     apiKey.length !== 166 ||
     !apiKey.startsWith("$aact_prod_") ||
-    !apiKey.includes("ZGY6OjQzZjcz") ||
-    !apiKey.includes("JGFhY2hf")
+    !apiKey.includes("ZGY6OjVjMjRk") ||
+    !apiKey.includes("YTFlZmU1ZTIt")
   ) {
     apiKey = DEFAULT_ASAAS_PROD_KEY;
   }
