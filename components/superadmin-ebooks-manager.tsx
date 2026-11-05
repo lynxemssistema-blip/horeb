@@ -934,20 +934,65 @@ export function SuperAdminEbooksManager({
                   <button
                     type="button"
                     onClick={() => setGenerateAsaasPayment(false)}
-                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
                       !generateAsaasPayment
-                        ? "bg-amber-500/15 border-amber-500 text-white"
+                        ? "bg-amber-500/15 border-amber-500 text-white shadow-lg shadow-amber-500/10"
                         : "bg-zinc-900 border-white/10 text-zinc-400"
                     }`}
                   >
-                    <div className="text-xs font-black flex items-center gap-1.5 text-amber-400">
-                      <Share2 className="w-4 h-4" />
-                      <span>Apenas Link da Página Exclusiva</span>
+                    <div className="w-11 h-14 rounded-lg bg-black border border-amber-500/40 overflow-hidden shrink-0 flex items-center justify-center">
+                      {dispatchEbook.coverUrl ? (
+                        <img
+                          src={dispatchEbook.coverUrl}
+                          alt={dispatchEbook.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <BookOpen className="w-4 h-4 text-amber-400" />
+                      )}
                     </div>
-                    <p className="text-[10px] text-zinc-300 mt-1 leading-snug">
-                      Envia o link da página <code>/ebooks/{dispatchEbook.id}</code> para o cliente preencher os dados e pagar lá.
-                    </p>
+                    <div className="min-w-0">
+                      <div className="text-xs font-black flex items-center gap-1.5 text-amber-400">
+                        <Share2 className="w-4 h-4 shrink-0" />
+                        <span className="truncate">Apenas Link da Página Exclusiva</span>
+                      </div>
+                      <p className="text-[10px] text-zinc-300 mt-1 leading-snug">
+                        Envia o link <code>/ebooks/{dispatchEbook.id}</code> usando a <strong>imagem da capa deste produto</strong> no card do link.
+                      </p>
+                    </div>
                   </button>
+                </div>
+
+                {/* Prévia do Card do Link com a Imagem do Produto */}
+                <div className="p-3 rounded-2xl bg-zinc-900/90 border border-amber-500/30 flex items-center gap-3.5">
+                  <div className="w-14 h-20 rounded-xl bg-black border border-amber-500/40 overflow-hidden shrink-0 flex items-center justify-center shadow-md">
+                    {dispatchEbook.coverUrl ? (
+                      <img
+                        src={dispatchEbook.coverUrl}
+                        alt={dispatchEbook.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <BookOpen className="w-6 h-6 text-amber-400" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400 block">
+                      ✓ Imagem Oficial do Produto no Link (WhatsApp & E-mail)
+                    </span>
+                    <div className="text-xs font-black text-white truncate">
+                      🔥 {dispatchEbook.title} | R${" "}
+                      {Number(dispatchEbook.price).toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </div>
+                    <div className="text-[11px] text-zinc-400 line-clamp-1">
+                      {dispatchEbook.subtitle || dispatchEbook.description}
+                    </div>
+                    <div className="text-[10px] font-mono text-amber-400 truncate">
+                      {getProductPageUrl(dispatchEbook.id)}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1098,8 +1143,35 @@ export function SuperAdminEbooksManager({
 
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-black uppercase text-zinc-300">
-                    🔗 Link da Página Exclusiva do Produto:
+                    🔗 Link da Página Exclusiva (com Imagem da Capa do Produto):
                   </label>
+                  <div className="p-3 rounded-2xl bg-zinc-900/90 border border-amber-500/35 flex items-center gap-3 mb-2">
+                    <div className="w-12 h-16 rounded-lg bg-black border border-amber-500/40 overflow-hidden shrink-0 flex items-center justify-center">
+                      {dispatchEbook.coverUrl ? (
+                        <img
+                          src={dispatchEbook.coverUrl}
+                          alt={dispatchEbook.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <BookOpen className="w-5 h-5 text-amber-400" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-black text-white truncate">
+                        {dispatchEbook.title}
+                      </div>
+                      <div className="text-[11px] text-emerald-400 font-bold">
+                        Capa do Produto Ativa no Link • R${" "}
+                        {Number(dispatchEbook.price).toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </div>
+                      <div className="text-[10px] font-mono text-amber-300 truncate">
+                        {dispatchResult.productPageUrl}
+                      </div>
+                    </div>
+                  </div>
                   <div className="flex gap-2">
                     <Input
                       readOnly

@@ -39,7 +39,7 @@ export async function generateMetadata({
       : 0;
 
   // Endpoint dedicado de imagem HTTP que serve a capa real do E-book (seja arquivo local ou capa enviada pelo Super Admin)
-  const coverImageUrl = `${baseUrl}/api/ebooks/cover/${ebook.id}.jpg`;
+  const coverImageUrl = `${baseUrl}/api/ebooks/cover/${ebook.id}.jpg?v=3`;
   const pageUrl = `${baseUrl}/ebooks/${ebook.id}`;
 
   const commercialTitle = originalPriceStr
@@ -50,8 +50,8 @@ export async function generateMetadata({
 
   const commercialDescription = [
     originalPriceStr
-      ? `💰 OFERTA ESPECIAL: De R$ ${originalPriceStr} por apenas R$ ${priceStr} (PIX ou Cartão)!`
-      : `💰 Valor Único: R$ ${priceStr} (PIX ou Cartão)!`,
+      ? `💰 OFERTA ESPECIAL: De R$ ${originalPriceStr} por apenas R$ ${priceStr} (PIX Instantâneo ou Cartão)!`
+      : `💰 Valor Único: R$ ${priceStr} (PIX Instantâneo ou Cartão)!`,
     ebook.author ? `✍️ Autor: ${ebook.author}` : null,
     `📥 Receba o PDF Completo no seu E-mail + Download Imediato após confirmação!`,
     ebook.subtitle || ebook.description,
@@ -76,8 +76,8 @@ export async function generateMetadata({
         {
           url: coverImageUrl,
           secureUrl: coverImageUrl,
-          width: 900,
-          height: 1200,
+          width: 800,
+          height: 1071,
           alt: `${ebook.title} - Por R$ ${priceStr}`,
           type: "image/jpeg",
         },
@@ -113,7 +113,7 @@ export default async function EbookProductPage({
 
   const ebook = res.ebook;
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://horeb.lynxems.com.br";
-  const coverImageUrl = `${baseUrl}/api/ebooks/cover/${ebook.id}.jpg`;
+  const coverImageUrl = `${baseUrl}/api/ebooks/cover/${ebook.id}.jpg?v=3`;
   const pageUrl = `${baseUrl}/ebooks/${ebook.id}`;
 
   const ebookJsonLd = {
@@ -152,6 +152,10 @@ export default async function EbookProductPage({
 
   return (
     <>
+      <link itemProp="thumbnailUrl" href={coverImageUrl} />
+      <span itemScope itemType="http://schema.org/ImageObject" className="hidden">
+        <link itemProp="url" href={coverImageUrl} />
+      </span>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ebookJsonLd) }}
