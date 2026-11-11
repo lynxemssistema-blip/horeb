@@ -314,6 +314,7 @@ export function AppSidebar({
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group",
                 isActive
@@ -347,7 +348,7 @@ export function AppSidebar({
           {/* Atalho Master para Superadmin alternar entre todas as congregações */}
           {currentUser?.role === "SUPERADMIN" && (
             <div className="px-2 mb-3">
-              <Link href="/select-church">
+              <Link href="/select-church" prefetch={false}>
                 <Button
                   variant="outline"
                   size="sm"
@@ -373,6 +374,7 @@ export function AppSidebar({
                     <Link
                       key={b.id}
                       href={`/${b.slug}`}
+                      prefetch={false}
                       className="flex items-center justify-between px-3 py-2 text-xs rounded-md text-foreground hover:bg-muted/80 transition-colors border border-transparent hover:border-border group"
                     >
                       <div className="flex items-center gap-2 min-w-0">
@@ -427,6 +429,7 @@ export function AppSidebar({
               </span>
               <Link
                 href={`/${parent.slug}`}
+                prefetch={false}
                 className="flex items-center justify-between px-3 py-2 text-xs rounded-md text-foreground hover:bg-muted/80 transition-colors border border-border bg-background/50"
               >
                 <div className="flex items-center gap-2">
@@ -505,7 +508,7 @@ export function AppSidebar({
                 />
               )}
 
-              <Link href={`/${slug}/perfil`}>
+              <Link href={`/${slug}/perfil`} prefetch={false}>
                 <Button
                   variant="ghost"
                   size="icon"

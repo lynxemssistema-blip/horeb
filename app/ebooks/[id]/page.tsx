@@ -152,10 +152,6 @@ export default async function EbookProductPage({
 
   return (
     <>
-      <link itemProp="thumbnailUrl" href={coverImageUrl} />
-      <span itemScope itemType="http://schema.org/ImageObject" className="hidden">
-        <link itemProp="url" href={coverImageUrl} />
-      </span>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ebookJsonLd) }}

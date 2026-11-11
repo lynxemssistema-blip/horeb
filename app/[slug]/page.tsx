@@ -89,6 +89,19 @@ export default async function TenantDashboardPage({ params }: PageProps) {
 
   if (!tenant) notFound();
 
+  // Normaliza logos em Base64 para o endpoint binário /api/icon/[slug] evitando payloads RSC/HTML gigantes
+  if (tenant.logoUrl?.startsWith("data:")) {
+    tenant.logoUrl = `/api/icon/${tenant.slug}?v=${tenant.updatedAt.getTime()}`;
+  }
+  if (tenant.parent?.logoUrl?.startsWith("data:")) {
+    tenant.parent.logoUrl = `/api/icon/${tenant.parent.slug}?v=${tenant.parent.updatedAt.getTime()}`;
+  }
+  for (const br of tenant.branches) {
+    if (br.logoUrl?.startsWith("data:")) {
+      br.logoUrl = `/api/icon/${br.slug}?v=${br.updatedAt.getTime()}`;
+    }
+  }
+
   const pastor = tenant.users[0];
   const isMatriz = !tenant.parentId;
 
@@ -834,7 +847,7 @@ export default async function TenantDashboardPage({ params }: PageProps) {
           <div className="group relative rounded-2xl overflow-hidden border border-border/80 hover:border-primary/60 bg-card shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col justify-between">
             <div className="relative h-44 sm:h-48 w-full overflow-hidden shrink-0">
               <img
-                src="https://images.unsplash.com/photo-1548625361-1959779dfcf3?auto=format&fit=crop&w=800&q=80"
+                src="https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=800&q=80"
                 alt="Rede e Filiais"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                 loading="lazy"

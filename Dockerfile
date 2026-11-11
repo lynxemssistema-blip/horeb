@@ -45,8 +45,8 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Cria e configura permissões para o diretório de dados SQLite (caso usado)
-RUN mkdir -p /app/prisma && chown -R nextjs:nodejs /app/prisma
+# Cria e configura permissões estritas para o diretório de dados SQLite
+RUN mkdir -p /app/prisma && chown -R nextjs:nodejs /app/prisma && chmod 700 /app/prisma
 
 # Copia arquivos estáticos públicos e standalone gerados pelo Next.js
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
@@ -55,6 +55,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
+RUN chmod 700 /app/prisma && chmod 600 /app/prisma/*.db* 2>/dev/null || true
+
 USER nextjs
 
 EXPOSE 3000
@@ -62,4 +64,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "chmod 700 /app/prisma 2>/dev/null || true; chmod 600 /app/prisma/*.db* 2>/dev/null || true; umask 0077; exec node server.js"]

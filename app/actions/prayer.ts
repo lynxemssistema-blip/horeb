@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { supabase } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import { getSession, checkChurchAccess } from "@/lib/session";
 import { sendPrayerResponseEmail } from "@/lib/mail";
@@ -53,25 +53,27 @@ export async function submitPrayerRequest(params: SubmitPrayerParams) {
       });
     }
 
-    // 2. Sincronizar com Supabase se disponível
-    try {
-      const { data: tenant } = await supabase
-        .from("tenants")
-        .select("id")
-        .eq("slug", tenantSlug)
-        .single();
+    // 2. Sincronizar com Supabase apenas se explicitamente configurado
+    if (isSupabaseConfigured) {
+      try {
+        const { data: tenant } = await supabase
+          .from("tenants")
+          .select("id")
+          .eq("slug", tenantSlug)
+          .single();
 
-      if (tenant?.id) {
-        await supabase.from("prayer_requests").insert({
-          tenant_id: tenant.id,
-          author_name: isAnonymous ? "Anônimo" : authorName || "Membro da Igreja",
-          content: content.trim(),
-          is_anonymous: !!isAnonymous,
-          status: "PENDING",
-        });
+        if (tenant?.id) {
+          await supabase.from("prayer_requests").insert({
+            tenant_id: tenant.id,
+            author_name: isAnonymous ? "Anônimo" : authorName || "Membro da Igreja",
+            content: content.trim(),
+            is_anonymous: !!isAnonymous,
+            status: "PENDING",
+          });
+        }
+      } catch (sbErr) {
+        console.warn("Supabase prayer sync warning:", sbErr);
       }
-    } catch (sbErr) {
-      console.warn("Supabase prayer sync warning:", sbErr);
     }
 
     try {

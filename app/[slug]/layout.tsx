@@ -6,7 +6,6 @@ import { generateTenantTheme } from "@/lib/theme";
 import { AppHeader } from "@/components/app-header";
 import { BottomNav } from "@/components/bottom-nav";
 import { AppSidebar } from "@/components/app-sidebar";
-import { getTenantBySlug } from "@/lib/supabase-service";
 import { checkChurchAccess } from "@/lib/session";
 import { AccessDeniedScreen } from "@/components/access-denied-screen";
 import { TrialBanner } from "@/components/trial-banner";
@@ -48,6 +47,7 @@ export async function generateMetadata({
   if (slug.includes(".")) return { title: "404 - Not Found" };
   const tenant = await prisma.tenant.findUnique({
     where: { slug },
+    select: { name: true },
   });
 
   if (!tenant) return { title: "Igreja não encontrada" };
@@ -111,89 +111,51 @@ export default async function TenantLayout({
     accessRules = await getUserAccessRules();
   }
 
-  // 1. Busca Server-Side com prioridade no Supabase (Nuvem VPS) e fallback no Prisma (Local)
-  let tenantData: {
-    id: string;
-    name: string;
-    slug: string;
-    primaryColor: string;
-    logoUrl?: string | null;
-    parentId?: string | null;
-    parent?: { id: string; name: string; slug: string } | null;
-    branches?: { id: string; name: string; slug: string; primaryColor: string }[];
-    status?: string;
-    plan?: string;
-    subscriptionExpiresAt?: Date | string | null;
-    pixKey?: string | null;
-  } | null = null;
+  // 1. Busca direta e isolada no banco SQLite/Prisma da VPS (baixa latência e sem vazamento externo)
+  const prismaTenant = await prisma.tenant.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      primaryColor: true,
+      logoUrl: true,
+      parentId: true,
+      status: true,
+      plan: true,
+      subscriptionExpiresAt: true,
+      pixKey: true,
+      updatedAt: true,
+      parent: { select: { id: true, name: true, slug: true } },
+      branches: { select: { id: true, name: true, slug: true, primaryColor: true } },
+    },
+  });
 
-  try {
-    const supabaseTenant = await getTenantBySlug(slug);
-    if (supabaseTenant) {
-      tenantData = {
-        id: supabaseTenant.id,
-        name: supabaseTenant.name,
-        slug: supabaseTenant.slug,
-        primaryColor: supabaseTenant.primary_color || "#dc2626",
-        logoUrl: supabaseTenant.logo_url,
-        parentId: supabaseTenant.parent_id,
-        parent: supabaseTenant.parent,
-        branches: supabaseTenant.branches?.map((b) => ({
-          id: b.id,
-          name: b.name,
-          slug: b.slug,
-          primaryColor: b.primary_color,
-        })),
-        status: (supabaseTenant as any).status || "ACTIVE",
-        plan: (supabaseTenant as any).plan || "GESTAO",
-        subscriptionExpiresAt: (supabaseTenant as any).subscription_expires_at || null,
-        pixKey: (supabaseTenant as any).pix_key || (supabaseTenant as any).pixKey || null,
-      };
-    }
-  } catch (err) {
-    console.warn("Supabase fetch failed, falling back to Prisma", err);
-  }
-
-  if (!tenantData) {
-    const prismaTenant = await prisma.tenant.findUnique({
-      where: { slug },
-      include: {
-        parent: { select: { id: true, name: true, slug: true } },
-        branches: { select: { id: true, name: true, slug: true, primaryColor: true } },
-      },
-    });
-
-    if (prismaTenant) {
-      tenantData = {
-        id: prismaTenant.id,
-        name: prismaTenant.name,
-        slug: prismaTenant.slug,
-        primaryColor: prismaTenant.primaryColor,
-        logoUrl: prismaTenant.logoUrl,
-        parentId: prismaTenant.parentId,
-        parent: prismaTenant.parent,
-        branches: prismaTenant.branches,
-        status: prismaTenant.status,
-        plan: prismaTenant.plan,
-        subscriptionExpiresAt: prismaTenant.subscriptionExpiresAt,
-        pixKey: prismaTenant.pixKey,
-      };
-    }
-  } else if (tenantData.pixKey === null || tenantData.pixKey === undefined) {
-    const prismaPix = await prisma.tenant.findUnique({
-      where: { slug },
-      select: { pixKey: true },
-    });
-    if (prismaPix) {
-      tenantData.pixKey = prismaPix.pixKey;
-    }
-  }
-
-  if (!tenantData) {
+  if (!prismaTenant) {
     notFound();
   }
 
-  const tenant = tenantData;
+  // Evita serializar centenas de KB de Base64 repetidas vezes no HTML/RSC: serve via endpoint binário com cache HTTP
+  const resolvedLogoUrl = prismaTenant.logoUrl
+    ? prismaTenant.logoUrl.startsWith("data:")
+      ? `/api/icon/${prismaTenant.slug}?v=${prismaTenant.updatedAt.getTime()}`
+      : prismaTenant.logoUrl
+    : null;
+
+  const tenant = {
+    id: prismaTenant.id,
+    name: prismaTenant.name,
+    slug: prismaTenant.slug,
+    primaryColor: prismaTenant.primaryColor,
+    logoUrl: resolvedLogoUrl,
+    parentId: prismaTenant.parentId,
+    parent: prismaTenant.parent,
+    branches: prismaTenant.branches,
+    status: prismaTenant.status,
+    plan: prismaTenant.plan,
+    subscriptionExpiresAt: prismaTenant.subscriptionExpiresAt,
+    pixKey: prismaTenant.pixKey,
+  };
 
   // 2. Motor White-Label: cálculo dinâmico de cores HSL, RGB, HEX e contraste
   const theme = generateTenantTheme(tenant.primaryColor);
@@ -213,9 +175,6 @@ export default async function TenantLayout({
           } as React.CSSProperties
         }
       >
-        <link rel="icon" href={`/api/icon/${tenant.slug}`} />
-        <link rel="apple-touch-icon" href={`/api/icon/${tenant.slug}`} />
-        <link rel="manifest" href={`/api/manifest/${tenant.slug}`} />
         <style
           dangerouslySetInnerHTML={{
             __html: `
@@ -261,10 +220,6 @@ export default async function TenantLayout({
         } as React.CSSProperties
       }
     >
-      <link rel="icon" href={`/api/icon/${tenant.slug}`} />
-      <link rel="apple-touch-icon" href={`/api/icon/${tenant.slug}`} />
-      <link rel="manifest" href={`/api/manifest/${tenant.slug}`} />
-
       {/* Injeção global no :root e escopo do Tenant */}
       <style
         dangerouslySetInnerHTML={{

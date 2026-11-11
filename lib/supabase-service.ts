@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 export interface TenantData {
   id: string;
@@ -14,6 +14,7 @@ export interface TenantData {
 }
 
 export async function getTenantBySlug(slug: string): Promise<TenantData | null> {
+  if (!isSupabaseConfigured) return null;
   const { data: tenant, error } = await supabase
     .from("tenants")
     .select("*")

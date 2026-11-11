@@ -28,6 +28,31 @@ async function requireSuperAdmin() {
   return session;
 }
 
+function isSafePublicHttpUrl(rawUrl: string): boolean {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host === "::1" ||
+      host.startsWith("10.") ||
+      host.startsWith("192.168.") ||
+      host.startsWith("169.254.") ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) ||
+      host.endsWith(".local") ||
+      host.endsWith(".internal")
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Converte pdfUrl (data:application/pdf;base64,..., caminho local em Ebooks/ ou URL externa) em Buffer binário para envio ao Asaas
  */
@@ -40,15 +65,22 @@ async function resolvePdfBuffer(pdfUrl: string): Promise<Buffer | null> {
       return Buffer.from(base64Part, "base64");
     }
     if (pdfUrl.startsWith("http://") || pdfUrl.startsWith("https://")) {
-      const res = await fetch(pdfUrl, { cache: "no-store" });
+      if (!isSafePublicHttpUrl(pdfUrl)) return null;
+      const res = await fetch(pdfUrl, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+        redirect: "error",
+      });
       if (!res.ok) return null;
       const arr = await res.arrayBuffer();
       return Buffer.from(arr);
     }
-    // Se for caminho local relativo ao projeto (ex: "Ebooks/Os Seis Instintos da Alma.pdf")
-    const projectRoot = path.resolve(process.cwd());
-    const localPath = path.resolve(projectRoot, pdfUrl.replace(/^\/+/, ""));
-    if (!localPath.startsWith(projectRoot + path.sep)) {
+    // Escopo restrito exclusivamente à pasta Ebooks/ para isolamento de arquivos e zero whole-project tracing
+    const ebooksRoot = path.join(process.cwd(), "Ebooks");
+    const cleanRel = pdfUrl.replace(/^\/+/, "").replace(/^Ebooks[\\/]/i, "");
+    if (!cleanRel || cleanRel.includes("..")) return null;
+    const localPath = path.join(ebooksRoot, cleanRel);
+    if (!localPath.startsWith(ebooksRoot + path.sep)) {
       return null;
     }
     return await fs.readFile(localPath);
@@ -59,11 +91,19 @@ async function resolvePdfBuffer(pdfUrl: string): Promise<Buffer | null> {
 }
 
 let seedingPromise: Promise<void> | null = null;
+let lastEbooksSeededAt = 0;
+let lastAsaasSyncAt = 0;
+const EBOOKS_SEED_TTL_MS = 10 * 60 * 1000; // 10 minutos
+const ASAAS_SYNC_COOLDOWN_MS = 60 * 1000; // 60 segundos
 
 /**
  * Inicializa e sincroniza os E-books oficiais da pasta Ebooks/ (incluindo Libertação Espiritual, Os Seis Instintos da Alma e Batalha Invisível)
  */
 async function ensureInitialEbooksSeeded() {
+  const now = Date.now();
+  if (lastEbooksSeededAt > 0 && now - lastEbooksSeededAt < EBOOKS_SEED_TTL_MS) {
+    return;
+  }
   if (seedingPromise) {
     return seedingPromise;
   }
@@ -168,12 +208,15 @@ async function ensureInitialEbooksSeeded() {
 
         const canonicalRecord = matches.find((m) => m.id === item.fixedId);
         const found = canonicalRecord || matches[0];
+        const alreadyHasPdfData = Boolean(canonicalRecord?.pdfUrl?.startsWith("data:"));
 
         let pdfDataUri = `Ebooks/${item.relativePdfPath}`;
-        try {
-          const fileBuf = await fs.readFile(path.join(ebooksDir, item.relativePdfPath));
-          pdfDataUri = `data:application/pdf;base64,${fileBuf.toString("base64")}`;
-        } catch {}
+        if (!alreadyHasPdfData) {
+          try {
+            const fileBuf = await fs.readFile(path.join(ebooksDir, item.relativePdfPath));
+            pdfDataUri = `data:application/pdf;base64,${fileBuf.toString("base64")}`;
+          } catch {}
+        }
 
         if (!canonicalRecord) {
           await prisma.ebookProduct
@@ -229,10 +272,7 @@ async function ensureInitialEbooksSeeded() {
         }
       }
 
-      // Sincroniza automaticamente pedidos de E-book recentes pagos no Asaas (garantindo envio do e-mail com PDF em anexo + link de uso único mesmo após deploy ou sem webhook secret)
-      await syncRecentAsaasEbookOrdersInternal().catch((err) => {
-        console.warn("[syncRecentAsaasEbookOrdersInternal Warning]:", err);
-      });
+      lastEbooksSeededAt = Date.now();
     } catch (err) {
       console.warn("[ensureInitialEbooksSeeded Warning]:", err);
     } finally {
@@ -500,6 +540,12 @@ export async function getAdminEbooksData() {
   try {
     await requireSuperAdmin();
     await ensureInitialEbooksSeeded();
+    if (Date.now() - lastAsaasSyncAt >= ASAAS_SYNC_COOLDOWN_MS) {
+      lastAsaasSyncAt = Date.now();
+      await syncRecentAsaasEbookOrdersInternal().catch((err) => {
+        console.warn("[syncRecentAsaasEbookOrdersInternal Warning]:", err);
+      });
+    }
 
     const [ebooks, orders] = await Promise.all([
       prisma.ebookProduct.findMany({
@@ -596,12 +642,14 @@ export async function saveEbookProduct(data: {
 
         // 2. Se a capa anterior era um arquivo local customizado em public/uploads/, remove do disco com segurança
         if (existing.coverUrl.startsWith("/uploads/")) {
-          const oldFilePath = path.join(
-            process.cwd(),
-            "public",
-            existing.coverUrl.replace(/^\/+/, "")
-          );
-          await fs.unlink(oldFilePath).catch(() => {});
+          const uploadsRoot = path.join(process.cwd(), "public", "uploads");
+          const cleanUploadRel = existing.coverUrl.replace(/^\/+uploads\/+/i, "");
+          if (cleanUploadRel && !cleanUploadRel.includes("..")) {
+            const oldFilePath = path.join(uploadsRoot, cleanUploadRel);
+            if (oldFilePath.startsWith(uploadsRoot + path.sep)) {
+              await fs.unlink(oldFilePath).catch(() => {});
+            }
+          }
         }
       }
 

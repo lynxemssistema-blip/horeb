@@ -93,9 +93,6 @@ export async function getDailyDevotional(mood: string, tenantId?: string) {
       await recordMoodCheckIn(normalizedMood, tenantId);
     }
 
-    // Simulação da latência da IA
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
     const devotionalData =
       DEVOTIONAL_PRESETS[normalizedMood] || DEVOTIONAL_PRESETS.FELIZ;
 

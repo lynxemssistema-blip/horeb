@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { supabase } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
@@ -225,20 +225,22 @@ export async function generatePixTransaction({
       },
     });
 
-    // 4. Gravar de forma assíncrona no Supabase na VPS (se conectado)
-    try {
-      await supabase.from("transactions").insert({
-        tenant_id: resolvedTenantId,
-        amount: Number(amount),
-        category,
-        description: autoDescription,
-        type: "INCOME",
-        paymentMethod: "PIX",
-        status: "COMPLETED",
-        member_id: memberId,
-      });
-    } catch (sbErr) {
-      console.warn("Supabase transaction log error (fallback ignored):", sbErr);
+    // 4. Gravar de forma assíncrona no Supabase apenas se explicitamente configurado
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from("transactions").insert({
+          tenant_id: resolvedTenantId,
+          amount: Number(amount),
+          category,
+          description: autoDescription,
+          type: "INCOME",
+          paymentMethod: "PIX",
+          status: "COMPLETED",
+          member_id: memberId,
+        });
+      } catch (sbErr) {
+        console.warn("Supabase transaction log error (fallback ignored):", sbErr);
+      }
     }
 
     try {

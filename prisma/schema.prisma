@@ -70,6 +70,9 @@ model Tenant {
 
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+
+  @@index([parentId])
+  @@index([status])
 }
 
 model User {
@@ -124,6 +127,9 @@ model User {
 
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, role])
 }
 
 model Ministry {
@@ -176,6 +182,8 @@ model MinistryMeeting {
 
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
+
+  @@index([ministryId, date])
 }
 
 model MeetingMinute {
@@ -200,6 +208,8 @@ model MinistryTask {
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@index([ministryId, status])
 }
 
 model UserChurchAccess {
@@ -214,6 +224,8 @@ model UserChurchAccess {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@index([tenantId, role])
 }
 
 model CellGroup {
@@ -404,6 +416,8 @@ model MoodCheckIn {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([tenantId, date])
 }
 
 model PrayerRequest {
@@ -424,6 +438,9 @@ model PrayerRequest {
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
 }
 
 // ==========================================
@@ -446,6 +463,8 @@ model AgentProfile {
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  @@index([tenantId, isActive])
 }
 
 model Conversation {
@@ -465,6 +484,8 @@ model Conversation {
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  @@index([tenantId, userId])
 }
 
 model Message {
@@ -476,6 +497,8 @@ model Message {
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   createdAt      DateTime @default(now())
+
+  @@index([conversationId, createdAt])
 }
 
 model RolePermission {

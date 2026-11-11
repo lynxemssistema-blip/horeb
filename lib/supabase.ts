@@ -1,11 +1,19 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  "https://supabase-supabase.1cnep6.easypanel.host";
-const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const rawSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || "";
+const rawSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || "";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const isSupabaseConfigured = Boolean(rawSupabaseUrl && rawSupabaseAnonKey);
+
+export const supabase = createClient(
+  rawSupabaseUrl || "http://127.0.0.1:54321",
+  rawSupabaseAnonKey || "public-anon-placeholder-disabled",
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  }
+);
 
 export default supabase;

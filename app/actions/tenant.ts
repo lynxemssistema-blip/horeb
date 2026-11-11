@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { supabase } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { generateActivationCode, sendActivationCodeEmail, sendPasswordResetEmail } from "@/lib/mail";
@@ -176,38 +176,40 @@ export async function registerMasterAndChurch(params: RegisterMasterParams) {
       },
     });
 
-    // 5. Cadastrar no Supabase Auth & Banco na VPS (fallback)
-    try {
-      await supabase.auth.signUp({
-        email: cleanEmail,
-        password: rawPassword,
-        options: {
-          data: {
-            name: user.name,
-            role: user.role,
-            tenant_id: tenant.id,
+    // 5. Cadastrar no Supabase Auth & Banco na VPS apenas se explicitamente configurado
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.auth.signUp({
+          email: cleanEmail,
+          password: rawPassword,
+          options: {
+            data: {
+              name: user.name,
+              role: user.role,
+              tenant_id: tenant.id,
+            },
           },
-        },
-      });
+        });
 
-      await supabase.from("tenants").insert({
-        id: tenant.id,
-        name: tenant.name,
-        slug: tenant.slug,
-        primary_color: tenant.primaryColor,
-        logo_url: tenant.logoUrl,
-        address: params.address || "Sede Principal",
-      });
+        await supabase.from("tenants").insert({
+          id: tenant.id,
+          name: tenant.name,
+          slug: tenant.slug,
+          primary_color: tenant.primaryColor,
+          logo_url: tenant.logoUrl,
+          address: params.address || "Sede Principal",
+        });
 
-      await supabase.from("users").insert({
-        id: user.id,
-        tenant_id: tenant.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      });
-    } catch (sbErr) {
-      console.warn("Supabase auth sync warning (fallback local active):", sbErr);
+        await supabase.from("users").insert({
+          id: user.id,
+          tenant_id: tenant.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        });
+      } catch (sbErr) {
+        console.warn("Supabase auth sync warning (fallback local active):", sbErr);
+      }
     }
 
     // 6. Iniciar imediatamente a Sessão HTTP-Only para o Usuário Master
@@ -674,18 +676,20 @@ export async function createBranchChurch(params: CreateBranchParams) {
       });
     }
 
-    try {
-      await supabase.from("tenants").insert({
-        id: branch.id,
-        name: branch.name,
-        slug: branch.slug,
-        primary_color: branch.primaryColor,
-        parent_id: branch.parentId,
-        logo_url: branch.logoUrl,
-        address: params.address || `Filial de ${parentTenant.name}`,
-      });
-    } catch (sbErr) {
-      console.warn("Supabase branch sync warning:", sbErr);
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from("tenants").insert({
+          id: branch.id,
+          name: branch.name,
+          slug: branch.slug,
+          primary_color: branch.primaryColor,
+          parent_id: branch.parentId,
+          logo_url: branch.logoUrl,
+          address: params.address || `Filial de ${parentTenant.name}`,
+        });
+      } catch (sbErr) {
+        console.warn("Supabase branch sync warning:", sbErr);
+      }
     }
 
     revalidatePath("/");
@@ -838,7 +842,7 @@ export async function requestPasswordReset(identifier: string) {
 
     return {
       success: true,
-      email: user.email,
+      email: clean.includes("@") ? cleanLower : clean,
       maskedEmail,
       message: `Enviamos um código de 6 dígitos para ${maskedEmail}.`,
     };
@@ -858,7 +862,8 @@ export async function resetPasswordWithCode(params: {
   newPassword: string;
 }) {
   try {
-    const cleanEmail = params.email?.trim().toLowerCase();
+    const rawIdentifier = params.email?.trim();
+    const cleanEmail = rawIdentifier?.toLowerCase();
     const cleanCode = params.code?.trim();
     const rawPassword = params.newPassword?.trim();
 
@@ -870,8 +875,10 @@ export async function resetPasswordWithCode(params: {
       return { success: false, error: "A nova senha deve ter no mínimo 6 caracteres." };
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: cleanEmail },
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: cleanEmail }, { name: { equals: rawIdentifier } }],
+      },
       include: { tenant: true },
     });
 
@@ -879,14 +886,15 @@ export async function resetPasswordWithCode(params: {
       return { success: false, error: "Conta não encontrada." };
     }
 
-    const attemptRecord = resetFailedAttempts.get(cleanEmail) || { count: 0, lastAttemptAt: Date.now() };
+    const userEmailLower = user.email.toLowerCase();
+    const attemptRecord = resetFailedAttempts.get(userEmailLower) || { count: 0, lastAttemptAt: Date.now() };
     if (attemptRecord.count >= MAX_RESET_ATTEMPTS) {
       await prisma.user.update({
         where: { id: user.id },
         data: { verificationCode: null, codeExpiresAt: null },
       });
       await prisma.activationCode.updateMany({
-        where: { email: cleanEmail, used: false },
+        where: { email: userEmailLower, used: false },
         data: { used: true },
       });
       return {
@@ -905,7 +913,7 @@ export async function resetPasswordWithCode(params: {
     if (!isValid) {
       const activation = await prisma.activationCode.findFirst({
         where: {
-          email: cleanEmail,
+          email: userEmailLower,
           code: cleanCode,
           used: false,
           expiresAt: { gt: new Date() },
@@ -924,14 +932,14 @@ export async function resetPasswordWithCode(params: {
 
     if (!isValid) {
       const nextCount = attemptRecord.count + 1;
-      resetFailedAttempts.set(cleanEmail, { count: nextCount, lastAttemptAt: Date.now() });
+      resetFailedAttempts.set(userEmailLower, { count: nextCount, lastAttemptAt: Date.now() });
       if (nextCount >= MAX_RESET_ATTEMPTS) {
         await prisma.user.update({
           where: { id: user.id },
           data: { verificationCode: null, codeExpiresAt: null },
         });
         await prisma.activationCode.updateMany({
-          where: { email: cleanEmail, used: false },
+          where: { email: userEmailLower, used: false },
           data: { used: true },
         });
         return {
@@ -945,7 +953,7 @@ export async function resetPasswordWithCode(params: {
       };
     }
 
-    resetFailedAttempts.delete(cleanEmail);
+    resetFailedAttempts.delete(userEmailLower);
 
     const hashedPassword = await bcrypt.hash(rawPassword, 10);
 

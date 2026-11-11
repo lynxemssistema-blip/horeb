@@ -31,12 +31,11 @@ export async function verifyActivationCode({ email, code }: VerifyCodeParams) {
       return { success: false, error: "Usuário não encontrado. Realize o cadastro novamente." };
     }
 
-    // Se já está verificado
+    // Se já está verificado, não vazar slug/papel sem autenticar
     if (user.isEmailVerified) {
       return {
-        success: true,
-        message: "Sua conta já está ativada!",
-        redirectUrl: user.role === "SUPERADMIN" ? "/admin" : `/${user.tenant?.slug || "admin"}`,
+        success: false,
+        error: "Esta conta já está ativada! Faça login diretamente com seu e-mail e senha.",
       };
     }
 

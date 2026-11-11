@@ -62,6 +62,7 @@ interface CreateChurchDialogProps {
   triggerButton?: React.ReactNode;
   defaultTab?: "master" | "branch" | "login";
   parentTenantId?: string;
+  autoOpen?: boolean;
 }
 
 const colorPresets = [
@@ -80,11 +81,19 @@ export function CreateChurchDialog({
   triggerButton,
   defaultTab = "master",
   parentTenantId,
+  autoOpen = false,
 }: CreateChurchDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(defaultTab);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (autoOpen) {
+      setOpen(true);
+      setActiveTab(defaultTab);
+    }
+  }, [autoOpen, defaultTab]);
 
   useEffect(() => {
     if (open) {

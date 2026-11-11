@@ -133,11 +133,12 @@ export async function getFinancialDashboardData(
       };
     }
 
-    // PASSO 3: O Motor de Regras de Negócio (RBAC)
+    // PASSO 3: O Motor de Regras de Negócio (RBAC derivado estritamente da sessão autenticada)
+    const isSessionMaster = ["SUPERADMIN", "ADMIN", "PASTOR"].includes(auth.role || "");
     let whereClause: any;
 
-    if (userRole === "LOCAL") {
-      // 🔒 Blindagem: Ignora sumariamente qualquer valor em filterTenantId
+    if (!isSessionMaster) {
+      // 🔒 Blindagem: Ignora sumariamente qualquer valor em filterTenantId ou userRole do cliente
       whereClause = {
         tenantId: currentTenantId,
         status: { in: ["COMPLETED", "PENDING"] },
@@ -334,6 +335,24 @@ export async function createManualTransaction(data: any) {
       throw new Error("Congregação não encontrada no banco de dados.");
     }
 
+    let validMemberId: string | null = null;
+    if (type === "INCOME" && data.category === "DIZIMO" && data.memberId) {
+      const candidateMember = await prisma.user.findFirst({
+        where: {
+          id: String(data.memberId),
+          OR: [
+            { tenantId },
+            { churchAccesses: { some: { tenantId } } },
+          ],
+        },
+        select: { id: true },
+      });
+      if (!candidateMember) {
+        throw new Error("O membro selecionado não pertence a esta congregação.");
+      }
+      validMemberId = candidateMember.id;
+    }
+
     // 2. Persistência no banco via Prisma
     const transaction = await prisma.transaction.create({
       data: {
@@ -344,7 +363,7 @@ export async function createManualTransaction(data: any) {
         description: data.description ? String(data.description).trim() : null,
         paymentMethod: data.paymentMethod || "PIX",
         status: "COMPLETED",
-        memberId: type === "INCOME" && data.category === "DIZIMO" && data.memberId ? data.memberId : null,
+        memberId: validMemberId,
         createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
       },
       include: {
@@ -365,9 +384,6 @@ export async function createManualTransaction(data: any) {
         },
       },
     });
-
-    // 3. Delay simulado de 1 segundo (conforme requisito para teste do loading state na UI)
-    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // Revalidação de cache das rotas
     try {
@@ -424,7 +440,7 @@ export async function getFinancialDashboard(
     }
 
     const isMatriz = !currentChurch.parentId;
-    const isMasterRole = userRole === "MASTER" || userRole === "ADMIN" || userRole === "SUPERADMIN";
+    const isMasterRole = ["SUPERADMIN", "ADMIN", "PASTOR"].includes(auth.role || "");
 
     const networkChurches: ChurchFilterOption[] = [
       {
@@ -667,7 +683,23 @@ export async function confirmPendingTransaction(transactionId: string, memberId?
       return { success: false, error: auth.error || "Acesso negado." };
     }
 
-    const resolvedMemberId = memberId !== undefined ? (memberId || null) : tx.memberId;
+    let resolvedMemberId = memberId !== undefined ? (memberId || null) : tx.memberId;
+    if (memberId) {
+      const candidateMember = await prisma.user.findFirst({
+        where: {
+          id: memberId,
+          OR: [
+            { tenantId: tx.tenantId },
+            { churchAccesses: { some: { tenantId: tx.tenantId } } },
+          ],
+        },
+        select: { id: true },
+      });
+      if (!candidateMember) {
+        return { success: false, error: "O membro informado não pertence a esta congregação." };
+      }
+      resolvedMemberId = candidateMember.id;
+    }
 
     const updated = await prisma.transaction.update({
       where: { id: transactionId },

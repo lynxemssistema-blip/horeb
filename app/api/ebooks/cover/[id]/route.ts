@@ -62,7 +62,7 @@ export async function GET(
           status: 200,
           headers: {
             "Content-Type": mimeType,
-            "Cache-Control": "public, max-age=60, s-maxage=60",
+            "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
           },
         });
       }
@@ -88,7 +88,7 @@ export async function GET(
             status: 200,
             headers: {
               "Content-Type": mime,
-              "Cache-Control": "public, max-age=300, s-maxage=300",
+              "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
             },
           });
         } catch {}

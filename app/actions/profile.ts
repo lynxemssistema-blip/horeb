@@ -173,6 +173,10 @@ export async function updateUserAvatar(avatarUrl: string | null) {
       return { success: false, error: "Sessão expirada. Faça login novamente." };
     }
 
+    if (avatarUrl && avatarUrl.length > 4_000_000) {
+      return { success: false, error: "A imagem de perfil excede o limite máximo permitido." };
+    }
+
     await prisma.user.update({
       where: { id: session.userId },
       data: { avatarUrl },

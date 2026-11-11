@@ -56,6 +56,7 @@ export function BottomNav({ slug }: BottomNavProps) {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className="flex flex-col items-center justify-center -mt-6 group min-w-[52px] min-h-[44px]"
               >
                 <div
@@ -82,6 +83,7 @@ export function BottomNav({ slug }: BottomNavProps) {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={cn(
                 "flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 active:scale-90 min-w-[48px] min-h-[44px]",
                 isActive

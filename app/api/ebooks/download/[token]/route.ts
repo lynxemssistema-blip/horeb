@@ -3,6 +3,31 @@ import { prisma } from "@/lib/prisma";
 import fs from "fs/promises";
 import path from "path";
 
+function isSafePublicHttpUrl(rawUrl: string): boolean {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host === "::1" ||
+      host.startsWith("10.") ||
+      host.startsWith("192.168.") ||
+      host.startsWith("169.254.") ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) ||
+      host.endsWith(".local") ||
+      host.endsWith(".internal")
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function resolvePdfBuffer(pdfUrl: string): Promise<Buffer | null> {
   try {
     if (!pdfUrl) return null;
@@ -12,14 +37,21 @@ async function resolvePdfBuffer(pdfUrl: string): Promise<Buffer | null> {
       return Buffer.from(base64Part, "base64");
     }
     if (pdfUrl.startsWith("http://") || pdfUrl.startsWith("https://")) {
-      const res = await fetch(pdfUrl, { cache: "no-store" });
+      if (!isSafePublicHttpUrl(pdfUrl)) return null;
+      const res = await fetch(pdfUrl, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+        redirect: "error",
+      });
       if (!res.ok) return null;
       const arr = await res.arrayBuffer();
       return Buffer.from(arr);
     }
-    const projectRoot = path.resolve(process.cwd());
-    const localPath = path.resolve(projectRoot, pdfUrl.replace(/^\/+/, ""));
-    if (!localPath.startsWith(projectRoot + path.sep)) {
+    const ebooksRoot = path.join(process.cwd(), "Ebooks");
+    const cleanRel = pdfUrl.replace(/^\/+/, "").replace(/^Ebooks[\\/]/i, "");
+    if (!cleanRel || cleanRel.includes("..")) return null;
+    const localPath = path.join(ebooksRoot, cleanRel);
+    if (!localPath.startsWith(ebooksRoot + path.sep)) {
       return null;
     }
     return await fs.readFile(localPath);

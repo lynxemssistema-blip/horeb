@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  compress: true,
   experimental: {
     serverActions: {
       // Base64 adiciona ~33% ao tamanho de um arquivo de 5MB (~6.8MB + capa). 20MB garante envio de PDFs e capas sem erro!
@@ -63,9 +64,22 @@ const nextConfig: NextConfig = {
               "camera=(self), microphone=(self), geolocation=(), payment=(self)",
           },
           {
+            key: "X-Permitted-Cross-Domain-Policies",
+            value: "none",
+          },
+          {
             key: "Content-Security-Policy",
             value:
               "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests;",
+          },
+        ],
+      },
+      {
+        source: "/ebooks-covers/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400, stale-while-revalidate=604800",
           },
         ],
       },

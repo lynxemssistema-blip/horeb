@@ -131,6 +131,19 @@ export default async function SelectChurchPage() {
     }
   }
 
+  // Normaliza logos Base64 para URLs binárias /api/icon/[slug] reduzindo o payload HTML de ~670KB para ~25KB
+  churchList = churchList.map((entry) => ({
+    ...entry,
+    tenant: {
+      ...entry.tenant,
+      logoUrl: entry.tenant.logoUrl
+        ? entry.tenant.logoUrl.startsWith("data:")
+          ? `/api/icon/${entry.tenant.slug}`
+          : entry.tenant.logoUrl
+        : null,
+    },
+  }));
+
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-start p-4 sm:p-8 text-foreground">
       {/* Background Glow */}

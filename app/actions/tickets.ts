@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { sendTicketPurchaseEmail } from "@/lib/mail";
-import { getSession, requirePermission } from "@/lib/session";
+import { getSession, checkChurchAccess, requirePermission } from "@/lib/session";
 
 export interface PurchaseTicketResult {
   success: boolean;
@@ -39,12 +39,19 @@ export async function purchaseTickets(
       include: { tenant: true },
     });
 
-    if (!event) {
-      return { success: false, error: "Evento não encontrado." };
+    if (!event || !event.isActive) {
+      return { success: false, error: "Evento não encontrado ou inscrições encerradas." };
     }
 
-    // Simulação do Gateway de Pagamento (delay de 2 segundos)
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    if (!event.isPublic) {
+      const access = await checkChurchAccess(event.tenant.slug);
+      if (!access.authorized) {
+        return {
+          success: false,
+          error: "Este evento é exclusivo para membros autenticados desta congregação.",
+        };
+      }
+    }
 
     // Cria os ingressos individualmente para gerar UUIDs únicos (limite máximo de 10 por transação contra abuso)
     const createdTickets = [];

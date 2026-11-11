@@ -54,7 +54,8 @@ export default async function HomePage(props: {
 }) {
   const searchParams = props.searchParams ? await props.searchParams : {};
   const isAuthRequired = searchParams.auth === "required";
-  const isAdminAuthRequired = searchParams.auth === "admin_required";
+  const isAdminAuthRequired =
+    searchParams.auth === "admin_required" || searchParams.auth === "login";
   const churchSlug = typeof searchParams.church === "string" ? searchParams.church : null;
   const isSwitching = searchParams.switch === "true" || searchParams.select === "true";
 
@@ -87,7 +88,6 @@ export default async function HomePage(props: {
         name: true,
         slug: true,
         primaryColor: true,
-        logoUrl: true,
         parentId: true,
         parent: {
           select: { id: true, name: true, slug: true },
@@ -260,9 +260,9 @@ export default async function HomePage(props: {
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white max-w-3xl leading-[1.1] pt-1">
-            TODA A SUA IGREJA CONECTADA EM UM{" "}
+            TODA A SUA IGREJA CONECTADA EM{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500">
-              SÓ LUGAR.
+              UM SÓ LUGAR.
             </span>
           </h1>
 
@@ -390,6 +390,7 @@ export default async function HomePage(props: {
                     primaryColor: t.primaryColor,
                   }))}
                   defaultTab="login"
+                  autoOpen={Boolean(isAuthRequired || isAdminAuthRequired)}
                   triggerButton={
                     <Button
                       variant="outline"

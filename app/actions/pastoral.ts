@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { getSession, checkChurchAccess } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export interface PastorScheduleDay {
@@ -107,6 +107,9 @@ export async function getChurchPastors(slug: string) {
       ],
     });
 
+    const access = await checkChurchAccess(slug).catch(() => null);
+    const isChurchMember = Boolean(access && access.authorized);
+
     const parsedPastors: PastorInfo[] = users.map((u) => {
       let scheduleConfig: PastorScheduleConfig | null = null;
       if (u.pastoralScheduleConfig) {
@@ -122,13 +125,13 @@ export async function getChurchPastors(slug: string) {
       return {
         id: u.id,
         name: u.name,
-        email: u.email,
+        email: isChurchMember ? u.email : "",
         avatarUrl: u.avatarUrl,
         role: u.role,
         isLiveAvailable: !!u.isLiveAvailable,
         pastoralTitle: (u.pastoralTitle || (u.role === "PASTOR" ? "Pr. Titular" : "Liderança Pastoral")).replace(/Pastor/g, "Pr."),
         pastoralBio: u.pastoralBio || "Disponível para acolhimento espiritual, aconselhamento e oração.",
-        pastoralPhone: u.pastoralPhone,
+        pastoralPhone: isChurchMember ? u.pastoralPhone : null,
         pastoralScheduleConfig: scheduleConfig,
       };
     });
@@ -285,8 +288,14 @@ export async function createPastoralAppointment(params: {
 
     if (!tenant) return { success: false, error: "Igreja não encontrada." };
 
-    const pastor = await prisma.user.findUnique({
-      where: { id: params.pastorId },
+    const pastor = await prisma.user.findFirst({
+      where: {
+        id: params.pastorId,
+        OR: [
+          { tenantId: tenant.id },
+          { churchAccesses: { some: { tenantId: tenant.id } } },
+        ],
+      },
       select: { id: true, name: true, isLiveAvailable: true, pastoralTitle: true },
     });
 
@@ -375,19 +384,30 @@ export async function getPastoralAppointment(appointmentId: string) {
     }
 
     const session = await getSession();
-    const isSuper = session?.role === "SUPERADMIN" || session?.originalRole === "SUPERADMIN";
-    const isAdmin = session?.role === "ADMIN" || session?.role === "PASTOR";
+    if (!session) {
+      return { success: false, error: "Autenticação necessária para visualizar este atendimento pastoral." };
+    }
+    const isSuper = session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN";
+    const isTenantPastorOrAdmin =
+      (session.role === "ADMIN" || session.role === "PASTOR") &&
+      session.tenantId === appointment.tenantId;
+    const isAssignedPastor = session.userId === appointment.pastorId;
+    const isPastorPrivilege = isSuper || isTenantPastorOrAdmin || isAssignedPastor;
+
     if (
-      appointment.userId &&
-      session?.userId !== appointment.userId &&
-      session?.userId !== appointment.pastorId &&
-      !isSuper &&
-      !(isAdmin && session?.tenantId === appointment.tenantId)
+      !isPastorPrivilege &&
+      (!appointment.userId || session.userId !== appointment.userId)
     ) {
       return { success: false, error: "Acesso negado a este atendimento pastoral." };
     }
 
-    return { success: true, appointment };
+    return {
+      success: true,
+      appointment: {
+        ...appointment,
+        pastorNotes: isPastorPrivilege ? appointment.pastorNotes : null,
+      },
+    };
   } catch (error: any) {
     console.error("Erro ao buscar atendimento pastoral:", error);
     return { success: false, error: error.message };

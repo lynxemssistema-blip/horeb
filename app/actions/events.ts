@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { getSession } from "@/lib/session";
+import { getSession, checkChurchAccess } from "@/lib/session";
 
 export interface CreateEventInput {
   title: string;
@@ -32,9 +32,8 @@ export async function createEvent(
       return { success: false, error: "Autenticação necessária para criar eventos." };
     }
 
-    const effectiveRole = session.role || userRole || "LOCAL";
+    const effectiveRole = session.role || "GUEST";
     const isMaster =
-      effectiveRole === "MASTER" ||
       effectiveRole === "ADMIN" ||
       effectiveRole === "SUPERADMIN" ||
       effectiveRole === "PASTOR";
@@ -69,11 +68,12 @@ export async function createEvent(
       return { success: false, error: `Congregação não encontrada com ID ou slug '${rawTarget}'.` };
     }
 
-    // Validação Multi-Tenant: garante que o usuário só cria evento na sua congregação ou em suas filiais
+    const access = await checkChurchAccess(tenant.slug);
     if (
-      session.role !== "SUPERADMIN" &&
-      tenant.id !== session.tenantId &&
-      tenant.parentId !== session.tenantId
+      !access.authorized ||
+      !["SUPERADMIN", "ADMIN", "PASTOR", "LEADER", "SECRETARIA"].includes(
+        access.effectiveRole
+      )
     ) {
       return {
         success: false,
@@ -81,8 +81,11 @@ export async function createEvent(
       };
     }
 
+    const canSetGlobal = ["SUPERADMIN", "ADMIN", "PASTOR"].includes(
+      access.effectiveRole
+    );
     const effectiveTenantId = tenant.id;
-    const effectiveIsGlobalFeature = isMaster ? Boolean(data.isGlobalFeature) : false;
+    const effectiveIsGlobalFeature = canSetGlobal ? Boolean(data.isGlobalFeature) : false;
     const effectiveIsPublic = data.isPublic !== undefined ? Boolean(data.isPublic) : true;
 
     const event = await prisma.event.create({
@@ -426,8 +429,11 @@ export async function deleteEvent(eventId: string) {
 export async function toggleEventActive(eventId: string, userRole?: string) {
   try {
     const session = await getSession();
-    const effectiveUserId = session?.userId;
-    const effectiveRole = userRole || session?.role || "GUEST";
+    if (!session?.userId) {
+      return { success: false, error: "Autenticação necessária." };
+    }
+    const effectiveUserId = session.userId;
+    const effectiveRole = session.role || "GUEST";
 
     const isMaster =
       effectiveRole === "SUPERADMIN" ||
@@ -528,8 +534,11 @@ export async function updateEvent(
 ) {
   try {
     const session = await getSession();
-    const effectiveUserId = session?.userId;
-    const effectiveRole = userRole || session?.role || "GUEST";
+    if (!session?.userId) {
+      return { success: false, error: "Autenticação necessária." };
+    }
+    const effectiveUserId = session.userId;
+    const effectiveRole = session.role || "GUEST";
 
     const isMaster =
       effectiveRole === "SUPERADMIN" ||
@@ -670,6 +679,19 @@ export async function getEventById(eventId: string) {
 
     if (!event) {
       return { success: false, error: "Evento não encontrado." };
+    }
+
+    if (
+      !event.isActive ||
+      !event.isPublic
+    ) {
+      const access = await checkChurchAccess(event.tenant.slug);
+      if (!access.authorized) {
+        return {
+          success: false,
+          error: "Este evento é privado ou não está disponível publicamente.",
+        };
+      }
     }
 
     return {

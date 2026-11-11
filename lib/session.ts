@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { cache } from "react";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 
@@ -96,6 +97,28 @@ function decodeSessionCookie(raw: string): { session: SessionData; isSigned: boo
   }
 }
 
+const VERIFIED_SESSION_TTL_MS = 15_000;
+interface CachedVerifiedUser {
+  id: string;
+  email: string;
+  name: string;
+  avatarUrl: string | null;
+  role: string;
+  tenantId: string | null;
+  tenantSlug: string | null;
+  churchAccesses: Array<{ tenantId: string; role: string; tenantSlug: string }>;
+  expiresAt: number;
+}
+const verifiedUserCache = new Map<string, CachedVerifiedUser>();
+
+export function invalidateUserSessionCache(userId?: string) {
+  if (userId) {
+    verifiedUserCache.delete(userId);
+  } else {
+    verifiedUserCache.clear();
+  }
+}
+
 export async function createSession(data: {
   userId: string;
   email: string;
@@ -107,6 +130,7 @@ export async function createSession(data: {
   tenantSlug?: string | null;
 }) {
   try {
+    invalidateUserSessionCache(data.userId);
     const cookieStore = await cookies();
     const sessionData: SessionData = {
       userId: data.userId,
@@ -132,7 +156,7 @@ export async function createSession(data: {
   }
 }
 
-export async function getSession(): Promise<SessionData | null> {
+const resolveRequestSession = cache(async (): Promise<SessionData | null> => {
   try {
     const cookieStore = await cookies();
     const cookie = cookieStore.get(SESSION_COOKIE_NAME);
@@ -140,21 +164,64 @@ export async function getSession(): Promise<SessionData | null> {
     const parsed = decodeSessionCookie(cookie.value);
     if (!parsed || !parsed.isSigned || !parsed.session?.userId) return null;
 
-    const session = parsed.session;
+    const session: SessionData = { ...parsed.session };
+    const now = Date.now();
+    let verified = verifiedUserCache.get(session.userId);
 
-    if (session.role === "SUPERADMIN" && session.email) {
-      try {
-        const existingSuper = await prisma.user.findUnique({
-          where: { email: session.email.toLowerCase() },
-          select: { id: true },
+    if (!verified || verified.expiresAt <= now) {
+      let dbUser = await prisma.user.findUnique({
+        where: { id: session.userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          avatarUrl: true,
+          role: true,
+          tenantId: true,
+          tenant: { select: { id: true, slug: true } },
+          churchAccesses: {
+            select: {
+              tenantId: true,
+              role: true,
+              tenant: { select: { slug: true } },
+            },
+          },
+        },
+      });
+
+      // Seed de segurança exclusivamente para o SuperAdmin oficial em caso de banco recém-criado
+      if (
+        !dbUser &&
+        session.role === "SUPERADMIN" &&
+        session.email?.toLowerCase() === "edsonmanoel2012@gmail.com"
+      ) {
+        dbUser = await prisma.user.findUnique({
+          where: { email: "edsonmanoel2012@gmail.com" },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            avatarUrl: true,
+            role: true,
+            tenantId: true,
+            tenant: { select: { id: true, slug: true } },
+            churchAccesses: {
+              select: {
+                tenantId: true,
+                role: true,
+                tenant: { select: { slug: true } },
+              },
+            },
+          },
         });
-        if (!existingSuper) {
-          await prisma.user
+
+        if (!dbUser) {
+          dbUser = await prisma.user
             .create({
               data: {
                 id: session.userId,
                 name: session.name || "Edson Manoel",
-                email: session.email.toLowerCase(),
+                email: "edsonmanoel2012@gmail.com",
                 password:
                   "$2b$10$cHivWfrCv7vM5NI0VC7HDO6jMQLSaixB7RGDjKohQFUO1dsfPz5z2",
                 role: "SUPERADMIN",
@@ -162,96 +229,90 @@ export async function getSession(): Promise<SessionData | null> {
                 themePreference: "dark",
                 themePalette: "prime",
               },
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                avatarUrl: true,
+                role: true,
+                tenantId: true,
+                tenant: { select: { id: true, slug: true } },
+                churchAccesses: {
+                  select: {
+                    tenantId: true,
+                    role: true,
+                    tenant: { select: { slug: true } },
+                  },
+                },
+              },
             })
-            .catch(() => {});
+            .catch(() => null);
         }
-      } catch {}
-    }
-
-    if (session.tenantSlug && session.tenantSlug !== "admin") {
-      // Auto-recuperação transparente caso o banco SQLite do container tenha sido recriado
-      try {
-        const existingTenant = await prisma.tenant.findUnique({
-          where: { slug: session.tenantSlug },
-          select: { id: true, slug: true },
-        });
-        if (!existingTenant) {
-          const recoveredTenantId = session.tenantId || `tenant-${session.tenantSlug}`;
-          const formattedName =
-            session.tenantSlug.charAt(0).toUpperCase() +
-            session.tenantSlug.slice(1).replace(/-/g, " ");
-          const trialExpiresAt = new Date();
-          trialExpiresAt.setDate(trialExpiresAt.getDate() + 30);
-
-          const createdTenant = await prisma.tenant.create({
-            data: {
-              id: recoveredTenantId,
-              name: formattedName.toLowerCase().startsWith("igreja")
-                ? formattedName
-                : `Igreja ${formattedName}`,
-              slug: session.tenantSlug,
-              primaryColor: "#d97706",
-              pastorName: session.name || `Pr. ${formattedName}`,
-              plan: "PREMIUM",
-              status: "TRIAL",
-              monthlyPrice: 399,
-              setupPrice: 1290,
-              subscriptionExpiresAt: trialExpiresAt,
-            },
-          });
-
-          session.tenantId = createdTenant.id;
-        } else {
-          session.tenantId = existingTenant.id;
-        }
-
-        // Garantir que o usuário da sessão também exista no banco local
-        if (session.email) {
-          const existingUser = await prisma.user.findUnique({
-            where: { email: session.email.toLowerCase() },
-            select: { id: true },
-          });
-          const userIdToUse = existingUser?.id || session.userId;
-          if (!existingUser) {
-            await prisma.user.create({
-              data: {
-                id: session.userId,
-                name: session.name || "Administrador",
-                email: session.email.toLowerCase(),
-                role: session.role || "ADMIN",
-                isEmailVerified: true,
-                themePreference: "dark",
-                themePalette: "prime",
-                tenantId: session.tenantId,
-              },
-            });
-          }
-          await prisma.userChurchAccess.upsert({
-            where: {
-              userId_tenantId: {
-                userId: userIdToUse,
-                tenantId: session.tenantId,
-              },
-            },
-            update: { role: session.role || "ADMIN" },
-            create: {
-              userId: userIdToUse,
-              tenantId: session.tenantId,
-              role: session.role || "ADMIN",
-            },
-          });
-        }
-      } catch (recoverErr) {
-        console.warn("Aviso ao sincronizar sessão com banco local:", recoverErr);
       }
+
+      // Se o usuário foi removido do banco, invalida imediatamente a sessão (sem recriar conta)
+      if (!dbUser) {
+        verifiedUserCache.delete(session.userId);
+        return null;
+      }
+
+      verified = {
+        id: dbUser.id,
+        email: dbUser.email,
+        name: dbUser.name,
+        avatarUrl: dbUser.avatarUrl || null,
+        role: dbUser.role,
+        tenantId: dbUser.tenantId || null,
+        tenantSlug: dbUser.tenant?.slug || null,
+        churchAccesses: dbUser.churchAccesses.map((ca) => ({
+          tenantId: ca.tenantId,
+          role: ca.role,
+          tenantSlug: ca.tenant.slug,
+        })),
+        expiresAt: now + VERIFIED_SESSION_TTL_MS,
+      };
+      if (verifiedUserCache.size > 2000) {
+        verifiedUserCache.clear();
+      }
+      verifiedUserCache.set(dbUser.id, verified);
     }
 
-    // Aplica o papel simulado se existir (para testes e superadmin)
+    session.userId = verified.id;
+    session.email = verified.email;
+    session.name = verified.name;
+    session.avatarUrl = verified.avatarUrl;
+
+    if (verified.role === "SUPERADMIN") {
+      session.role = "SUPERADMIN";
+    } else if (session.tenantSlug && session.tenantSlug !== "admin") {
+      const explicitAccess = verified.churchAccesses.find(
+        (ca) => ca.tenantSlug === session.tenantSlug || ca.tenantId === session.tenantId
+      );
+      if (verified.tenantSlug === session.tenantSlug && verified.tenantId) {
+        session.tenantId = verified.tenantId;
+        session.role = verified.role;
+      } else if (explicitAccess) {
+        session.tenantId = explicitAccess.tenantId;
+        session.tenantSlug = explicitAccess.tenantSlug;
+        session.role = explicitAccess.role;
+      } else {
+        // Mantém o papel real do usuário sem elevar privilégios
+        session.role = verified.role;
+        if (verified.tenantId && verified.tenantSlug) {
+          session.tenantId = verified.tenantId;
+          session.tenantSlug = verified.tenantSlug;
+        }
+      }
+    } else {
+      session.role = verified.role;
+    }
+
+    // Aplica o papel simulado se existir (exclusivamente para SUPERADMIN)
     if (session.role === "SUPERADMIN") {
       const simulatedRole = cookieStore.get("horeb_simulated_role")?.value;
       if (simulatedRole) {
-        session.originalRole = "SUPERADMIN"; // guarda o original
-        session.role = simulatedRole; // injeta o simulado para a aplicação
+        session.originalRole = "SUPERADMIN";
+        session.role = simulatedRole;
       }
     }
 
@@ -259,11 +320,24 @@ export async function getSession(): Promise<SessionData | null> {
   } catch {
     return null;
   }
+});
+
+export async function getSession(): Promise<SessionData | null> {
+  return resolveRequestSession();
 }
 
 export async function destroySession() {
-  const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  try {
+    const cookieStore = await cookies();
+    const raw = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    if (raw) {
+      const parsed = decodeSessionCookie(raw);
+      if (parsed?.session?.userId) {
+        invalidateUserSessionCache(parsed.session.userId);
+      }
+    }
+    cookieStore.delete(SESSION_COOKIE_NAME);
+  } catch {}
 }
 
 export type AccessCheckResult =
@@ -290,46 +364,11 @@ export async function checkChurchAccess(slug: string): Promise<AccessCheckResult
     return { authorized: false, reason: "NOT_LOGGED_IN" };
   }
 
-  // Buscar congregação de destino para validar existência e metadados
-  let targetTenant = await prisma.tenant.findUnique({
+  // Buscar congregação de destino somente leitura (sem auto-criar congregações fantasmas)
+  const targetTenant = await prisma.tenant.findUnique({
     where: { slug },
     select: { id: true, name: true, slug: true, parentId: true },
   });
-
-  // Se a congregação não existir no banco mas o usuário logado pertence a ela (ou é SUPERADMIN),
-  // recria automaticamente a congregação para evitar perda em rebuilds e loops de redirecionamento
-  if (!targetTenant && (session.tenantSlug === slug || session.role === "SUPERADMIN" || session.originalRole === "SUPERADMIN")) {
-    try {
-      const formattedName =
-        slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ");
-      const trialExpiresAt = new Date();
-      trialExpiresAt.setDate(trialExpiresAt.getDate() + 30);
-
-      const created = await prisma.tenant.create({
-        data: {
-          id: session.tenantSlug === slug && session.tenantId ? session.tenantId : undefined,
-          name: formattedName.toLowerCase().startsWith("igreja")
-            ? formattedName
-            : `Igreja ${formattedName}`,
-          slug,
-          primaryColor: "#d97706",
-          pastorName: session.name || `Pr. ${formattedName}`,
-          plan: "PREMIUM",
-          status: "TRIAL",
-          monthlyPrice: 399,
-          setupPrice: 1290,
-          subscriptionExpiresAt: trialExpiresAt,
-        },
-        select: { id: true, name: true, slug: true, parentId: true },
-      });
-      targetTenant = created;
-    } catch {
-      targetTenant = await prisma.tenant.findUnique({
-        where: { slug },
-        select: { id: true, name: true, slug: true, parentId: true },
-      });
-    }
-  }
 
   if (!targetTenant) {
     return {
