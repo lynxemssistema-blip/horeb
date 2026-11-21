@@ -113,6 +113,25 @@ async function ensureInitialEbooksSeeded() {
       const ebooksDir = path.join(process.cwd(), "Ebooks");
       const defaultItems = [
         {
+          fixedId: "cmw0evangrei0005grus99999",
+          matchTitle: "O Evangelho do Rei",
+          title: "O Evangelho do Rei — Esboços e Profundidades em Mateus",
+          subtitle:
+            "Um guia teológico e homilético através de Mateus para inspirar sermões transformadores e cristocêntricos",
+          author: "Pr. Luan Demattos",
+          description:
+            "Manual de insights pastorais, teológicos e homiléticos através do Evangelho de Mateus: A Genealogia da Graça (Mt 1), A Ética do Reino no Sermão do Monte (Mt 5–7), A Matemática de Deus no Deserto (Mt 14), O Reino Invisível e Irreversível (Mt 13) e O Custo da Coroa e a Grande Comissão (Mt 27–28).",
+          price: 9.9,
+          originalPrice: 29.9,
+          coverUrl: "/ebooks-covers/o-evangelho-do-rei.jpg?v=2",
+          relativePdfPath: "O Evangelho do Rei/O Evangelho do Rei.pdf",
+          fileName: "O Evangelho do Rei - Pr. Luan Demattos.pdf",
+          badge: "NOVO LANÇAMENTO",
+          pagesCount: 11,
+          category: "TEOLOGIA & HOMILÉTICA",
+          featured: true,
+        },
+        {
           fixedId: "cmvze2dwf0004grus70x124s9",
           matchTitle: "Libertação Espiritual",
           title: "Libertação Espiritual — Restaurando a Ordem e o Equilíbrio",
@@ -127,7 +146,7 @@ async function ensureInitialEbooksSeeded() {
           relativePdfPath:
             "Libertação Espiritual/Libertação Espiritual - Restaurando a Ordem e o Equilíbrio (1).pdf",
           fileName: "Libertação Espiritual - Restaurando a Ordem e o Equilíbrio.pdf",
-          badge: "NOVO LANÇAMENTO",
+          badge: "LANÇAMENTO",
           pagesCount: 10,
           category: "LIBERTAÇÃO & CURA INTERIOR",
           featured: true,
@@ -491,6 +510,7 @@ export async function getPublicEbookById(ebookId: string, orderId?: string) {
         cmvzcozhp0000grbsql5wh0jd: "Os Seis Instintos da Alma",
         cmvzcozir0001grbsmbyp93cq: "Batalha Invisível",
         cmvze2dwf0004grus70x124s9: "Libertação Espiritual",
+        cmw0evangrei0005grus99999: "O Evangelho do Rei",
       };
       const targetTitle = legacyTitleMap[ebookId] || ebookId;
       ebook = await prisma.ebookProduct.findFirst({
