@@ -9,6 +9,7 @@ const RESERVED_ROOT_SEGMENTS = new Set([
   "api",
   "activate",
   "ebooks",
+  "links",
   "select-church",
   "_next",
 ]);
